@@ -12,6 +12,8 @@
 import base64
 import datetime
 import json
+import math
+import random
 import urllib.parse
 
 import requests
@@ -21,6 +23,10 @@ from Crypto.Util.Padding import pad, unpad
 BASE_URL = "https://yzsxg.fzu.edu.cn"
 API_PREFIX = "/livecloud/project/fzu/attn"
 AES_KEY = b"apexinfoapexinfo"  # KEY == IV（前端源码硬编码）
+
+# 打卡坐标随机抖动：默认半径 200 米，配置 jitter_radius_m: 0 可关闭
+DEFAULT_JITTER_RADIUS_M = 200.0
+JITTER_MAX_ATTEMPTS = 3  # 抖动点意外落在签到范围外时的重试次数
 
 # GitHub Actions 跑在 UTC，迟到判定必须按北京时间算，不能用运行环境本地时间
 TZ_CN = datetime.timezone(datetime.timedelta(hours=8), "Asia/Shanghai")
@@ -51,6 +57,38 @@ def decrypt(b64text: str) -> str:
     """与前端 Decrypt() 一致：Base64 → AES-128-CBC 解密。"""
     cipher = AES.new(AES_KEY, AES.MODE_CBC, iv=AES_KEY)
     return unpad(cipher.decrypt(base64.b64decode(b64text)), AES.block_size).decode()
+
+
+# ============ 打卡坐标抖动 ============
+
+def _meters_per_degree(latitude: float):
+    """该纬度下 1° 纬度 / 1° 经度对应的米数（WGS-84 椭球近似展开式）。
+
+    200m 量级下精度远优于实际需要，仅用于把"米"换算成经纬度增量。
+    """
+    phi = math.radians(latitude)
+    m_per_lat = 111132.92 - 559.82 * math.cos(2 * phi) + 1.175 * math.cos(4 * phi)
+    m_per_lon = 111412.84 * math.cos(phi) - 93.5 * math.cos(3 * phi)
+    return m_per_lat, max(m_per_lon, 1e-9)   # 近极点处兜底，避免除零
+
+
+def jitter_location(longitude: float, latitude: float, radius_m: float):
+    """在以 (longitude, latitude) 为圆心、radius_m 米为半径的圆内均匀随机取一点。
+
+    - 半径按面积均匀采样：r = R * sqrt(U)，避免随机点过度聚集在圆心；
+    - 方位角 θ 在 [0, 2π) 均匀分布；
+    - radius_m <= 0 时原样返回入参（不抖动）。
+
+    返回 (longitude, latitude)。每次调用结果都不同。
+    """
+    if not radius_m or radius_m <= 0:
+        return longitude, latitude
+    r = radius_m * math.sqrt(random.random())
+    theta = random.uniform(0.0, 2.0 * math.pi)
+    north_m = r * math.cos(theta)
+    east_m = r * math.sin(theta)
+    m_per_lat, m_per_lon = _meters_per_degree(latitude)
+    return longitude + east_m / m_per_lon, latitude + north_m / m_per_lat
 
 
 # ============ 客户端 ============
@@ -140,8 +178,16 @@ def do_checkin(client: AttnClient, cfg: dict, init_data: dict) -> bool:
     """按 init 数据 + 配置定位完成 check → clockIn 全链路。"""
     user = init_data["userData"]
     params = init_data["paramsData"]
-    longitude = float(cfg["checkin"]["longitude"])
-    latitude = float(cfg["checkin"]["latitude"])
+    base_lon = float(cfg["checkin"]["longitude"])
+    base_lat = float(cfg["checkin"]["latitude"])
+    # 抖动半径：缺省/留空/写错都按默认 200m；显式 0（或负数）表示关闭抖动
+    radius_m = cfg["checkin"].get("jitter_radius_m")
+    if radius_m is None or (isinstance(radius_m, str) and not radius_m.strip()):
+        radius_m = DEFAULT_JITTER_RADIUS_M
+    try:
+        radius_m = float(radius_m)
+    except (TypeError, ValueError):
+        radius_m = DEFAULT_JITTER_RADIUS_M
 
     # 1. 组装签到范围并做定位校验（schoolPosition = {range: [多边形...]}）
     polygons = []
@@ -150,9 +196,28 @@ def do_checkin(client: AttnClient, cfg: dict, init_data: dict) -> bool:
             polygons.extend(json.loads(sd["FPosition"]).get("range") or [])
         except Exception:
             continue
-    matched = client.check(longitude, latitude, {"range": polygons})
-    if not matched:
-        return False
+
+    # 在半径内随机取点，check 与 clockIn 使用同一个点（模拟真实设备一次性定位）。
+    # 正常情况只发 1 次 check（与不抖动时一致），不额外增加请求特征。
+    longitude, latitude = base_lon, base_lat
+    matched = None
+    if radius_m > 0:
+        for attempt in range(JITTER_MAX_ATTEMPTS):
+            j_lon, j_lat = jitter_location(base_lon, base_lat, radius_m)
+            j_matched = client.check(j_lon, j_lat, {"range": polygons})
+            if j_matched:
+                longitude, latitude, matched = j_lon, j_lat, j_matched
+                break
+            print(f"第 {attempt + 1} 次抖动点落在签到范围外，重新取点…")
+
+    if matched is None:
+        # 未开启抖动，或抖动点全部越界（配置点贴近校区边缘）：退回配置坐标校验，
+        # 宁可上报固定坐标，也不因为抖动导致漏签。
+        if radius_m > 0:
+            print("抖动点均在范围外，回退到配置坐标打卡。")
+        matched = client.check(base_lon, base_lat, {"range": polygons})
+        if not matched:
+            return False
 
     # 2. 迟到判定：以服务器时间为准（换算成北京时间），与 FLateTime（迟到线）比较
     ts = client.server_time()
