@@ -24,7 +24,8 @@ BASE_URL = "https://yzsxg.fzu.edu.cn"
 API_PREFIX = "/livecloud/project/fzu/attn"
 AES_KEY = b"apexinfoapexinfo"  # KEY == IV（前端源码硬编码）
 
-# 打卡坐标随机抖动：默认半径 200 米，配置 jitter_radius_m: 0 可关闭
+# 打卡坐标随机抖动：默认半径 200 米。checkin.location_jitter_m（新键）优先于
+# checkin.jitter_radius_m（旧键，保留兼容），两键任一填 0 都表示关闭抖动
 DEFAULT_JITTER_RADIUS_M = 200.0
 JITTER_MAX_ATTEMPTS = 3  # 抖动点意外落在签到范围外时的重试次数
 
@@ -89,6 +90,178 @@ def jitter_location(longitude: float, latitude: float, radius_m: float):
     east_m = r * math.sin(theta)
     m_per_lat, m_per_lon = _meters_per_degree(latitude)
     return longitude + east_m / m_per_lon, latitude + north_m / m_per_lat
+
+
+# ============ 位置配置解析 ============
+
+def _coordinate_error(where: str, value) -> ValueError:
+    """构造坐标报错：必须写清"改哪个键、改成什么样"，否则用户只能去猜。"""
+    shown = "空（未配置）" if value is None or (
+        isinstance(value, str) and not value.strip()
+    ) else repr(value)
+    return ValueError(
+        f"checkin 未配置有效坐标：{where} 的值是{shown}。"
+        "请修改 config.yaml 的 checkin 段，填高德坐标拾取器"
+        "（https://lbs.amap.com/tools/picker）复制来的数字，"
+        "如 longitude: \"119.20463\" / latitude: \"26.04920\"；"
+        "也可以改用 checkin.locations 位置池，在每一项里分别填写 longitude / latitude。"
+    )
+
+
+def _parse_coordinate(value, where: str) -> float:
+    """配置里的经纬度 → float；缺失、空白、非数字一律抛 ValueError。
+
+    为什么不直接 float(value)：坐标是从坐标拾取器手抄进 YAML 的，最常见错法
+    是留空或粘进多余字符。这里要把"哪个键空了/写错了"讲明白，而不是抛一句
+    could not convert string to float 让人从头排。
+    """
+    if value is None or isinstance(value, bool):
+        raise _coordinate_error(where, value)
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            raise _coordinate_error(where, value)
+        value = text
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        raise _coordinate_error(where, value) from None
+
+
+def _actual_location_text(value, fallback: str = "") -> str:
+    """地址文案收口成去空白字符串；空/缺失用 fallback。
+
+    actualLocation 原样提交给学校接口，None 或带换行的多行 YAML 值都会让
+    接口校验失败，所以统一在这里归一。
+    """
+    if value is None:
+        return fallback
+    text = str(value).strip()
+    return text or fallback
+
+
+def _location_weight(value) -> float:
+    """位置池权重：缺失/非法/<=0 一律按 1。
+
+    权重只是"偏好"而不是硬约束，一处笔误不该让某个点永远抽不到（<=0 若当真
+    会导致 total 为 0 除零），所以统一退回等权。
+    """
+    if value is None or isinstance(value, bool):
+        return 1.0
+    if isinstance(value, str):
+        if not value.strip():
+            return 1.0
+        value = value.strip()
+    try:
+        weight = float(value)
+    except (TypeError, ValueError):
+        return 1.0
+    return weight if weight > 0 else 1.0
+
+
+def get_jitter_radius(cfg: dict) -> float:
+    """本次打卡的位置抖动半径（米），0 表示不抖动。
+
+    新键 checkin.location_jitter_m 优先于旧键 checkin.jitter_radius_m：老配置
+    只有旧键，不改文件就能继续按原半径抖动；新模板里新键默认留空，留空视同
+    未配置、继续看旧键，都没有才落到默认 200m。显式 0 是用户明确要关掉抖动，
+    不能因为"0 看起来跟没填一样"又悄悄恢复成 200m；负数与写错的值一样属于
+    笔误，按默认处理——把 -200 当成"关闭抖动"会让一个手滑的负号静默去掉坐标
+    抖动，而这恰恰是最不容易被发现的降级。
+    """
+    checkin = cfg.get("checkin") or {}
+    for key in ("location_jitter_m", "jitter_radius_m"):
+        if key not in checkin:
+            continue
+        raw = checkin[key]
+        if raw is None:
+            continue
+        if isinstance(raw, str) and not raw.strip():
+            continue                      # 留空 = 未配置，继续看下一个键
+        if isinstance(raw, bool):
+            return DEFAULT_JITTER_RADIUS_M
+        try:
+            radius_m = float(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_JITTER_RADIUS_M
+        if radius_m < 0:
+            print(
+                f"checkin.{key} 写成了负数（{raw!r}），已按默认 {DEFAULT_JITTER_RADIUS_M:.0f}m 处理；"
+                "关闭位置抖动请显式写 0。"
+            )
+            return DEFAULT_JITTER_RADIUS_M
+        return radius_m
+    return DEFAULT_JITTER_RADIUS_M
+
+
+def resolve_location(cfg: dict, *, rng=None) -> dict:
+    """解析本次上报的位置，返回 {longitude, latitude, actual_location, label}。
+
+    为什么需要位置池：固定坐标每晚分毫不差，比抖动更像脚本。配了
+    checkin.locations 后每跑一次按 weight 从池里抽一个点，连 actualLocation
+    文案一起换，上报特征更接近真人。rng 只为测试注入（random.Random(seed)
+    或任意带 .random() 的对象），生产路径用标准库 random。
+    """
+    checkin = cfg.get("checkin") or {}
+    pool = checkin.get("locations")
+    if isinstance(pool, list) and pool:
+        return _location_from_pool(pool, checkin, rng=rng)
+    return _location_from_single(checkin)
+
+
+def _location_from_single(checkin: dict) -> dict:
+    """旧配置路径：checkin.longitude / latitude / actual_location 单点。"""
+    return {
+        "longitude": _parse_coordinate(checkin.get("longitude"), "checkin.longitude"),
+        "latitude": _parse_coordinate(checkin.get("latitude"), "checkin.latitude"),
+        "actual_location": _actual_location_text(checkin.get("actual_location")),
+        "label": "single",
+    }
+
+
+def _location_from_pool(pool: list, checkin: dict, *, rng=None) -> dict:
+    """位置池路径：先整池解析校验，再按 weight 加权抽一个点。
+
+    整池预校验而不是只校验抽中的那项：坐标抄错时应当立刻报错并指出第几项，
+    而不是某个随机值恰好抽到才偶发失败——那种 bug 排查起来像幽灵。
+    """
+    candidates = []
+    for index, item in enumerate(pool):
+        where = f"checkin.locations[{index}]"
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"checkin 未配置有效坐标：{where} 不是键值对。请照 config.example.yaml "
+                "里 checkin.locations 的示例，在 config.yaml 中写成 "
+                "- longitude / latitude / actual_location / weight 这样的子项。"
+            )
+        candidates.append({
+            "index": index,
+            "longitude": _parse_coordinate(item.get("longitude"), f"{where}.longitude"),
+            "latitude": _parse_coordinate(item.get("latitude"), f"{where}.latitude"),
+            "weight": _location_weight(item.get("weight")),
+            "actual_location": item.get("actual_location"),
+        })
+
+    chooser = rng if rng is not None else random
+    total = sum(c["weight"] for c in candidates)   # weight 已保证 > 0，total > 0
+    # 加权抽签：U(0, total) 落在哪一段就取哪个点，权重越大区间越宽
+    point = chooser.random() * total
+    chosen = candidates[-1]
+    cursor = 0.0
+    for candidate in candidates:
+        cursor += candidate["weight"]
+        if point < cursor:
+            chosen = candidate
+            break
+
+    # 池内某项没写 actual_location 时沿用外层文案，避免上报名突然变成空串
+    default_text = _actual_location_text(checkin.get("actual_location"))
+    return {
+        "longitude": chosen["longitude"],
+        "latitude": chosen["latitude"],
+        "actual_location": _actual_location_text(chosen["actual_location"], default_text),
+        "label": f"locations[{chosen['index']}]",
+    }
 
 
 # ============ 客户端 ============
@@ -178,16 +351,13 @@ def do_checkin(client: AttnClient, cfg: dict, init_data: dict) -> bool:
     """按 init 数据 + 配置定位完成 check → clockIn 全链路。"""
     user = init_data["userData"]
     params = init_data["paramsData"]
-    base_lon = float(cfg["checkin"]["longitude"])
-    base_lat = float(cfg["checkin"]["latitude"])
-    # 抖动半径：缺省/留空/写错都按默认 200m；显式 0（或负数）表示关闭抖动
-    radius_m = cfg["checkin"].get("jitter_radius_m")
-    if radius_m is None or (isinstance(radius_m, str) and not radius_m.strip()):
-        radius_m = DEFAULT_JITTER_RADIUS_M
-    try:
-        radius_m = float(radius_m)
-    except (TypeError, ValueError):
-        radius_m = DEFAULT_JITTER_RADIUS_M
+    # 基准点可能来自位置池（每次运行换一个点），文案与基准点绑定，统一由
+    # resolve_location 解析；抖动半径单独由 get_jitter_radius 决定（0 = 不抖）
+    place = resolve_location(cfg)
+    base_lon, base_lat = place["longitude"], place["latitude"]
+    radius_m = get_jitter_radius(cfg)
+    if place["label"] != "single":
+        print(f"本次签到基准位置取自位置池 {place['label']}：{place['actual_location'] or '（无文案）'}")
 
     # 1. 组装签到范围并做定位校验（schoolPosition = {range: [多边形...]}）
     polygons = []
@@ -236,7 +406,7 @@ def do_checkin(client: AttnClient, cfg: dict, init_data: dict) -> bool:
         latitude=latitude,
         start_time=(params.get("FStartTime") or "").strip(),
         end_time=(params.get("FEndTime") or "").strip(),
-        actual_location=cfg["checkin"].get("actual_location", ""),
+        actual_location=place["actual_location"],
         coll_unit=user.get("FCollUnit"),
         way=user.get("FWay"),
         is_late=is_late,
