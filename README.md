@@ -11,13 +11,11 @@
 [![Tests](https://img.shields.io/badge/tests-129%20passed-brightgreen.svg)](tests)
 [![Cron](https://img.shields.io/badge/cron-21%3A00--23%3A59%20%2F%2010min-green.svg)](.github/workflows/checkin.yml)
 
-<img src="assets/fzu-checkin-poster.png" width="360" alt="晚点名自动签到海报">
-
 </div>
 
 > ⚠️ **使用须知**
 >
-> 晚点名是学校的安全确认制度。本项目只用于**本人确实在校时防止漏签**：不伪造定位、不隐瞒真实在/离校状态、不接受付费代挂。违规使用的后果由使用者自行承担。
+> 晚点名是学校的安全确认制度。本项目只用于**本人确实在校时防止漏签**：不伪造定位、不隐瞒真实在/离校状态、不接受付费代挂。违规使用的后果由使用者自行承担。本项目可能由于某些不可抗力，或者其他因素干扰，随时可能下线，且用且珍惜。
 
 > 📌 海报和宣传卡里的二维码指向旧的在线配置页，已经下线。**请用仓库内的 [`web/configurator.html`](web/configurator.html)**（下载后双击即可离线使用）。
 
