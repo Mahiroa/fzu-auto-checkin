@@ -1,12 +1,22 @@
 # ---- 敏感信息，勿提交 ----
 config.yaml
 config.yml
+# Go 服务的运行时数据：里面有密码哈希、Session 密钥、token 与全部运行历史
+server/data/
+data/
 
 # ---- Python ----
 __pycache__/
 *.pyc
 .venv/
 venv/
+
+# ---- Go ----
+server/fzucheckin
+server/fzucheckin.exe
+*.exe
+*.test
+*.out
 
 # ---- 运行时 ----
 *.log

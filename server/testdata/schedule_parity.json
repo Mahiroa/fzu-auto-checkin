@@ -1,0 +1,9064 @@
+{
+ "generated_by": "scripts/gen_parity.py",
+ "u": [
+  0.9664535356921388,
+  0.9085506848193617,
+  0.5333705282025948,
+  0.14868093942704885,
+  0.02613517263734344,
+  0.07468760220974835,
+  0.6478897665652841,
+  0.6017898664125034,
+  0.0791626612502635,
+  0.7292475441098485,
+  0.27483969606370307,
+  0.5381432959920904,
+  0.16643984660601896,
+  0.773947850623575,
+  0.5679250855924521,
+  0.5022729950412748,
+  0.146088439179772,
+  0.6992323739852176,
+  0.7896406634077038,
+  0.7325822130646349,
+  0.4343112054062631,
+  0.38827774198339937,
+  0.5470140287117748,
+  0.5100259512371934,
+  0.13718233165799465,
+  0.3857226873288311,
+  0.09047956131302826,
+  0.07738389310472238,
+  0.19194027282830461,
+  0.966663426217671,
+  0.12298992631618366,
+  0.006111399175208643,
+  0.9721253491771045,
+  0.06513668225698621,
+  0.08392211590929499,
+  0.7388438758846181,
+  0.569053991389682,
+  0.3472868882154301,
+  0.22656159488888772,
+  0.866532300854887,
+  0.11810351703998623,
+  0.6524841095271326,
+  0.24899891745754188,
+  0.22145918495774275,
+  0.060554665720315426,
+  0.7331540397418281,
+  0.8890508393844069,
+  0.21986039846567373,
+  0.054230236624264294,
+  0.32700489415255196,
+  0.4972133606850696,
+  0.25192825278461684,
+  0.33470639597334273,
+  0.4453663681645903,
+  0.849525195952466,
+  0.5747262051013583,
+  0.8513069402962158,
+  0.5728741425189103,
+  0.41245266592794283,
+  0.302033549149081,
+  0.8942233099538819,
+  0.09606204542987107,
+  0.47471999235162354,
+  0.4391464539043177
+ ],
+ "cases": [
+  {
+   "name": "sched0@2026-11-14 20:59:59",
+   "schedule": {},
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 21:00:00",
+   "schedule": {},
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 21:00:01",
+   "schedule": {},
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 21:04:09",
+   "schedule": {},
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 21:34:00",
+   "schedule": {},
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 60.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 21:35:00",
+   "schedule": {},
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 21:36:30",
+   "schedule": {},
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 21:37:00",
+   "schedule": {},
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 21:49:59",
+   "schedule": {},
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 21:50:00",
+   "schedule": {},
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 22:09:30",
+   "schedule": {},
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 22:30:00",
+   "schedule": {},
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 23:58:00",
+   "schedule": {},
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 23:59:00",
+   "schedule": {},
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 23:59:59",
+   "schedule": {},
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-15 00:00:00",
+   "schedule": {},
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-15T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched0@2026-11-14 19:30:00",
+   "schedule": {},
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 60.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-15T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched1@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ]
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 60.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:50:00.000000+08:00",
+    "wait_seconds": 1.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:50:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:50:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:50:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:50:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:50:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:50:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-15T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-15T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched2@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50"
+    ]
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 60.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:50:00.000000+08:00",
+    "wait_seconds": 1.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:50:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T22:10:00.000000+08:00",
+    "wait_seconds": 30.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:10:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:10:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:10:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:10:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-15T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-15T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-15T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched3@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "21:35",
+     "21:50",
+     "22:10"
+    ]
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "21:50:00",
+      "target": "2026-11-14T21:50:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     },
+     {
+      "configured": "22:10:00",
+      "target": "2026-11-14T22:10:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-15T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched4@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ]
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 60.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-15T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched5@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ]
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:59:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T21:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T21:00:01.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T21:04:09.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T21:34:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T21:36:30.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T21:37:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T21:49:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T21:50:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T22:09:30.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T22:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T23:58:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T23:59:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "no_slot_fallback",
+    "target": "2026-11-14T23:59:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-15T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched6@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "20:30"
+    ]
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "20:30:00",
+      "target": "2026-11-14T20:30:00.000000+08:00",
+      "valid": false,
+      "jittered": false,
+      "clamped": false,
+      "reason": "out_of_window"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 339.872121,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 279.872121,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 189.872121,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 159.872121,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:39:39.872121+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-15T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched7@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 5
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:39:39.872121+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:02:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-15T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched8@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T22:02:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:27:59.232728+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-15T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched9@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "21:00"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 1,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:00:00",
+      "target": "2026-11-14T21:27:59.232728+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T23:37:55.251382+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-15T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched10@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "23:59"
+    ],
+    "time_jitter_minutes": 30
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 4,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:59:00",
+      "target": "2026-11-14T23:37:55.251382+08:00",
+      "valid": true,
+      "jittered": true,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-15T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched11@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 0
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 3600.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 3599.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 3351.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 1560.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 1500.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 1410.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 1380.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 601.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 600.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T22:00:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-15T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched12@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "22:00"
+    ],
+    "time_jitter_minutes": 0,
+    "max_wait_minutes": 60
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "22:00:00",
+      "target": "2026-11-14T22:00:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 60.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-15T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched13@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 0
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 60.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-15T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched14@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "21:35"
+    ],
+    "tolerance_minutes": 30
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 20:59:59",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 21:00:00",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 21:00:01",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 21:04:09",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 21:34:00",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 21:35:00",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 21:36:30",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 21:37:00",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 21:49:59",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 21:50:00",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 22:09:30",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 22:30:00",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 23:58:00",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 23:59:00",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 23:59:59",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-15 00:00:00",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-15T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched15@2026-11-14 19:30:00",
+   "schedule": {
+    "window_start": "19:00",
+    "window_end": "20:00",
+    "times": [
+     "19:30"
+    ]
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T19:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "19:30:00",
+      "target": "2026-11-14T19:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 20:59:59",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 21:00:00",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 21:00:01",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 21:04:09",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 21:34:00",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 21:35:00",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 21:36:30",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 21:37:00",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 21:49:59",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 21:50:00",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 22:09:30",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 22:30:00",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 23:58:00",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 23:59:00",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 23:59:59",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T23:30:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-15 00:00:00",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-15T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched16@2026-11-14 19:30:00",
+   "schedule": {
+    "window_start": "23:00",
+    "window_end": "01:00",
+    "times": [
+     "23:30"
+    ]
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "23:30:00",
+      "target": "2026-11-14T23:30:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 20:59:59",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 21:00:00",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 21:00:01",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 21:04:09",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 21:34:00",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 60.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 21:35:00",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 21:36:30",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 21:37:00",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 21:49:59",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 21:50:00",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 22:09:30",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 22:30:00",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 23:58:00",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 23:59:00",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 23:59:59",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:00.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-15 00:00:00",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-15T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched17@2026-11-14 19:30:00",
+   "schedule": {
+    "times": []
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:00",
+      "target": "2026-11-14T21:35:00.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 20:59:59",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T20:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 21:00:00",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T21:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 21:00:01",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T21:00:01.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 21:04:09",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T21:04:09.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "wait_too_long",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 21:34:00",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T21:34:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 119.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 21:35:00",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T21:35:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "wait",
+    "reason": "wait_until_target",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 59.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 21:36:30",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T21:36:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 21:37:00",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T21:37:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "on_target",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 21:49:59",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T21:49:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 21:50:00",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T21:50:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 22:09:30",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T22:09:30.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 22:30:00",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T22:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 23:58:00",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T23:58:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 23:59:00",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T23:59:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 23:59:59",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T23:59:59.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "run",
+    "reason": "late_fallback",
+    "target": "2026-11-14T21:35:59.000000+08:00",
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-15 00:00:00",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-15T00:00:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-15T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  },
+  {
+   "name": "sched18@2026-11-14 19:30:00",
+   "schedule": {
+    "times": [
+     "21:35:59"
+    ]
+   },
+   "now": "2026-11-14T19:30:00.000000+08:00",
+   "uses": 0,
+   "expect": {
+    "mode": "skip",
+    "reason": "out_of_window",
+    "target": null,
+    "wait_seconds": 0.0,
+    "slots": [
+     {
+      "configured": "21:35:59",
+      "target": "2026-11-14T21:35:59.000000+08:00",
+      "valid": true,
+      "jittered": false,
+      "clamped": false,
+      "reason": "ok"
+     }
+    ]
+   }
+  }
+ ]
+}
