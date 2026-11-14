@@ -150,7 +150,7 @@
       <button class="btn ghost" data-copy="outSecret">📋 复制配置内容</button>
       <ol class="guide">
         <li>没有 GitHub 账号？<a href="https://github.com/signup" target="_blank">点这里免费注册</a>，1 分钟搞定（需要邮箱）。</li>
-        <li><a href="https://github.com/new/import" target="_blank">点这里把项目导入到你自己的私有仓库</a>：① "Your old repository's clone URL" 填 <code>https://github.com/cccccheyu/fzu-auto-checkin</code>；② 仓库名随意；③ 选择 <b>Private</b>（私有，重要！你的密码只有你自己能看到）；④ 点 Begin import。</li>
+        <li><a href="https://github.com/new/import" target="_blank">点这里把项目导入到你自己的私有仓库</a>：① "Your old repository's clone URL" 填 <code>https://github.com/Mahiroa/fzu-auto-checkin</code>；② 仓库名随意；③ 选择 <b>Private</b>（私有，重要！你的密码只有你自己能看到）；④ 点 Begin import。</li>
         <li>导入完成后，在你的仓库页面依次打开：<code>Settings → Secrets and variables → Actions → New repository secret</code>，Name 填 <code>CONFIG_YAML</code>，Secret 粘贴上面复制的内容，点 Add secret。</li>
         <li>完成！之后每晚 <b>21:35 / 21:50</b> 自动签到，可在仓库的 <code>Actions</code> 标签页查看签到记录。签到结果可回第 3 步配置微信推送。</li>
       </ol>
@@ -194,7 +194,7 @@
       </div>
       <div id="vacRepoRow">
         <label>你的私有仓库</label>
-        <input type="text" id="vacRepo" placeholder="如 cccccheyu/fzu-checkin；只填仓库名则默认在你账号下">
+        <input type="text" id="vacRepo" placeholder="如 Mahiroa/fzu-checkin；只填仓库名则默认在你账号下">
       </div>
       <button class="btn" id="vacPush">🚀 写入 config.yaml</button>
       <pre id="vacLog" class="hide"></pre>
@@ -218,10 +218,10 @@
       <div><a class="btn ghost" href="mailto:inspring_2026@163.com?subject=%E7%A6%8F%E5%A4%A7%E7%AD%BE%E5%88%B0%E5%B7%A5%E5%85%B7%E5%8F%8D%E9%A6%88" style="margin-top:0">✉️ 发邮件给我</a></div>
       <div><button class="btn ghost" data-copy="fbMail" style="margin-top:0">📋 复制</button></div>
     </div>
-    <p class="hint">也可以在项目 <a href="https://github.com/cccccheyu/fzu-auto-checkin/issues" target="_blank">GitHub Issues</a> 里提问题。</p>
+    <p class="hint">也可以在项目 <a href="https://github.com/Mahiroa/fzu-auto-checkin/issues" target="_blank">GitHub Issues</a> 里提问题。</p>
   </div>
 
-  <footer>开源项目 <a href="https://github.com/cccccheyu/fzu-auto-checkin" target="_blank">fzu-auto-checkin</a> · 本页面为纯静态工具，不收集任何数据 · 反馈：inspring_2026@163.com</footer>
+  <footer>开源项目 <a href="https://github.com/Mahiroa/fzu-auto-checkin" target="_blank">fzu-auto-checkin</a> · 本页面为纯静态工具，不收集任何数据 · 反馈：inspring_2026@163.com</footer>
 </div>
 
 <script>
@@ -517,7 +517,7 @@ document.querySelectorAll('[data-copy]').forEach(b => {
 });
 
 // —— 第 5 步：一键部署 ——
-const SRC_REPO = 'cccccheyu/fzu-auto-checkin';
+const SRC_REPO = 'Mahiroa/fzu-auto-checkin';
 const logEl = document.getElementById('log');
 function dlog(msg) {
   logEl.classList.remove('hide');
@@ -696,7 +696,7 @@ document.getElementById('vacPush').addEventListener('click', async () => {
     vlog('✅ 账号 ' + me.login + '，目标仓库 ' + repo);
     const rinfo = await gh('/repos/' + repo);
     if (!rinfo.private) {
-      throw new Error('仓库 ' + rinfo.full_name + ' 是公开的！配置里含你的学号密码，绝不能写入。请填你自己的私有签到仓库（如 cccccheyu/fzu-checkin）。');
+      throw new Error('仓库 ' + rinfo.full_name + ' 是公开的！配置里含你的学号密码，绝不能写入。请填你自己的私有签到仓库（如 Mahiroa/fzu-checkin）。');
     }
 
     vlog('⏳ 读取现有 config.yaml…');
