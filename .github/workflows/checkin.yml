@@ -1,7 +1,26 @@
 name: checkin
 
+# 串行化整条 workflow：窗口扫描 cron 每 10 分钟一个点，而单次运行可能因为
+# "早到就等到目标时刻"（main.py 里 wait 最长约 max_wait_minutes=12 分钟）跨过下一个 cron 点。
+# 不串行的话两个实例会同时 check/clockIn：轻则重复请求，重则后到的一次覆盖先到的签到状态。
+# cancel-in-progress: false —— 已经开始的签到必须跑完，宁可让新的一次排队也不能打断半途的请求。
+concurrency:
+  group: fzu-checkin
+  cancel-in-progress: false
+
 on:
   schedule:
+    # ===== 窗口扫描档（新增，主力）=====
+    # UTC 13:00-15:59 = 北京 21:00-23:59，每 10 分钟扫一次，覆盖整个可行签到窗口。
+    # 用户自定义的 schedule.times 必须落在这段扫描窗口内：落在窗口外的时刻没有任何 cron 会扫到，
+    # 等于配了也不会触发（脚本只能"被叫醒后决定做什么"，不能自己创造运行机会）。
+    # 抖动后的准确目标时刻由脚本内决定（resolve_run 算出 wait 就 sleep 到点），
+    # cron 只负责"扫到"——所以扫描粒度对齐 10 分钟，不必为每个自定义时刻单独加 cron。
+    - cron: "*/10 13-15 * * *"
+
+    # ===== 十档遗留档（保留，对老配置兜底）=====
+    # 老用户的 config 里没有 schedule 段，行为仍是"被叫醒就签"，这些档位继续有效；
+    # 与上面的扫描档叠加不会重复签到——已签到会被 query_today_task 静默跳过。
     # 晚点名窗口 21:30-23:59，迟到线 22:30 → 十档：
     # 提前档 20:05/20:35/21:05 —— GitHub 定时实测常延迟 1-4 小时，准点到达窗口外会被静默跳过，
     #   被延迟拖进窗口（21:35 后）则正常签到，对冲整批延迟导致全晚漏签；
@@ -18,11 +37,23 @@ on:
     - cron: "5 15 * * *"
     - cron: "30 15 * * *"
     - cron: "55 15 * * *"
-  workflow_dispatch: {}   # 支持手动触发
+
+  # 支持手动触发。force=true 是手动补签模式：跳过"等到目标时刻"立即签到。
+  # 窗口外的处理由 main.py 决定：打印窗口警告后**仍然尝试**签到（补签本来就是窗口外才用得上），
+  # workflow 只负责把布尔透传成 CHECKIN_FORCE=1，不在 CI 层再放一套窗口判断。
+  workflow_dispatch:
+    inputs:
+      force:
+        type: boolean
+        default: false
+        description: "手动补签：跳过等待立即签到，但仍受签到窗口约束"
 
 jobs:
   checkin:
     runs-on: ubuntu-latest
+    # 单次最长耗时 = 装依赖 + 早到的 wait（上限约 12 分钟）+ 签到/重试/推送。
+    # 留到 60 分钟是给 GitHub 排队与网络抖动兜底；同时避免脚本真挂死时白占 runner 一小时以上。
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -48,5 +79,12 @@ jobs:
             test -s config.yaml && echo "config from committed config.yaml"
           fi
 
+      # 布尔输入必须落成显式的 "1"/"0"，不能留空串：
+      #   * schedule 触发时 inputs 上下文为空，表达式会一路短路到最后的 0；
+      #   * 用 inputs.force == true 比较而不是 github.event.inputs.force（后者是字符串 "true"/"false"），
+      #     保证类型化 boolean 输入在新旧 runner 上都判得准；
+      #   * main.py 只认 CHECKIN_FORCE == "1"，其它值一律走正常调度分支。
       - name: Run checkin
+        env:
+          CHECKIN_FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force == true && 1 || 0 }}
         run: python main.py
