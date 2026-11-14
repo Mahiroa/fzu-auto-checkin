@@ -10,9 +10,10 @@ import (
 // 两者不重叠：前缀判断而不是正则匹配，代价是一次 HasPrefix。
 const apiPrefix = "/api/v1"
 
-// securityPolicy 是 CSP。用 'self' 而不是内联脚本白名单：前端是零构建的
-// 外链 app.js，没有一处内联 <script>，所以这里可以关得很死；style 允许
-// 'unsafe-inline' 是因为页面里有几处 style 属性（进度/布局），不放开会白屏。
+// securityPolicy 是 CSP。用 'self' 而不是内联白名单：前端是零构建的外链
+// app.js + 单文件 style.css，页面里没有内联 <script>/<style>/style 属性，
+// 所以 script-src 与 style-src 都能关到 'self'——写 style="…" 会被浏览器
+// 直接丢弃（这也是"文档里不出现 [style]"能当门禁的原因）。
 const securityPolicy = "default-src 'self'; img-src 'self' data:; " +
 	"style-src 'self'; script-src 'self'; connect-src 'self'"
 

@@ -5,10 +5,23 @@
 
 ## 1. 构建与启动
 
+**一键启动（Windows，推荐）**：双击仓库根的 `start.cmd`，或
+
+```powershell
+.\start.ps1               # 默认 http://127.0.0.1:14514
+.\start.ps1 -Status       # 只看健康状态（未运行退出码 1）
+.\start.ps1 -Port 14515 -NoBuild   # 换端口、跳过构建
+.\start.ps1 -Listen 0.0.0.0:14514  # 允许局域网访问（会打印本机 IP 的 URL）
+```
+
+脚本会自动按需构建、检查端口（已在运行就不重复启动）、等 health 就绪后打印地址，Ctrl+C 停止。
+
+手动构建与启动：
+
 ```bash
 cd server
 go build -trimpath -ldflags="-s -w" -o fzucheckin ./cmd/fzucheckin      # 生产二进制约 6.3 MB
-./fzucheckin -listen 127.0.0.1:8787 -data ./data
+./fzucheckin -listen 127.0.0.1:14514 -data ./data
 ```
 
 Windows：
@@ -16,7 +29,7 @@ Windows：
 ```powershell
 cd server
 go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
-.\fzucheckin.exe -listen 127.0.0.1:8787 -data .\data
+.\fzucheckin.exe -listen 127.0.0.1:14514 -data .\data
 ```
 
 参数与环境变量：
@@ -36,7 +49,7 @@ go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
 
 ## 2. 三步用起来
 
-1. 浏览器打开 <http://127.0.0.1:8787> → 设置管理密码（≥8 位，只此一次）。
+1. 浏览器打开 <http://127.0.0.1:14514> → 设置管理密码（≥8 位，只此一次）。
 2. 「配置」页填：学号 + 密码（或免登 token）、宿舍楼经纬度（[高德坐标拾取器](https://lbs.amap.com/tools/picker)）、推送渠道（可选）→ 保存。
    - 已有旧版 `config.yaml`：点「导入 YAML」粘贴全文 → 预览 → 应用。
 3. 「仪表盘」看今日状态与下一档倒计时；到点自动签到，结果进「历史」与推送。
@@ -46,33 +59,44 @@ go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
 | 视图 | 作用 |
 |---|---|
 | 仪表盘 `#/dashboard` | 今日是否已签、窗口内/外、今日计划与迟到线、下一档倒计时、时间轴三态（待触发/已完成/已错过）、`立即签到` / `定位预检` / `推送测试`、最近 5 次运行 |
-| 配置 `#/config` | 账号 / 位置（单点或位置池）/ 时间调度 / 假期 / 推送 / 服务参数；带行内校验与警告；导入 YAML、导出 |
+| 配置 `#/config` | 账号 / 位置（单点或位置池，含「获取当前位置」）/ 时间调度 / 假期 / 推送 / 服务参数；带行内校验与警告；导入 YAML、导出 |
 | 日志 `#/logs` | 历史日志快照 + SSE 实时流（等价 `tail -f`），级别过滤、自动滚动 |
 | 历史 `#/runs` | 运行记录分页与详情抽屉（含坐标、校区、迟到标记、错误原文） |
+
+界面是**左右分栏**：左侧固定侧边栏放导航与退出，右侧是内容区；窄屏自动变成顶部横向导航。所有控件（下拉、复选框、数字、时间、日期、文本域、滚动条、焦点环）都是自绘样式，不跟随浏览器默认外观。
+
+### 「获取当前位置」按钮
+
+配置页 → 位置 → 点「获取当前位置」，浏览器会请求定位权限，成功后自动填入经度/纬度。
+
+- 填入的是**高德 GCJ-02**：浏览器给的是 WGS-84，前端做了标准转换（福州实测偏移约 590 米，不转换会「定位不在签到范围」）。
+- 浏览器只在 **HTTPS 或 `127.0.0.1` / `localhost`** 下允许定位。用局域网 IP 以 http 打开时按钮会给出明确提示，此时请改用 127.0.0.1 或配 HTTPS 反代。
+- 只填坐标，不覆盖你写的「上报文案」，也不会自动保存——确认无误后自己点保存。
+- 电脑定位靠 Wi-Fi/网络，室内精度可能几百米；状态行会显示精度，超过 100 米会提示到窗边重试。手机浏览器精度通常更好。
 
 ## 4. 常用 API（全部 `/api/v1`，非 GET 需带 `X-Requested-With: fzu-web`）
 
 ```bash
 # 健康检查（无需鉴权）
-curl -s http://127.0.0.1:8787/api/v1/health
+curl -s http://127.0.0.1:14514/api/v1/health
 
 # 登录（拿到 fzu_sess Cookie 后其余接口都带上）
 curl -s -c jar -H 'X-Requested-With: fzu-web' -H 'Content-Type: application/json' \
-     -d '{"password":"你的管理密码"}' http://127.0.0.1:8787/api/v1/auth/login
+     -d '{"password":"你的管理密码"}' http://127.0.0.1:14514/api/v1/auth/login
 
 # 今日状态 / 下一档 / 决策
-curl -s -b jar http://127.0.0.1:8787/api/v1/status
+curl -s -b jar http://127.0.0.1:14514/api/v1/status
 
 # 手动补签（跳过等待与窗口拦截）
 curl -s -b jar -H 'X-Requested-With: fzu-web' -H 'Content-Type: application/json' \
-     -d '{"mode":"force"}' http://127.0.0.1:8787/api/v1/runs
+     -d '{"mode":"force"}' http://127.0.0.1:14514/api/v1/runs
 
 # 定位预检（只 init + check，不打卡）
 curl -s -b jar -H 'X-Requested-With: fzu-web' -H 'Content-Type: application/json' \
-     -d '{"mode":"normal","dry_run":true}' http://127.0.0.1:8787/api/v1/runs
+     -d '{"mode":"normal","dry_run":true}' http://127.0.0.1:14514/api/v1/runs
 
 # 实时日志
-curl -N -b jar http://127.0.0.1:8787/api/v1/logs/stream
+curl -N -b jar http://127.0.0.1:14514/api/v1/logs/stream
 ```
 
 完整契约（含错误码与 JSON 结构）见设计文档 §9。
@@ -164,7 +188,8 @@ schtasks /create /tn fzucheckin /tr "C:\path\fzucheckin.exe -listen 127.0.0.1:87
 | 现象 | 原因与处理 |
 |---|---|
 | 打开页面只看到「请通过服务访问」 | 直接双击了 `index.html`（`file://`）——必须通过服务 URL 访问 |
-| 登录后立刻回登录页 | Cookie 被浏览器拦：确认用 `http://127.0.0.1:8787` 而不是 `localhost` 混用，或反向代理透传了 `X-Forwarded-Proto: https` 但实际是 http |
+| 登录后立刻回登录页 | Cookie 被浏览器拦：确认用 `http://127.0.0.1:14514` 而不是 `localhost` 混用，或反向代理透传了 `X-Forwarded-Proto: https` 但实际是 http |
 | 窗口外启动什么都不做 | 设计行为：窗口外一律静默跳过；要立刻验证用「立即签到」 |
 | 服务器暂未返回今日计划 | 跨午夜 0:00–1:00 的 500，属正常；服务会重试 |
 | 签名/时间不对 | 服务内部一律按北京时间判定，宿主机时区不影响结果 |
+

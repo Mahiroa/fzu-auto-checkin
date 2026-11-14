@@ -477,16 +477,23 @@ Go 侧注意：`json.Marshal` 对 `float64` 用最短往返表示（与 Python `
 ## 13. 前端规格（`server/web/static`）
 
 - **技术**：原生 ESM（`<script type="module">`）+ 手写 CSS 变量主题，**零构建、零依赖**；`fetch` 统一封装（自动带 `X-Requested-With`、`credentials:'same-origin'`、401 → 跳登录）。
-- **体积预算**：`index.html + app.js + style.css` 合计 ≤ 120 KB（未压缩），单文件 ≤ 60 KB。
+- **布局（v1.1，左右分栏）**：`#shell` 为 CSS Grid `248px minmax(0,1fr)`——左侧 `<aside class="sidebar">` 固定 `sticky` 全高（品牌 / `#nav` 竖排导航 / 底部「退出登录 + 版本号」），右侧 `#main` 内容区（`max-width 1180px` 居中）。`≤860px` 侧栏转为顶部横向条（导航横向滚动），`≤480px` 隐藏品牌文字、导航四等分。`<a class="skip">` 跳到主内容保留。
+- **控件全部自绘**（不使用浏览器默认外观）：`select` / `checkbox` / `time` / `date` / `text` / `password` / `textarea` 一律 `appearance:none`，`number` 用 `appearance:textfield` + 隐藏 spin button（同样不是原生外观）；图标用 data URI SVG（`#` 需写成 `%23`）；`time/date` 把原生指示器 `opacity:0` 覆盖在自绘图标上方，点击仍能弹出原生选择器；复选框自绘方框 + `::after` 勾；自绘滚动条与 `:focus-visible` 焦点环；颜色对比度按 WCAG AA 复核（白字面统一 `--accent-btn`，浅色主题的日志 INFO 用压深的 `--accent-lv`）。
+- **体积预算**：`index.html ≤ 40 KB`、`style.css ≤ 45 KB`、`app.js ≤ 80 KB`，三文件合计 **≤ 160 KB**（未压缩）；当前实测 23.6 / 32.1 / 64.6 KiB（合计 120.3 KiB）。体积门禁在 `zz_review_test.go` / `zz_layout_review_test.go` 里，超了就红。
 - **视图**（单页 + hash 路由 `#/dashboard|config|logs|runs`）：
   1. `#/dashboard`：今日状态卡（已签/待签/假期）、计划时段与迟到线、下一档倒计时（前端本地每秒递减，数据来自 `status.next_run_at`）、`slots` 时间轴（pending/done/missed 三色）、按钮「立即签到」「定位预检」「推送测试」、最近 5 次运行表格。
   2. `#/config`：分段表单（账号 / 位置（单点或池，可增删行、权重）/ 时间调度 / 假期 / 推送 / 服务），行内校验与警告展示、保存（PUT）、`导入 YAML`（弹窗粘贴 → 预览 → 应用）、`导出`。
   3. `#/logs`：SSE 实时流（等价 `tail -f`）、级别过滤、自动滚动开关、复制/清屏；断线显示「重连中…」。
   4. `#/runs`：历史分页列表 + 单条详情（含坐标、校区、isLate、错误原文）。
   5. 未初始化 → 强制「设置管理密码」；未登录 → 登录页。
-- **体验**：暗色为默认（跟随 `prefers-color-scheme`），键盘可达（所有交互 `button`/`label`），`aria-live="polite"` 播报运行结果，无外部字体/CDN（离线可用）。
+- **浏览器定位（v1.1）**：「位置」区提供「获取当前位置」按钮（`#btn-geo` + 状态行 `#geo-status`）。
+  - 流程：`navigator.geolocation.getCurrentPosition({enableHighAccuracy:true, timeout:15000, maximumAge:0})` → **WGS-84 → GCJ-02** 转换 → 以 6 位小数填入经度/纬度 → 冒泡 `input` 事件（不自动保存、不覆盖上报文案）。
+  - **必须做坐标转换**：浏览器给的是 WGS-84，高德/学校要 GCJ-02；福州实测偏移约 590 米，不转换会直接「定位不在签到范围」。境外坐标（`outOfChina`）原样返回。
+  - **安全上下文**：`getCurrentPosition` 只在 HTTPS 或 `localhost/127.0.0.1` 下可用；`isSecureContext === false` 时给出可执行提示（改用 127.0.0.1 或配 HTTPS），不能表现为「点了没反应」。
+  - 错误按 `error.code` 分档（拒绝权限 / 定位源不可用 / 超时），状态行 + toast 双通道；精度 > 100 m 追加「可能在室内」提示。
+- **体验**：暗色为默认（跟随 `prefers-color-scheme`），键盘可达（所有交互 `button`/`label`），`aria-live="polite"` 播报运行结果与定位结果，无外部字体/CDN（离线可用）。
 - **错误呈现**：`error.details[]` 逐条列出，附「怎么改」文本（与后端 §6.2 同源）。
-
+- **CSP 约束（写前端时的三条硬线）**：不许 `style="…"` 内联属性、不许内联 `<style>`、不许外部资源；图标只能 CSS 绘制或 data URI；动态文本一律 `textContent`（无 `innerHTML`/`eval`）。
 ## 14. 非功能预算
 
 | 指标 | 预算 | 测量方法 |
@@ -512,12 +519,27 @@ Go 侧注意：`json.Marshal` 对 `float64` 用最短往返表示（与 Python `
 
 ## 16. 运维与部署
 
+**一键启动（推荐，Windows）**：仓库根的双击入口 `start.cmd` → 调 `start.ps1`。
+
+```powershell
+.\start.ps1                 # 默认 http://127.0.0.1:14514，自动按需构建，前台运行，Ctrl+C 停止
+.\start.ps1 -Status         # 只看健康状态（JSON），未运行退出码 1
+.\start.ps1 -Port 14515     # 换端口
+.\start.ps1 -NoBuild        # 用现有 exe，不重新构建
+.\start.ps1 -Listen 0.0.0.0:14514   # 局域网可访问（会提示用本机 IP 打开）
+.\start.ps1 -NoOpen         # 不自动打开 Chrome
+```
+
+脚本行为：定位仓库根 → 检查端口（已在运行则不重复启动，打印 URL 后退出 0；被别的程序占用则报进程名并退出 1）→ 按需 `go build -trimpath -ldflags="-s -w"` → 前台起服务 → 30 秒内轮询 `/api/v1/health` 就绪后打印 URL（并可用 Chrome 绝对路径打开）→ 服务输出逐行回显 + 落 `%TEMP%\fzucheckin-<port>-*.log`。**不得**用 `Start-Process http://…` 打开浏览器（本机 http 默认关联是 Edge）。
+
+手动构建与运行：
+
 ```bash
 # 构建（Windows）
 go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
-# 运行
-./fzucheckin.exe -listen 127.0.0.1:8787 -data ./data
-# 或环境变量：FZU_LISTEN / FZU_DATA_DIR / FZU_LOG_LEVEL(debug|info|warn|error)
+# 运行（服务自身默认 8787；一键脚本默认 14514）
+./fzucheckin.exe -listen 127.0.0.1:14514 -data ./data
+# 或环境变量：FZU_LISTEN / FZU_DATA_DIR / FZU_LOG_LEVEL(debug|info|warn|error) / FZU_TRUST_PROXY=1
 ```
 
 - **systemd（Linux）**：`Restart=on-failure`、`After=network-online.target`、`NoNewPrivileges=yes`、`ProtectSystem=strict`、`ReadWritePaths=/var/lib/fzucheckin`。
@@ -602,3 +624,5 @@ go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
 | server-agent | `internal/server`、`cmd`、`web/embed.go` | 路由/中间件/鉴权/调度循环/flow/SSE，54 用例，覆盖率 84.8% |
 | web-agent | `web/static` | 4 视图原生前端（96.2 KB / 120 KB 预算），Chrome 走查 53 项 |
 | verify-agent | `zz_review_test.go` ×2 | 26 个对抗性测试函数、41 叶子用例、8 条缺陷（含 1 条 P0） |
+
+

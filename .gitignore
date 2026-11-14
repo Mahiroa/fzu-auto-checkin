@@ -3,6 +3,7 @@ config.yaml
 config.yml
 # Go 服务的运行时数据：里面有密码哈希、Session 密钥、token 与全部运行历史
 server/data/
+server/data-*/
 data/
 
 # ---- Python ----
@@ -21,3 +22,4 @@ server/fzucheckin.exe
 # ---- 运行时 ----
 *.log
 .DS_Store
+

@@ -971,6 +971,134 @@ async function saveConfig() {
   }
 }
 
+/* ---------- 6.1 浏览器定位：WGS-84 → 高德 GCJ-02 ---------- */
+
+/* GCJ-02 偏移公式的椭球参数（克拉索夫斯基 1940），标准实现的固定值 */
+const GCJ_A = 6378245.0;
+const GCJ_EE = 0.00669342162296594323;
+const GCJ_PI = 3.1415926535897932384626;
+
+/* 模块级 busy：定位期间再点只会再挂一个被浏览器忽略的请求，直接挡住更省事 */
+let geoBusy = false;
+
+/* 境外不偏移：GCJ-02 只对国内坐标加偏移，对境外点套公式会把它推走几百米，必须原样返回 */
+function outOfChina(lng, lat) {
+  return !(lng > 73.66 && lng < 135.05 && lat > 3.86 && lat < 53.55);
+}
+
+function transformLat(x, y) {
+  let ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+  ret += (20.0 * Math.sin(6.0 * x * GCJ_PI) + 20.0 * Math.sin(2.0 * x * GCJ_PI)) * 2.0 / 3.0;
+  ret += (20.0 * Math.sin(y * GCJ_PI) + 40.0 * Math.sin(y / 3.0 * GCJ_PI)) * 2.0 / 3.0;
+  ret += (160.0 * Math.sin(y / 12.0 * GCJ_PI) + 320 * Math.sin(y * GCJ_PI / 30.0)) * 2.0 / 3.0;
+  return ret;
+}
+
+function transformLng(x, y) {
+  let ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+  ret += (20.0 * Math.sin(6.0 * x * GCJ_PI) + 20.0 * Math.sin(2.0 * x * GCJ_PI)) * 2.0 / 3.0;
+  ret += (20.0 * Math.sin(x * GCJ_PI) + 40.0 * Math.sin(x / 3.0 * GCJ_PI)) * 2.0 / 3.0;
+  ret += (150.0 * Math.sin(x / 12.0 * GCJ_PI) + 300.0 * Math.sin(x / 30.0 * GCJ_PI)) * 2.0 / 3.0;
+  return ret;
+}
+
+/* 浏览器 Geolocation 给的是 WGS-84（GPS 原始坐标），服务端判签到范围用的是高德 GCJ-02。
+   少这一步在福州会偏出约 590 米，结论直接变成「不在签到范围」。
+   参考向量：WGS-84 119.20463,26.04920 → GCJ-02 119.209433,26.046112 */
+function wgs84ToGcj02(lng, lat) {
+  if (outOfChina(lng, lat)) return { lng: lng, lat: lat };
+  let dLat = transformLat(lng - 105.0, lat - 35.0);
+  let dLng = transformLng(lng - 105.0, lat - 35.0);
+  const radLat = lat / 180.0 * GCJ_PI;
+  let magic = Math.sin(radLat);
+  magic = 1 - GCJ_EE * magic * magic;
+  const sqrtMagic = Math.sqrt(magic);
+  dLat = (dLat * 180.0) / ((GCJ_A * (1 - GCJ_EE)) / (magic * sqrtMagic) * GCJ_PI);
+  dLng = (dLng * 180.0) / (GCJ_A / sqrtMagic * Math.cos(radLat) * GCJ_PI);
+  return { lng: lng + dLng, lat: lat + dLat };
+}
+
+/* 状态行：类名 ok/err 由这里统一切，避免成功/失败两条路径各写一遍 */
+function geoStatus(text, kind) {
+  const el = $('geo-status');
+  if (!el) return;
+  el.textContent = str(text);
+  el.classList.remove('ok', 'err');
+  if (kind) el.classList.add(kind);
+}
+
+/* 直接改 value 不会触发配置表单的 input 监听（徽标/提示靠它同步），补发一次冒泡 input */
+function fillCoord(id, v) {
+  const el = $(id);
+  if (!el) return;
+  setVal(id, v);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function onGeoOk(pos) {
+  const c = (pos && pos.coords) || {};
+  const g = wgs84ToGcj02(Number(c.longitude), Number(c.latitude));
+  if (!Number.isFinite(g.lng) || !Number.isFinite(g.lat)) {
+    onGeoErr({ code: 0, message: '浏览器返回的坐标不可用' });
+    return;
+  }
+  /* 保留 6 位小数：约 0.1 米，远小于 GPS 误差，也让回填值和配置里手填的格式一致 */
+  fillCoord('cfg-lon', g.lng.toFixed(6));
+  fillCoord('cfg-lat', g.lat.toFixed(6));
+  const acc = Math.round(Number(c.accuracy) || 0);
+  let msg = '已定位：精度约 ±' + acc + ' 米，已转换为高德 GCJ-02，请确认是否为你的常驻位置。';
+  if (acc > 100) msg += ' 精度较低（可能在室内），建议到窗边重试。';
+  geoStatus(msg, 'ok');
+  announce('已定位并填入 GCJ-02 坐标（未保存）');
+}
+
+function onGeoErr(e) {
+  const code = Number(e && e.code);
+  let msg;
+  if (code === 1) msg = '浏览器拒绝了定位权限，请在地址栏左侧的站点设置里允许位置，然后重试';
+  else if (code === 2) msg = '系统定位服务不可用（GPS/Wi-Fi 定位被关闭？）';
+  else if (code === 3) msg = '定位超时，请重试或手动填写坐标';
+  else msg = '定位失败：' + (str(e && e.message) || '未知错误');
+  geoStatus(msg, 'err');
+  toast('error', msg);
+}
+
+/* 点击主流程：只回填经纬度，不碰「上报地址文案」，也不自动保存（要用户自己确认后点保存） */
+function locateNow(btn) {
+  if (geoBusy) return;
+  if (!navigator.geolocation) {
+    geoStatus('当前浏览器不支持定位', 'err');
+    toast('error', '当前浏览器不支持定位');
+    return;
+  }
+  /* 非安全上下文（局域网 IP + http 就是本服务最常见的形态）下浏览器会直接以
+     PERMISSION_DENIED 拒绝，错误码看着像「用户点了拒绝」，所以必须单独拦下给可执行提示 */
+  if (window.isSecureContext === false) {
+    geoStatus('浏览器只在 HTTPS 或 localhost/127.0.0.1 下允许定位；用局域网 IP 以 http 打开时需要改用 127.0.0.1 或配 HTTPS', 'err');
+    toast('error', '定位需要安全上下文：改用 http://127.0.0.1 或 HTTPS 访问');
+    return;
+  }
+  geoBusy = true;
+  setBusy(btn, '定位中…');
+  // 用 'busy' 点亮状态行的自绘转圈点（ui 侧已实现 .geo-status.busy），
+  // 比一行静止文字更能说明"正在等你点允许"。
+  geoStatus('申请定位权限…', 'busy');
+  const finish = function (err, pos) {
+    geoBusy = false;
+    clearBusy(btn);
+    if (err) onGeoErr(err); else onGeoOk(pos);
+  };
+  try {
+    navigator.geolocation.getCurrentPosition(
+      function (pos) { finish(null, pos); },
+      function (e) { finish(e, null); },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  } catch (e) {
+    finish({ code: 0, message: e && e.message }, null);
+  }
+}
+
 /* ---------- 7. 导入 / 导出 ---------- */
 
 function openImport() {
@@ -1393,8 +1521,9 @@ function renderRunDetail(r) {
   const errText = str(r.error);
   if (errText) {
     const box = document.createElement('div');
-    box.className = 'err-box';
-    box.style.marginTop = '10px';
+    // 间距交给 CSS（.err-box-gap）：CSP 下内联 style 属性本身会被 style-src 丢弃，
+    // 而"文档里不出现 [style]"是可自动化门禁，不能在错误分支上破例。
+    box.className = 'err-box err-box-gap';
     const p = document.createElement('p');
     p.className = 'err';
     p.textContent = '错误原文：' + errText;
@@ -1534,6 +1663,9 @@ function bindEvents() {
   if (exportBtn) exportBtn.addEventListener('click', exportConfig);
   const typeSel = $('cfg-notify-type');
   if (typeSel) typeSel.addEventListener('change', applyNotifyType);
+  /* 浏览器定位：按钮在「位置」区域，未登录/视图隐藏时可能压根不存在，必须判空 */
+  const geoBtn = $('btn-geo');
+  if (geoBtn) geoBtn.addEventListener('click', function () { locateNow(geoBtn); });
 
   each(document.querySelectorAll('.clear-secret'), function (btn) {
     btn.addEventListener('click', function () {

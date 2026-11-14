@@ -1474,10 +1474,13 @@ func TestReviewFrontendAndCSPContract(t *testing.T) {
 		t.Fatalf("app.js 真的使用了 innerHTML（注释里提到不算）：既有约定是 textContent")
 	}
 
-	// 体积预算（§13）：合计 ≤ 120KB，单文件 ≤ 60KB。
+	// 体积预算（§13 v1.1）：合计 ≤ 160KB，单文件 ≤ 80KB。
+	// v1.1 加了浏览器定位（WGS-84→GCJ-02）与整套自绘控件，指标正式上调；
+	// 分文件更细的口径（index ≤40KB / style ≤45KB / app.js ≤80KB）在
+	// zz_layout_review_test.go 的 TestReviewLayoutSizeBudgets 里钉死。
 	const (
-		totalBudget = 120 << 10
-		fileBudget  = 60 << 10
+		totalBudget = 160 << 10
+		fileBudget  = 80 << 10
 	)
 	total := len(index) + len(appJS) + len(styleCSS)
 	if total > totalBudget {
@@ -1488,7 +1491,7 @@ func TestReviewFrontendAndCSPContract(t *testing.T) {
 			t.Fatalf("%s 体积 %d 超过单文件预算 %d", name, size, fileBudget)
 		}
 	}
-	t.Logf("前端体积：index=%d app.js=%d style.css=%d 合计=%d（预算 120KB，单文件 60KB）",
+	t.Logf("前端体积：index=%d app.js=%d style.css=%d 合计=%d（预算 160KB，单文件 80KB）",
 		len(index), len(appJS), len(styleCSS), total)
 
 	// CSP 头本身。

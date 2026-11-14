@@ -1,10 +1,18 @@
 // 真实浏览器验收：Chrome + CDP（flat session），跑完四个视图并留截图。
 //
-// 为什么单独写一个脚本而不是手点：验收结论要可复现、可留痕。这里把「登录 → 仪表盘 →
-// 配置 → 日志(SSE) → 历史 → 移动端」每一步都落成断言 + PNG，失败会以非 0 退出码返回。
+// 为什么单独写一个脚本而不是手点：验收结论要可复现、可留痕。这里把「登录 → 布局 →
+// 仪表盘 → 配置（含自绘控件 + 浏览器定位）→ 日志(SSE) → 历史 → 移动端 → 控制台/CSP 干净」
+// 每一步都落成断言 + PNG，失败会以非 0 退出码返回。
 // 硬约束（见 browser-verification 技能）：只用 Google Chrome 绝对路径，绝不用 Edge。
 //
 // 用法：node scripts/ui-verify.mjs --base http://127.0.0.1:8787 --cdp 9225 --password xxx --out <dir>
+//
+// v1.1（第二轮验收）新增：
+//   - 左导航 / 右内容的 Grid 布局断言（1440×900），并真的点一次导航看 aria-current；
+//   - 自绘控件的 computed appearance（select/checkbox/time/text）、checkbox 尺寸、全文档无内联 style；
+//   - 浏览器定位：CDP 授权 + 坐标覆盖 → 断言 WGS-84→GCJ-02 的参考向量、精度提示、拒绝分支；
+//   - 移动端（390×844）：无横向溢出 + 侧栏仍是 sticky + 导航条在主内容之上；
+//   - CSP 违规（securitypolicyviolation / Log 域的 security error）与 console.error 一起必须为 0。
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -38,6 +46,7 @@ let seq = 0;
 const pending = new Map();
 const consoleErrors = [];
 const exceptions = [];
+const cspViolations = [];
 
 ws.onmessage = (raw) => {
   const msg = JSON.parse(raw.data);
@@ -52,6 +61,14 @@ ws.onmessage = (raw) => {
   }
   if (msg.method === 'Runtime.exceptionThrown') {
     exceptions.push(msg.params.exceptionDetails.text + ' ' + (msg.params.exceptionDetails.exception?.description ?? ''));
+  }
+  // CSP 违规在 Chrome 里走 Log 域（source=security），不走 console API；
+  // 只认"安全策略"这一类，网络层的 4xx/5xx 噪音不算。
+  if (msg.method === 'Log.entryAdded' && msg.params.entry.level === 'error') {
+    const e = msg.params.entry;
+    if (e.source === 'security' || /Refused to|Content Security Policy|violates the following/i.test(e.text ?? '')) {
+      cspViolations.push(`${e.source}: ${e.text}`);
+    }
   }
 };
 
@@ -71,6 +88,17 @@ const T = (m, p) => send(m, p, sessionId);
 
 await T('Page.enable');
 await T('Runtime.enable');
+try { await T('Log.enable'); } catch { /* 老版本 Chrome 没有 Log 域，页面内监听兜底 */ }
+// 页面内监听：securitypolicyviolation 是 CSP 违规最权威的来源，且不受 Log 域开关影响。
+// 必须在 Page.navigate 之前注册，才能在文档解析阶段就捕获。
+try {
+  await T('Page.addScriptToEvaluateOnNewDocument', {
+    source: `window.__cspViolations = [];
+      document.addEventListener('securitypolicyviolation', function (e) {
+        window.__cspViolations.push((e.effectiveDirective || e.violatedDirective) + ' ' + (e.blockedURI || ''));
+      });`,
+  });
+} catch { /* 忽略：没有这个能力时只靠 Log 域 */ }
 // 无头页面默认按 hidden 处理，setInterval 会被节流到约 1 次/分钟；提到前台并模拟焦点，
 // 才能真实验证「倒计时每秒递减」这种依赖定时器的行为。
 await T('Page.bringToFront', {});
@@ -107,6 +135,37 @@ async function setViewport(width, height, mobile = false) {
 
 const text = (id) => evaluate(`(document.getElementById(${JSON.stringify(id)})?.innerText ?? '').trim()`);
 const hidden = (id) => evaluate(`document.getElementById(${JSON.stringify(id)})?.hidden ?? true`);
+const styleOf = (selector, prop) =>
+  evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(selector)})).getPropertyValue(${JSON.stringify(prop)})`);
+const rectOf = (selector) =>
+  evaluate(`(() => { const r = document.querySelector(${JSON.stringify(selector)})?.getBoundingClientRect();
+    return r ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height } : null; })()`);
+const near = (got, want, eps) => Number.isFinite(Number(got)) && Math.abs(Number(got) - want) <= eps;
+
+// 点 #btn-geo，等状态行从「申请定位权限…」落定，然后把状态 + 回填值一起取回来。
+async function clickGeoSettle(label) {
+  await evaluate(`(() => {
+    const el = document.getElementById('geo-status');
+    if (el) { el.textContent = ''; el.classList.remove('ok', 'err', 'busy'); }
+    document.getElementById('btn-geo').click();
+    return true;
+  })()`);
+  await waitFor(
+    `(() => { const el = document.getElementById('geo-status'); const t = (el?.innerText ?? '').trim();
+      return t.length > 0 && !/申请定位权限|定位中/.test(t); })()`,
+    { label, timeout: 25000 }
+  );
+  return evaluate(`(() => {
+    const el = document.getElementById('geo-status');
+    return {
+      text: (el.innerText || '').trim(),
+      cls: el.className,
+      lon: document.getElementById('cfg-lon').value,
+      lat: document.getElementById('cfg-lat').value,
+      version: (document.getElementById('config-version')?.innerText ?? '').trim(),
+    };
+  })()`);
+}
 
 try {
   // ---------- 登录 ----------
@@ -130,6 +189,54 @@ try {
   } else {
     check(true, '已处于登录态（Cookie 复用）');
   }
+
+  // ---------- 布局：左导航 + 右内容（1440×900） ----------
+  console.log('\n=== 布局（1440×900）===');
+  await evaluate(`window.scrollTo(0, 0)`);
+  await sleep(150);
+
+  const shellDisplay = await styleOf('#shell', 'display');
+  check(shellDisplay === 'grid', '#shell 是 CSS Grid', shellDisplay);
+  // computed grid-template-columns 在 Chrome 里已经解析成像素值（如 "248px 1192px"）。
+  const firstCol = await evaluate(`parseFloat(
+    getComputedStyle(document.getElementById('shell')).gridTemplateColumns.split(' ')[0] || '0')`);
+  check(Number.isFinite(firstCol) && firstCol >= 200, '左侧栏宽度 ≥ 200px（§13 规定 248px）', `${firstCol}px`);
+
+  const asidePos = await styleOf('aside.sidebar', 'position');
+  check(asidePos === 'sticky' || asidePos === 'fixed', 'aside.sidebar 为 sticky/fixed（长页面滚动时导航不跑）', asidePos);
+
+  const navRect = await rectOf('#nav');
+  const mainRect = await rectOf('#main');
+  if (navRect && mainRect) {
+    check(navRect.left < mainRect.left, '#nav 在 #main 左侧', `nav.left=${navRect.left} main.left=${mainRect.left}`);
+    console.log(`  [INFO] 左栏=${firstCol}px · aside.position=${asidePos} · nav.left=${navRect.left} · main.left=${mainRect.left}`);
+  } else {
+    check(false, '#nav / #main 都取得到几何信息', JSON.stringify({ navRect, mainRect }));
+  }
+
+  const navBtnCount = await evaluate(`document.querySelectorAll('aside .nav-btn').length`);
+  check(navBtnCount === 4, '侧栏 4 个导航项', String(navBtnCount));
+
+  // 真点一次「配置」：顺带验证 hash 路由 + aria-current 的联动（不是只看静态 DOM）。
+  await evaluate(`(() => {
+    const btn = Array.from(document.querySelectorAll('#nav .nav-btn')).find((b) => b.textContent.trim() === '配置');
+    if (!btn) return false;
+    btn.click();
+    return true;
+  })()`);
+  await waitFor(`!document.getElementById('view-config')?.hidden`, { label: '点「配置」后配置视图可见' });
+  const currentNav = await evaluate(
+    `(document.querySelector('aside .nav-btn[aria-current="page"]')?.textContent ?? '').trim()`);
+  check(currentNav === '配置', '点「配置」后侧栏高亮项是「配置」', `aria-current=${currentNav}`);
+  await shot('verify-layout-sidebar');
+
+  // 回到仪表盘，后续用例继续用真实导航（而不是只改 location.hash）。
+  await evaluate(`(() => {
+    const btn = Array.from(document.querySelectorAll('#nav .nav-btn')).find((b) => b.textContent.trim() === '仪表盘');
+    if (btn) btn.click();
+    return true;
+  })()`);
+  await waitFor(`!document.getElementById('view-dashboard')?.hidden`, { label: '回到仪表盘' });
 
   // ---------- 仪表盘 ----------
   console.log('\n=== 仪表盘 ===');
@@ -183,6 +290,32 @@ try {
   check(passValue === '••••', '密码以哨兵回显（不泄露明文）', passValue);
   check(timeRows >= 2, '时刻多档渲染成 2 行', String(timeRows));
   check(cfgVersion.length > 0, '显示配置版本', cfgVersion);
+
+  // ---------- 自绘控件（computed style） ----------
+  console.log('\n=== 自绘控件（computed style）===');
+  const appearanceOf = (id) =>
+    evaluate(`getComputedStyle(document.getElementById(${JSON.stringify(id)})).appearance`);
+  const appearance = {};
+  for (const id of ['cfg-notify-type', 'cfg-vacation-notify', 'cfg-window-start', 'cfg-lon']) {
+    const got = await appearanceOf(id);
+    appearance[id] = got;
+    check(got === 'none', `#${id} appearance === none`, got);
+  }
+  // number：实现选的是 appearance:textfield + 隐藏 spin button（两者等价于"看不到原生控件"）。
+  const jitterAppearance = await appearanceOf('cfg-jitter');
+  appearance['cfg-jitter'] = jitterAppearance;
+  console.log(`  [INFO] appearance：${Object.entries(appearance).map(([k, v]) => `${k}=${v}`).join(' · ')}`);
+  check(jitterAppearance === 'textfield' || jitterAppearance === 'none',
+    '#cfg-jitter appearance 为 textfield/none（原生上下箭头已隐藏）', jitterAppearance);
+
+  const cbRect = await rectOf('#cfg-vacation-notify');
+  check(cbRect !== null && cbRect.width >= 16 && cbRect.width <= 22,
+    '自绘复选框宽度 16–22px', cbRect ? `${cbRect.width.toFixed(2)}px` : 'null');
+  if (cbRect) console.log(`  [INFO] #cfg-vacation-notify ${cbRect.width.toFixed(2)}×${cbRect.height.toFixed(2)}px`);
+
+  // 无内联 style：CSP 是 style-src 'self'（无 'unsafe-inline'），任何 style 属性都会被丢弃。
+  const styledCount = await evaluate(`document.querySelectorAll('[style]').length`);
+  check(styledCount === 0, '配置视图渲染后全文档无内联 style 属性', `${styledCount} 处`);
   await shot('03-config');
 
   // 保存一次，验证 PUT 往返。等待条件必须盯"版本号变化"：toasts 里可能还留着
@@ -201,6 +334,47 @@ try {
   check(/保存|成功|v\d/i.test(saveMsg), '保存后有成功反馈', saveMsg.replace(/\n/g, ' | ').slice(0, 120));
   check(cfgVersionAfter !== cfgVersion || /v\d/.test(saveMsg), '配置版本已推进', `${cfgVersion} -> ${cfgVersionAfter}`);
   await shot('04-config-saved');
+
+  // ---------- 浏览器定位（CDP 模拟，核心用例） ----------
+  // 参考向量：WGS-84 119.20463,26.04920 → GCJ-02 119.209433,26.046112（§13 定位 v1.1）。
+  console.log('\n=== 浏览器定位（CDP 模拟）===');
+  await send('Browser.grantPermissions', { origin: BASE, permissions: ['geolocation'] });
+  await T('Emulation.setGeolocationOverride', { latitude: 26.0492, longitude: 119.20463, accuracy: 15 });
+
+  const verBeforeGeo = await text('config-version');
+  const geoOk = await clickGeoSettle('定位成功并落定状态行');
+  check(near(geoOk.lon, 119.209433, 0.000002), '#cfg-lon 回填为 GCJ-02 119.209433（±2e-6）', geoOk.lon);
+  check(near(geoOk.lat, 26.046112, 0.000002), '#cfg-lat 回填为 GCJ-02 26.046112（±2e-6）', geoOk.lat);
+  check(/GCJ-02/.test(geoOk.text), '#geo-status 说明已转换为 GCJ-02', geoOk.text);
+  check(/\bok\b/.test(geoOk.cls), '#geo-status 为 ok 态', geoOk.cls);
+  check(geoOk.version === verBeforeGeo, '定位只回填、不自动保存（配置版本未变）', `${verBeforeGeo} -> ${geoOk.version}`);
+  await shot('verify-geo-ok');
+
+  // 精度 > 100 m 时追加"精度较低"提示（§13 定位 v1.1）。
+  await T('Emulation.setGeolocationOverride', { latitude: 26.0492, longitude: 119.20463, accuracy: 350 });
+  const geoLow = await clickGeoSettle('低精度定位落定状态行');
+  check(/精度较低/.test(geoLow.text), '精度 350 m 时提示「精度较低」', geoLow.text);
+
+  // 收回权限后必须落到 err 分支：状态行有文案 + err 态（不能"点了没反应"）。
+  await send('Browser.resetPermissions', {});
+  const geoDenied = await clickGeoSettle('定位被拒后落定状态行');
+  let denial = geoDenied;
+  if (!/\berr\b/.test(denial.cls)) {
+    // 部分 Chrome 版本里 resetPermissions 只把权限打回 "ask"，无头模式不会真的拒绝；
+    // 这时用显式 denied 复现同一分支（断言不变，只换触发方式）。
+    await send('Browser.setPermission', {
+      origin: BASE,
+      permission: { name: 'geolocation' },
+      setting: 'denied',
+    });
+    denial = await clickGeoSettle('显式拒绝权限后落定状态行');
+    console.log('  [INFO] resetPermissions 未触发拒绝分支，已改用 Browser.setPermission=denied 复现');
+  }
+  check(/\berr\b/.test(denial.cls), '#geo-status 为 err 态（权限被拒）', denial.cls);
+  check(denial.text.length > 0, '拒绝定位时状态行有可执行文案', denial.text);
+  await shot('verify-geo-err');
+  // 复位权限，别把"被拒"状态带给后面的用例。
+  try { await send('Browser.resetPermissions', {}); } catch { /* 忽略 */ }
 
   // ---------- 日志（SSE） ----------
   console.log('\n=== 日志 ===');
@@ -236,6 +410,14 @@ try {
     check(drawerOpen, '详情抽屉可打开');
     check(drawerBody.length > 20, '抽屉内有运行详情', drawerBody.slice(0, 40).replace(/\n/g, ' '));
     await shot('07-run-detail');
+    // 详情渲染完再查一次内联 style：错误框是 CSSOM 写出来的（app.js:1525），
+    // 静态模板查不到，只有这里能抓到。这是「无内联 style」契约的运行时一侧。
+    const styledAfterDrawer = await evaluate(`document.querySelectorAll('[style]').length`);
+    const styledSample = await evaluate(
+      `(document.querySelector('[style]')?.outerHTML ?? '').replace(/\\s+/g, ' ').slice(0, 120)`);
+    check(styledAfterDrawer === 0,
+      '运行详情渲染后全文档仍无内联 style（否则命中 app.js:1525 的 CSSOM 写法）',
+      `${styledAfterDrawer} 处：${styledSample}`);
     await evaluate(`document.getElementById('drawer-close').click()`);
   }
 
@@ -244,17 +426,41 @@ try {
   await setViewport(390, 844, true);
   await evaluate(`location.hash = '#/dashboard'`);
   await sleep(700);
+  await evaluate(`window.scrollTo(0, 0)`);
+  await sleep(300);
   const overflow = await evaluate(`document.documentElement.scrollWidth - document.documentElement.clientWidth`);
   check(overflow <= 1, '移动端无横向溢出', `overflow=${overflow}px`);
+
+  const mobileAsidePos = await styleOf('aside.sidebar', 'position');
+  check(mobileAsidePos === 'sticky' || mobileAsidePos === 'fixed',
+    '移动端侧栏折成顶部条后仍是 sticky/fixed', mobileAsidePos);
+  const mobileNav = await rectOf('#nav');
+  const mobileMain = await rectOf('#main');
+  if (mobileNav && mobileMain) {
+    check(mobileNav.bottom <= mobileMain.top + 2,
+      '移动端导航条在主内容之上（不重叠）',
+      `nav.bottom=${mobileNav.bottom.toFixed(1)} main.top=${mobileMain.top.toFixed(1)}`);
+    console.log(`  [INFO] 移动端 overflow=${overflow}px · aside.position=${mobileAsidePos} · ` +
+      `nav.bottom=${mobileNav.bottom.toFixed(1)} · main.top=${mobileMain.top.toFixed(1)}`);
+  } else {
+    check(false, '移动端 #nav / #main 几何信息可取', JSON.stringify({ mobileNav, mobileMain }));
+  }
   await shot('08-mobile-dashboard');
+  await shot('verify-mobile-topbar');
 
   await setViewport(1440, 900);
   await evaluate(`location.hash = '#/config'`);
   await sleep(500);
 
   // ---------- 控制台干净 ----------
+  console.log('\n=== 控制台 / CSP ===');
   check(exceptions.length === 0, '无未捕获 JS 异常', exceptions.join(' | ').slice(0, 200));
   check(consoleErrors.length === 0, '无 console.error', consoleErrors.join(' | ').slice(0, 200));
+
+  // 页面内监听（securitypolicyviolation）+ Log 域的 security error 合并去重。
+  const pageCsp = await evaluate(`(window.__cspViolations ?? [])`);
+  const allCsp = Array.from(new Set([...cspViolations, ...(Array.isArray(pageCsp) ? pageCsp : [])]));
+  check(allCsp.length === 0, '无 CSP 违规（含 Refused to）', allCsp.join(' | ').slice(0, 300));
 } catch (err) {
   failures.push('脚本异常: ' + err.message);
   console.log(`  [FAIL] ${err.message}`);
@@ -267,5 +473,3 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 console.log(`\n结果：${pass} 项通过，${failures.length} 项失败（Chrome ${version.Browser}）`);
 if (failures.length) { failures.forEach((f) => console.log('  × ' + f)); process.exit(1); }
-
-

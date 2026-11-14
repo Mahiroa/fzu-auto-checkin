@@ -62,9 +62,9 @@
   </div>
 </section>
 
-<!-- 登录后的应用外壳 -->
+<!-- 登录后的应用外壳：左导航 + 右内容 -->
 <div id="shell" hidden>
-  <header class="topbar">
+  <aside class="sidebar">
     <div class="brand">
       <img src="./favicon.svg" alt="" width="22" height="22" decoding="async">
       <span>福大晚点名</span>
@@ -75,10 +75,13 @@
       <button class="nav-btn" type="button" data-route="#/logs">日志</button>
       <button class="nav-btn" type="button" data-route="#/runs">历史</button>
     </nav>
-    <button id="btn-logout" class="ghost" type="button">退出</button>
-  </header>
+    <div class="sidebar-foot">
+      <button id="btn-logout" class="ghost" type="button">退出登录</button>
+      <span class="side-version">v1.0.0</span>
+    </div>
+  </aside>
 
-  <main id="main">
+  <main id="main" tabindex="-1">
 
     <!-- ==================== 仪表盘 ==================== -->
     <section id="view-dashboard" class="view" hidden>
@@ -209,6 +212,14 @@
               <label for="cfg-actual">上报地址文案</label>
               <input id="cfg-actual" type="text" placeholder="福州大学旗山校区生活区X号楼">
             </div>
+          </div>
+
+          <div class="geo-row">
+            <button id="btn-geo" class="ghost" type="button">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></svg>
+              获取当前位置
+            </button>
+            <p id="geo-status" class="geo-status" role="status" aria-live="polite"></p>
           </div>
 
           <div class="sub">
@@ -396,11 +407,11 @@
       <p id="runs-empty" class="empty">还没有运行记录。</p>
     </section>
 
-  </main>
+    <footer class="foot">
+      <span class="muted small">零构建 · 零依赖 · 数据都在本机 <code>data/</code> 目录</span>
+    </footer>
 
-  <footer class="foot">
-    <span class="muted small">零构建 · 零依赖 · 数据都在本机 <code>data/</code> 目录</span>
-  </footer>
+  </main>
 </div>
 
 <!-- 运行详情抽屉 -->
