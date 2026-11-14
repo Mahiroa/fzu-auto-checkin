@@ -1,0 +1,46 @@
+{
+ "cbc_param": [
+  {
+   "json": "{}",
+   "plain": "{}",
+   "b64": "U7MsTEzqp8gSKiv7xWeUuQ=="
+  },
+  {
+   "json": "{\"mapType\":\"amap\",\"longitude\":119.20463,\"latitude\":26.0492,\"range\":\"{\\\"range\\\":[[[119.2,26.0],[119.3,26.0],[119.3,26.1]]]}\"}",
+   "plain": "{\"mapType\":\"amap\",\"longitude\":119.20463,\"latitude\":26.0492,\"range\":\"{\\\"range\\\":[[[119.2,26.0],[119.3,26.0],[119.3,26.1]]]}\"}",
+   "b64": "Sx6VwGw2eZqPheRhiYoSZ8I7Rmp4yQvfAs4ymFb8X1ZT6IcGa3okZDTL28bBKQkeH/EguF09ywqHs+Zkjp4POT6V555Rl4bYqf7O1gi5d2BsVtRZs0YDiLL4huwRP16on/prq1YKKdRRt+fQ1ez/1puzu8hxzKC9kq7SKac7N9Q="
+  },
+  {
+   "json": "{\"campus\":\"c-1\",\"lon\":119.20471,\"lat\":26.04912,\"startTime\":\"21:30\",\"endTime\":\"23:59\",\"actualLocation\":\"福州大学旗山校区生活区3号楼\",\"caIsNo\":\"0\",\"collUnit\":\"u-9\",\"way\":1,\"isLate\":0}",
+   "plain": "{\"campus\":\"c-1\",\"lon\":119.20471,\"lat\":26.04912,\"startTime\":\"21:30\",\"endTime\":\"23:59\",\"actualLocation\":\"\\u798f\\u5dde\\u5927\\u5b66\\u65d7\\u5c71\\u6821\\u533a\\u751f\\u6d3b\\u533a3\\u53f7\\u697c\",\"caIsNo\":\"0\",\"collUnit\":\"u-9\",\"way\":1,\"isLate\":0}",
+   "b64": "xOVQj82TyNjRWshyRFJV2PEG7WDN1btIxvc54QPWly8/gShKpk2oZhYTl1WsAZTtSp7xpplAoGadwslQY/zxmb9avg67T0EVAaOx23G8kwHZbct4M7+KMWy1M4Yb09J1VSk/sekAoJ0EyDqo8XXf6v6GLRzN5ofsJu7jc6UZQYqN7Sj9I2jBf7HPgH0kHtBjr+THeKahktLs41orOQhopYYhTEcs824nw5AVmpw0JduXeHrz7eU4PtUiCE7tKbLmTldbePp2HrG8Qf9r3FPW34/wovPcwZCfaYWiokw6gC/fFTGS8sENx5rDjm8LYo6C"
+  },
+  {
+   "json": "{\"lon\":0.30000000000000004,\"lat\":-1.234e-06,\"note\":\"浮点边界\"}",
+   "plain": "{\"lon\":0.30000000000000004,\"lat\":-1.234e-06,\"note\":\"\\u6d6e\\u70b9\\u8fb9\\u754c\"}",
+   "b64": "wfw0HppcYO5uvWADzjyRr09oqpro1Av9EQOrsJj226cTcemZWdvczsbiKpV6EEjuH6VWJugp/WN1vaPr8DOPbZ6baao2Ief3ZBEPWtMeTBg="
+  },
+  {
+   "json": "{\"t\":\"中文与 emoji ✅\",\"n\":null,\"arr\":[1,2,{\"k\":\"v\"}]}",
+   "plain": "{\"t\":\"\\u4e2d\\u6587\\u4e0e emoji \\u2705\",\"n\":null,\"arr\":[1,2,{\"k\":\"v\"}]}",
+   "b64": "gSbQU7zqA0mlPvd+D3UBPufLdjAXWKMsjDy9gyBl0qsBPagEZNlIXRJYka8J7u/vWvZEC7ckKrfQW9LI+U+pKfhEEeAmZW/Hhnros4PjPqE="
+  }
+ ],
+ "ecb_password": [
+  {
+   "croypto_b64": "AAECAwQFBgcICQoLDA0ODw==",
+   "password": "hunter2",
+   "out_b64": "gbAl6FBqxTHFvEXQ2mbSeQ=="
+  },
+  {
+   "croypto_b64": "AAECAwQFBgcICQoLDA0ODw==",
+   "password": "学号密码Abc123!@#",
+   "out_b64": "97j7YusR6v00CuTsEMLfO9RMrROPu8jNJPemzO7v4pM="
+  },
+  {
+   "croypto_b64": "AAECAwQFBgcICQoLDA0ODw==",
+   "password": "",
+   "out_b64": "lU9k8uTobp7ugtICFmhImQ=="
+  }
+ ]
+}

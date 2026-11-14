@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex, nofollow">
+<title>福大晚点名 · 自动签到管理</title>
+<meta name="description" content="fzu-auto-checkin 本地管理界面：今日状态、配置、实时日志与运行历史。">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="stylesheet" href="./style.css">
+<script type="module" src="./app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到主内容</a>
+
+<!-- 启动探测：决定「设置密码 / 登录 / 进入应用」三态之一 -->
+<section id="booting" class="boot-card" aria-labelledby="boot-h">
+  <h1 id="boot-h">福大晚点名 · 自动签到</h1>
+  <p id="boot-msg" class="muted" role="status">正在连接服务…</p>
+  <button id="btn-boot-retry" class="ghost" type="button" hidden>重试连接</button>
+</section>
+
+<!-- file:// 打开时的纯静态提示（不发起任何请求） -->
+<section id="file-notice" class="boot-card" hidden aria-labelledby="file-h">
+  <h1 id="file-h">请通过服务访问</h1>
+  <p>本页面是「福大晚点名自动签到」Go 服务内嵌的前端，直接双击以 file:// 方式打开时无法调用接口。</p>
+  <p>请先启动服务，再用浏览器访问默认监听地址 <code>127.0.0.1:8787</code>（可用 <code>-listen</code> 或环境变量 <code>FZU_LISTEN</code> 修改）。</p>
+</section>
+
+<!-- 未登录：只显示这一张卡 -->
+<section id="auth" class="auth-wrap" hidden aria-labelledby="auth-h">
+  <div class="auth-card">
+    <h1 id="auth-h">福大晚点名 · 自动签到</h1>
+    <p id="auth-sub" class="muted small">管理界面</p>
+
+    <form id="form-setup" class="stack" hidden>
+      <p class="notice">首次使用：请为管理界面设置密码（至少 8 个字符）。密码只保存在本机，用于登录本管理界面。</p>
+      <div class="field">
+        <label for="setup-pass">管理密码</label>
+        <input id="setup-pass" type="password" autocomplete="new-password" minlength="8" placeholder="至少 8 个字符">
+      </div>
+      <div class="field">
+        <label for="setup-pass2">再输一次</label>
+        <input id="setup-pass2" type="password" autocomplete="new-password" minlength="8">
+      </div>
+      <p id="setup-err" class="err" hidden></p>
+      <button id="setup-submit" class="primary" type="submit">设置密码并进入</button>
+    </form>
+
+    <form id="form-login" class="stack" hidden>
+      <div class="field">
+        <label for="login-pass">管理密码</label>
+        <input id="login-pass" type="password" autocomplete="current-password">
+      </div>
+      <p id="login-err" class="err" hidden></p>
+      <p id="auth-rate" class="warn-line" hidden></p>
+      <button id="login-submit" class="primary" type="submit">登录</button>
+    </form>
+
+    <p id="auth-env" class="muted small"></p>
+  </div>
+</section>
+
+<!-- 登录后的应用外壳 -->
+<div id="shell" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <img src="./favicon.svg" alt="" width="22" height="22" decoding="async">
+      <span>福大晚点名</span>
+    </div>
+    <nav id="nav" aria-label="主导航">
+      <button class="nav-btn" type="button" data-route="#/dashboard">仪表盘</button>
+      <button class="nav-btn" type="button" data-route="#/config">配置</button>
+      <button class="nav-btn" type="button" data-route="#/logs">日志</button>
+      <button class="nav-btn" type="button" data-route="#/runs">历史</button>
+    </nav>
+    <button id="btn-logout" class="ghost" type="button">退出</button>
+  </header>
+
+  <main id="main">
+
+    <!-- ==================== 仪表盘 ==================== -->
+    <section id="view-dashboard" class="view" hidden>
+      <h2 class="vh">仪表盘</h2>
+
+      <article class="card">
+        <div class="chips">
+          <span id="dash-check" class="chip">读取中…</span>
+          <span id="dash-window" class="chip">—</span>
+          <span id="dash-vacation" class="chip warn" hidden></span>
+        </div>
+        <p id="dash-summary" class="lead">正在读取服务状态…</p>
+        <dl class="kv">
+          <div><dt>今日</dt><dd id="dash-date">—</dd></div>
+          <div><dt>上次成功</dt><dd id="dash-last-success">—</dd></div>
+          <div><dt>最近决策</dt><dd id="dash-decision">—</dd></div>
+          <div><dt>调度器</dt><dd id="dash-scheduler">—</dd></div>
+          <div><dt>服务</dt><dd id="dash-version">—</dd></div>
+        </dl>
+        <p id="dash-live" class="muted small"></p>
+      </article>
+
+      <div class="cols">
+        <article class="card">
+          <h3>今日考勤计划</h3>
+          <p id="dash-plan-empty" class="empty" hidden>今日无考勤计划</p>
+          <dl id="dash-plan" class="kv">
+            <div><dt>开始</dt><dd id="plan-start">—</dd></div>
+            <div><dt>结束</dt><dd id="plan-end">—</dd></div>
+            <div><dt>迟到线</dt><dd id="plan-late">—</dd></div>
+          </dl>
+        </article>
+        <article class="card countdown-card">
+          <h3>下一档倒计时</h3>
+          <p id="dash-countdown" class="big" aria-live="off">--:--:--</p>
+          <p id="dash-next-at" class="muted small">—</p>
+        </article>
+      </div>
+
+      <article class="card">
+        <h3>时间轴 <span id="dash-slot-count" class="muted small"></span></h3>
+        <ol id="dash-slots" class="timeline"></ol>
+        <p id="dash-slots-empty" class="empty" hidden>暂无有效档位（未配置 times 或全部落在窗口外）。</p>
+      </article>
+
+      <article class="card">
+        <h3>操作</h3>
+        <div class="actions">
+          <button id="btn-force" class="primary" type="button">立即签到</button>
+          <button id="btn-probe" type="button">定位预检</button>
+          <button id="btn-notify" type="button">推送测试</button>
+        </div>
+        <p id="dash-action-hint" class="muted small">「立即签到」会跳过等待与窗口外拦截，仍会校验时间窗口后真打一次卡。</p>
+      </article>
+
+      <article class="card">
+        <h3>最近 5 次运行</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">时间</th><th scope="col">状态</th><th scope="col">耗时</th><th scope="col">错误摘要</th></tr>
+            </thead>
+            <tbody id="dash-runs-body"></tbody>
+          </table>
+        </div>
+        <p id="dash-runs-empty" class="empty" hidden>还没有运行记录。</p>
+      </article>
+    </section>
+
+    <!-- ==================== 配置 ==================== -->
+    <section id="view-config" class="view" hidden>
+      <div class="view-head">
+        <h2>配置</h2>
+        <div class="view-head-actions">
+          <span id="config-version" class="muted small"></span>
+          <button id="btn-config-export" class="ghost" type="button">导出</button>
+          <button id="btn-config-import" class="ghost" type="button">导入 YAML</button>
+          <button id="btn-config-save" class="primary" type="submit" form="form-config">保存</button>
+        </div>
+      </div>
+
+      <div id="config-msg" class="err-box" hidden></div>
+      <div id="config-warnings" class="warn-box" hidden></div>
+
+      <form id="form-config" class="stack" autocomplete="off">
+
+        <fieldset class="card">
+          <legend>账号</legend>
+          <p class="hint">token 与「学号 + 密码」二选一：有 token 优先；token 失效时服务会用学号密码自动登录并回写新 token。</p>
+          <div class="field has-secret">
+            <div class="field-head">
+              <label for="cfg-username">学号</label>
+            </div>
+            <input id="cfg-username" type="text" spellcheck="false" placeholder="登录智汇福大 App 的学号">
+          </div>
+          <div class="field has-secret">
+            <div class="field-head">
+              <label for="cfg-password">密码</label>
+              <span class="badge mask-badge" hidden>已配置</span>
+              <button class="link clear-secret" type="button" data-target="cfg-password">清空</button>
+            </div>
+            <input id="cfg-password" type="password" autocomplete="new-password" placeholder="登录智汇福大 App 的密码">
+          </div>
+          <div class="field has-secret">
+            <div class="field-head">
+              <label for="cfg-token">免登 token</label>
+              <span class="badge mask-badge" hidden>已配置</span>
+              <button class="link clear-secret" type="button" data-target="cfg-token">清空</button>
+            </div>
+            <input id="cfg-token" type="password" autocomplete="new-password" placeholder="留空则用学号密码自动登录">
+          </div>
+        </fieldset>
+
+        <fieldset class="card" id="fs-location">
+          <legend>位置</legend>
+          <p class="hint">高德 GCJ-02 坐标。填你在校区内常驻位置的真实坐标；抖动只做小范围漂移，不改变所在位置。</p>
+          <p id="cfg-single-note" class="warn-line" hidden></p>
+          <div class="row">
+            <div class="field">
+              <label for="cfg-lon">经度</label>
+              <input id="cfg-lon" type="text" inputmode="decimal" placeholder="119.20463">
+            </div>
+            <div class="field">
+              <label for="cfg-lat">纬度</label>
+              <input id="cfg-lat" type="text" inputmode="decimal" placeholder="26.04920">
+            </div>
+            <div class="field grow">
+              <label for="cfg-actual">上报地址文案</label>
+              <input id="cfg-actual" type="text" placeholder="福州大学旗山校区生活区X号楼">
+            </div>
+          </div>
+
+          <div class="sub">
+            <h4>位置池 <span class="muted small">（非空时完全接管上面的单点坐标）</span></h4>
+            <div id="pool-rows" class="rows"></div>
+            <button id="btn-pool-add" class="ghost" type="button">+ 添加位置</button>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="cfg-jitter">抖动半径 location_jitter_m（米）</label>
+              <input id="cfg-jitter" type="number" step="any" min="0" placeholder="留空 = 默认 200">
+            </div>
+            <div class="field">
+              <label for="cfg-jitter-legacy">旧键 jitter_radius_m（米）</label>
+              <input id="cfg-jitter-legacy" type="number" step="any" min="0" placeholder="留空 = 默认 200">
+            </div>
+          </div>
+          <p class="hint">以选中坐标为圆心、半径 N 米的圆内均匀取点（r = R·√U）。<code>location_jitter_m</code> 非空时优先；<code>0</code> 才是「关闭抖动」，留空/负数按默认 200 米。</p>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>时间调度</legend>
+          <div class="row">
+            <div class="field">
+              <label for="cfg-window-start">窗口起点 window_start</label>
+              <input id="cfg-window-start" type="time" step="60">
+            </div>
+            <div class="field">
+              <label for="cfg-window-end">窗口终点 window_end</label>
+              <input id="cfg-window-end" type="time" step="60">
+            </div>
+          </div>
+          <p class="hint">北京时间，起点与终点都含；终点写 <code>23:59</code> 时按 <code>23:59:59</code> 收尾。不支持跨日窗口，终点必须晚于起点。</p>
+
+          <div class="sub">
+            <h4>签到时刻 times <span class="muted small">（HH:MM，可多档）</span></h4>
+            <div id="time-rows" class="rows"></div>
+            <button id="btn-time-add" class="ghost" type="button">+ 添加时刻</button>
+            <div class="inline-note">
+              <label for="cfg-jitter-min">时间抖动 ± 分钟</label>
+              <input id="cfg-jitter-min" type="number" step="any" min="0" placeholder="0">
+            </div>
+            <div class="inline-note">
+              <label for="cfg-maxwait">最长等待（分钟）</label>
+              <input id="cfg-maxwait" type="number" step="any" min="0" placeholder="12">
+            </div>
+            <div class="inline-note">
+              <label for="cfg-tolerance">迟到容忍（分钟）</label>
+              <input id="cfg-tolerance" type="number" step="any" min="0" placeholder="5">
+            </div>
+            <p class="hint">抖动越出窗口时先重抽（最多 8 次），仍越界就贴边钳制到窗口内，执行前再校验一次 —— 抖多大都不会在窗口外打卡。最长等待：早到最多等多少分钟，等不起按 <code>wait_too_long</code> 跳过。迟到容忍：<code>now − target ≤ 该值</code> 记为准点，超出记为迟到但仍会签。</p>
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>假期</legend>
+          <label class="check">
+            <input id="cfg-vacation-notify" type="checkbox">
+            <span>命中假期时也推送提醒（默认静默跳过）</span>
+          </label>
+          <div class="sub">
+            <h4>跳过区间 <span class="muted small">（起止都含，格式 YYYY-MM-DD）</span></h4>
+            <div id="vac-rows" class="rows"></div>
+            <button id="btn-vac-add" class="ghost" type="button">+ 添加区间</button>
+          </div>
+          <p class="hint">区间内不签到、不推送、不留运行记录。</p>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>推送</legend>
+          <div class="field">
+            <label for="cfg-notify-type">通道</label>
+            <select id="cfg-notify-type">
+              <option value="serverchan">Server酱（serverchan）</option>
+              <option value="pushplus">PushPlus（pushplus）</option>
+              <option value="bark">Bark（bark）</option>
+              <option value="wecom">企业微信群机器人（wecom）</option>
+              <option value="none">不推送（none）</option>
+            </select>
+          </div>
+          <div class="field has-secret" data-notify="serverchan">
+            <div class="field-head">
+              <label for="cfg-serverchan-key">Server酱 SendKey</label>
+              <span class="badge mask-badge" hidden>已配置</span>
+              <button class="link clear-secret" type="button" data-target="cfg-serverchan-key">清空</button>
+            </div>
+            <input id="cfg-serverchan-key" type="password" autocomplete="new-password" placeholder="SCT 开头的 SendKey">
+          </div>
+          <div class="field has-secret" data-notify="pushplus" hidden>
+            <div class="field-head">
+              <label for="cfg-pushplus-token">PushPlus token</label>
+              <span class="badge mask-badge" hidden>已配置</span>
+              <button class="link clear-secret" type="button" data-target="cfg-pushplus-token">清空</button>
+            </div>
+            <input id="cfg-pushplus-token" type="password" autocomplete="new-password" placeholder="PushPlus 的 token">
+          </div>
+          <div class="field has-secret" data-notify="bark" hidden>
+            <div class="field-head">
+              <label for="cfg-bark-url">Bark 推送 URL</label>
+              <span class="badge mask-badge" hidden>已配置</span>
+              <button class="link clear-secret" type="button" data-target="cfg-bark-url">清空</button>
+            </div>
+            <input id="cfg-bark-url" type="password" autocomplete="new-password" placeholder="完整的 Bark 推送地址">
+          </div>
+          <div class="field has-secret" data-notify="wecom" hidden>
+            <div class="field-head">
+              <label for="cfg-wecom-webhook">企业微信 webhook</label>
+              <span class="badge mask-badge" hidden>已配置</span>
+              <button class="link clear-secret" type="button" data-target="cfg-wecom-webhook">清空</button>
+            </div>
+            <input id="cfg-wecom-webhook" type="password" autocomplete="new-password" placeholder="群机器人 webhook 完整地址">
+          </div>
+          <p id="notify-hint" class="hint">成功/越界/失败必推；已签到、跳过、假期默认静默。推送失败不影响签到结论。</p>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>服务</legend>
+          <div class="row">
+            <div class="field">
+              <label for="cfg-listen">监听地址 listen</label>
+              <input id="cfg-listen" type="text" spellcheck="false" placeholder="127.0.0.1:8787">
+            </div>
+            <div class="field">
+              <label for="cfg-datadir">数据目录 data_dir</label>
+              <input id="cfg-datadir" type="text" spellcheck="false" placeholder="./data">
+            </div>
+          </div>
+          <div class="field">
+            <label for="cfg-origins">跨源白名单 allow_origins <span class="muted small">（逗号或空格分隔，留空 = 仅同源）</span></label>
+            <input id="cfg-origins" type="text" spellcheck="false" placeholder="留空">
+          </div>
+          <p class="hint">监听地址与数据目录改动需要重启服务才生效；跨源白名单用于把前端放在别的静态服务器上托管（切 <code>server.allow_origins</code>）。</p>
+        </fieldset>
+
+        <p class="hint">保存会先备份旧文件为 <code>config.json.bak</code>；凭据显示为 <code>••••</code> 时保持原样提交 = 保留原值。</p>
+      </form>
+    </section>
+
+    <!-- ==================== 日志 ==================== -->
+    <section id="view-logs" class="view" hidden>
+      <div class="view-head">
+        <h2>日志</h2>
+        <div class="view-head-actions">
+          <span id="logs-conn" class="chip">未连接</span>
+          <label class="inline-label" for="log-level">级别</label>
+          <select id="log-level">
+            <option value="all">全部</option>
+            <option value="debug">debug 及以上</option>
+            <option value="info">info 及以上</option>
+            <option value="warn">warn 及以上</option>
+            <option value="error">仅 error</option>
+          </select>
+          <label class="check" for="log-autoscroll">
+            <input id="log-autoscroll" type="checkbox" checked>
+            <span>自动滚动</span>
+          </label>
+          <button id="btn-log-copy" class="ghost" type="button">复制</button>
+          <button id="btn-log-clear" class="ghost" type="button">清屏</button>
+        </div>
+      </div>
+      <article class="card log-card">
+        <ol id="logs-list" class="logs" data-level="all"></ol>
+        <p id="logs-empty" class="empty">暂无日志，等待服务输出…</p>
+      </article>
+    </section>
+
+    <!-- ==================== 历史 ==================== -->
+    <section id="view-runs" class="view" hidden>
+      <div class="view-head">
+        <h2>运行历史</h2>
+        <div class="view-head-actions">
+          <span id="runs-count" class="muted small"></span>
+          <label class="inline-label" for="runs-limit">每页</label>
+          <select id="runs-limit">
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+          <button id="btn-runs-more" class="ghost" type="button">加载更多</button>
+        </div>
+      </div>
+      <ul id="runs-list" class="run-list"></ul>
+      <p id="runs-empty" class="empty">还没有运行记录。</p>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <span class="muted small">零构建 · 零依赖 · 数据都在本机 <code>data/</code> 目录</span>
+  </footer>
+</div>
+
+<!-- 运行详情抽屉 -->
+<div id="drawer" class="drawer" hidden>
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <div class="drawer-head">
+      <h3 id="drawer-title">运行详情</h3>
+      <button id="drawer-close" class="ghost" type="button">关闭</button>
+    </div>
+    <div id="drawer-body" class="drawer-body"></div>
+  </div>
+</div>
+
+<!-- 导入 YAML 弹窗 -->
+<div id="modal-import" class="drawer" hidden>
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="modal-import-h">
+    <div class="drawer-head">
+      <h3 id="modal-import-h">导入 YAML</h3>
+      <button id="btn-import-close" class="ghost" type="button">关闭</button>
+    </div>
+    <div class="drawer-body">
+      <p class="hint">把旧版 <code>config.yaml</code> 全文粘进来，先「预览」解析结果（不落盘），确认无误再「应用」保存。</p>
+      <div class="field">
+        <label for="import-yaml">YAML 内容</label>
+        <textarea id="import-yaml" rows="12" spellcheck="false" placeholder="user:&#10;  username: &quot;...&quot;&#10;checkin:&#10;  schedule:&#10;    times: [&quot;21:35&quot;]"></textarea>
+      </div>
+      <div id="import-err" class="err-box" hidden></div>
+      <div id="import-warnings" class="warn-box" hidden></div>
+      <ul id="import-preview" class="preview"></ul>
+      <div class="actions">
+        <button id="btn-import-preview" type="button">预览</button>
+        <button id="btn-import-apply" class="primary" type="button" disabled>应用并保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toasts" class="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
+<p id="live" class="vh" role="status" aria-live="polite" aria-atomic="true"></p>
+
+<!-- ==================== 动态行模板（无 id，避免重复） ==================== -->
+<template id="tpl-pool-row">
+  <div class="row dyn">
+    <div class="field">
+      <label><span>经度</span><input class="r-lon" type="text" inputmode="decimal" placeholder="119.20463"></label>
+    </div>
+    <div class="field">
+      <label><span>纬度</span><input class="r-lat" type="text" inputmode="decimal" placeholder="26.04920"></label>
+    </div>
+    <div class="field grow">
+      <label><span>上报文案</span><input class="r-actual" type="text" placeholder="福州大学旗山校区生活区X号楼"></label>
+    </div>
+    <div class="field narrow">
+      <label><span>权重</span><input class="r-weight" type="number" step="any" min="0" placeholder="1"></label>
+    </div>
+    <button class="ghost r-del" type="button">删除</button>
+  </div>
+</template>
+
+<template id="tpl-time-row">
+  <div class="row dyn">
+    <div class="field">
+      <label><span>时刻</span><input class="t-time" type="time" step="60"></label>
+    </div>
+    <button class="ghost t-del" type="button">删除</button>
+  </div>
+</template>
+
+<template id="tpl-vac-row">
+  <div class="row dyn">
+    <div class="field grow">
+      <label><span>名称</span><input class="v-name" type="text" placeholder="寒假"></label>
+    </div>
+    <div class="field">
+      <label><span>起</span><input class="v-start" type="date"></label>
+    </div>
+    <div class="field">
+      <label><span>止</span><input class="v-end" type="date"></label>
+    </div>
+    <button class="ghost v-del" type="button">删除</button>
+  </div>
+</template>
+
+<noscript>
+  <p class="err-box">本管理界面需要 JavaScript（原生 ES module）。请启用后刷新。</p>
+</noscript>
+</body>
+</html>
