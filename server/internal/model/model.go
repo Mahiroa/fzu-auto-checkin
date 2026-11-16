@@ -19,11 +19,16 @@ type Config struct {
 	Server   ServerConfig   `json:"server"`
 }
 
-// UserConfig 认证信息：token 与学号密码二选一（有 token 优先）。
+// UserConfig 认证信息：三种凭据任一可用即可，优先级 token > cookie > 学号密码。
+//
+// Cookie 是浏览器里「统一身份认证」的会话 Cookie（sso.fzu.edu.cn 的 SESSION）。
+// 有它就能免密换出晚点名 token —— 学校侧对账密登录可能弹验证码，而 Cookie
+// 复用的是一个已经通过人机校验的浏览器会话。
 type UserConfig struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Token    string `json:"token"`
+	Cookie   string `json:"cookie"`
 }
 
 // CheckinConfig 位置 + 时间调度。locations 非空时完全接管 longitude/latitude/actual_location。

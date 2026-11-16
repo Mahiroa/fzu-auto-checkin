@@ -401,7 +401,9 @@ func TestValidate(t *testing.T) {
 		if err == nil {
 			t.Fatal("应报错")
 		}
-		for _, want := range []string{"二选一", "user.token", "username", "password"} {
+		// 三种凭据（token / cookie / 学号密码）都要在报错里点名：
+		// 少了哪一种，用户就以为那一项不能用。
+		for _, want := range []string{"至少", "user.token", "user.cookie", "username", "password"} {
 			if !strings.Contains(err.Error(), want) {
 				t.Fatalf("报错里缺 %q:\n%s", want, err.Error())
 			}

@@ -14,8 +14,17 @@ const apiPrefix = "/api/v1"
 // app.js + 单文件 style.css，页面里没有内联 <script>/<style>/style 属性，
 // 所以 script-src 与 style-src 都能关到 'self'——写 style="…" 会被浏览器
 // 直接丢弃（这也是"文档里不出现 [style]"能当门禁的原因）。
-const securityPolicy = "default-src 'self'; img-src 'self' data:; " +
-	"style-src 'self'; script-src 'self'; connect-src 'self'"
+//
+// 两处按功能放行的例外，都只服务「地图选点」弹窗（map-picker.js）：
+// img-src 加 *.autonavi.com（高德公开瓦片 webrd0x/webst0x，免 key 免付费）与
+// tile.openstreetmap.org（高德不通时的兜底底图）；
+// connect-src 加 restapi.amap.com（可选的逆地理编码，用来拼"省市区路号靠近POI"
+// 那条上报地点文字，只在用户自己填了高德 Web 服务 key 时才请求，走个人免费额度）。
+// 脚本与样式策略一个字符都没放宽：选点逻辑是同源 module，地图不引任何第三方 JS。
+const securityPolicy = "default-src 'self'; " +
+	"img-src 'self' data: https://*.autonavi.com https://tile.openstreetmap.org; " +
+	"style-src 'self'; script-src 'self'; " +
+	"connect-src 'self' https://restapi.amap.com"
 
 // routes 注册全部路由（Go 1.22 的"方法 + 路径模式"语法，无需第三方路由库）。
 func (s *Server) routes(mux *http.ServeMux) {
@@ -36,6 +45,8 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST "+apiPrefix+"/runs", s.handleRunStart)
 	mux.HandleFunc("GET "+apiPrefix+"/runs/{id}", s.handleRunByID)
 	mux.HandleFunc("POST "+apiPrefix+"/notify/test", s.handleNotifyTest)
+	mux.HandleFunc("POST "+apiPrefix+"/login/test", s.handleLoginTest)
+	mux.HandleFunc("POST "+apiPrefix+"/login/refresh", s.handleLoginRefresh)
 	mux.HandleFunc("GET "+apiPrefix+"/logs", s.handleLogs)
 	mux.HandleFunc("GET "+apiPrefix+"/logs/stream", s.handleLogStream)
 

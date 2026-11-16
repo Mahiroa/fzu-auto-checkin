@@ -43,6 +43,23 @@ var (
 	// tokenRe 从重定向链的 URL 里捞 token：只认字母数字，长度下限见 minTokenLen。
 	tokenRe = regexp.MustCompile(`[?&]token=([A-Za-z0-9]{20,})`)
 
+	// captchaIDRe 取页面上的验证码挑战 id（有值 = 这次登录要验证码）。
+	captchaIDRe = regexp.MustCompile(`id="captchaId">\s*([^<]*?)\s*</p>`)
+
+	// knownLoginErrors 是统一身份认证会在页面上出现的几种可读原因，按具体程度排序。
+	// 整页文本里最长出现的两句是「用户名或密码错误」与「验证码错误」。
+	knownLoginErrors = []string{
+		"用户名或密码错误",
+		"账号或密码错误",
+		"密码错误",
+		"用户不存在",
+		"账号不存在",
+		"账号已被锁定",
+		"账号已锁定",
+		"验证码错误",
+		"账号未激活",
+	}
+
 	// errTooManyRedirects 是 CheckRedirect 里用的哨兵：超跳后我们仍要回头
 	// 扫一遍已经走过的 URL（token 可能就在里面）。
 	errTooManyRedirects = errors.New("SSO 重定向超过上限")
@@ -174,10 +191,16 @@ func LoginAt(ssoBase, service, username, password string) (string, error) {
 		}
 		return "", fmt.Errorf("SSO 登录提交失败: %w", doErr)
 	}
-	if status != http.StatusOK {
-		return "", fmt.Errorf("SSO 登录失败: HTTP %d，%s", status, loginErrorHint(body))
+	hint := loginErrorHint(body)
+	if isWrongCredential(hint) {
+		// 这类失败最常见，而且用户最容易改错方向（去改 Cookie、改 token）。
+		// 直接点名"是学号密码不对"，并提醒填的是 App 现在用的那组。
+		return "", fmt.Errorf("学号或密码不对（统一身份认证原话：%s）；填「现在能登录智汇福大 App」的那组，不是初始密码", hint)
 	}
-	return "", fmt.Errorf("SSO 登录失败: %s", loginErrorHint(body))
+	if status != http.StatusOK {
+		return "", fmt.Errorf("SSO 登录失败：HTTP %d，%s", status, hint)
+	}
+	return "", fmt.Errorf("SSO 登录失败：%s", hint)
 }
 
 // ssoGet 取一页 HTML 并返回状态码与正文。
@@ -230,15 +253,35 @@ func tokenFromURL(rawURL string) string {
 
 // loginErrorHint 从失败页里取对端给的原因。
 //
-// 无 error-msg 时不能说"未知错误"就完事：这种情况几乎都是要求验证码（SSO 风控）
-// 或页面结构变了，把这两种可能写进提示，用户才知道下一步该干什么。
+// 新版前端把错误文案交给 JS 渲染，`#login-error-msg` 经常是空的——但服务端仍会在
+// 页面里留下两个可读信号：`#captchaId`（非空 = 这次要验证码）和整页文本里的中文
+// 错误句（实测「用户名或密码错误」就在 401 页面正文里）。早先只认 login-error-msg，
+// 于是所有失败都退化成一句"未知错误（可能需要验证码）"，用户完全不知道该改什么。
 func loginErrorHint(body []byte) string {
 	if m := loginErrRe.FindSubmatch(body); m != nil {
 		if text := strings.TrimSpace(string(m[1])); text != "" {
 			return text
 		}
 	}
-	return "未知错误（可能需要验证码或页面结构变化）"
+	if m := captchaIDRe.FindSubmatch(body); m != nil && strings.TrimSpace(string(m[1])) != "" {
+		return "学校这次要求输入验证码（同一来源连续登录失败会被风控）。改用浏览器 Cookie 登录可以绕过验证码。"
+	}
+	text := string(body)
+	for _, phrase := range knownLoginErrors {
+		if strings.Contains(text, phrase) {
+			return phrase
+		}
+	}
+	return "统一身份认证没有给出可读原因（登录页结构可能已变化）"
+}
+
+// isWrongCredential 判断这句话是不是"学号或密码不对"（要给出专门的引导）。
+func isWrongCredential(hint string) bool {
+	switch hint {
+	case "用户名或密码错误", "账号或密码错误", "密码错误", "用户不存在", "账号不存在":
+		return true
+	}
+	return false
 }
 
 // normalizeLoginURL 容错地规整登录地址：

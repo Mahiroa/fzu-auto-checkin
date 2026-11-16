@@ -56,6 +56,14 @@ var ErrOutOfRange = errors.New("定位校验未命中任何校区")
 // 并静默，而不是当作失败重试。
 var ErrNoPlan = errors.New("当天没有晚点名计划（schoolData 为空）")
 
+// ErrTokenRejected 上游把请求当成"未登录"处理：正常应是 JSON 信封，
+// 实际返回的却是一个 HTML 错误页（线上见过的是「信息提示」+ YUI 资源那一页）。
+//
+// 为什么要单独一个哨兵：这类失败与"网关 500/维护中"看起来都是 HTTP 500，但
+// 处置完全不同——前者要用户换 token（今晚还能签上），后者等一会儿就好。
+// 混在一起归类成 no_plan 的后果是用户看到「今日无计划」，以为今晚不用签。
+var ErrTokenRejected = errors.New("上游拒绝了当前 token（返回 HTML 错误页而不是 JSON）")
+
 // cstZone 北京时间。迟到判定必须以学校所在的 UTC+8 为准：服务可能跑在
 // UTC 容器里（旧版 GitHub Actions 就踩过），用本机时区算会整体偏 8 小时。
 var cstZone = time.FixedZone("CST", 8*3600)
@@ -267,10 +275,18 @@ func (c *Client) do(req *http.Request, op string) (envelope, error) {
 		return envelope{}, fmt.Errorf("%s 读取响应失败: %w", op, err)
 	}
 	if resp.StatusCode != http.StatusOK {
+		if looksLikeHTML(body) {
+			return envelope{}, fmt.Errorf("%w：%s HTTP %d，%s", ErrTokenRejected, op,
+				resp.StatusCode, htmlSummary(body))
+		}
 		return envelope{}, fmt.Errorf("%s HTTP %d: %s", op, resp.StatusCode, truncate(body))
 	}
 	var env envelope
 	if err := json.Unmarshal(body, &env); err != nil {
+		if looksLikeHTML(body) {
+			// 200 也可能是被顶到登录/错误页：同样按"token 不被接受"处理。
+			return envelope{}, fmt.Errorf("%w：%s 返回 HTML 页面，%s", ErrTokenRejected, op, htmlSummary(body))
+		}
 		return envelope{}, fmt.Errorf("%s 响应不是 JSON（网关拦截或对端改版？）: %s", op, truncate(body))
 	}
 	if !env.ok() {
@@ -434,6 +450,48 @@ func toMillis(v any) (int64, bool) {
 	default:
 		return 0, false
 	}
+}
+
+// htmlSummary 把上游的 HTML 错误页压成一句能直接显示在面板上的话。
+//
+// 不能把整页 HTML 塞进错误信息：它有 10 KB，带着换行与 yui 资源路径，进了
+// 面板的状态行（现在是 pre-wrap 多行）会把界面撑成一堵墙，用户反而看不到
+// 真正重要的那半句"上游不认这个 token"。取 <title> 就够了——最坏情况退回
+// 一句固定文案。
+func htmlSummary(body []byte) string {
+	lower := strings.ToLower(string(body))
+	if i := strings.Index(lower, "<title"); i >= 0 {
+		rest := string(body)[i:]
+		if j := strings.Index(strings.ToLower(rest), ">"); j >= 0 {
+			rest = rest[j+1:]
+			if k := strings.Index(strings.ToLower(rest), "</title>"); k >= 0 {
+				title := strings.Join(strings.Fields(rest[:k]), " ")
+				if title != "" {
+					return "页面标题「" + title + "」"
+				}
+			}
+		}
+	}
+	return "HTML 错误页"
+}
+
+// looksLikeHTML 判断响应体是不是一个 HTML 页面（上游把错误渲染成网页时用）。
+//
+// 判据只看开头：真实响应里有 <!DOCTYPE html>、<html>、以及带 BOM/空白的变体，
+// 不允许出现"响应体中间偶然有个 <"就对 JSON 响应误判——JSON 里的中文/坐标不会
+// 以 '<' 开头。
+func looksLikeHTML(body []byte) bool {
+	text := strings.TrimSpace(strings.TrimPrefix(string(body), "\ufeff"))
+	if text == "" {
+		return false
+	}
+	if text[0] != '<' {
+		return false
+	}
+	lower := strings.ToLower(text[:min(len(text), 64)])
+	return strings.HasPrefix(lower, "<!doctype") || strings.HasPrefix(lower, "<html") ||
+		strings.HasPrefix(lower, "<?xml") || strings.HasPrefix(lower, "<head") ||
+		strings.HasPrefix(lower, "<meta")
 }
 
 // truncate 截断响应体便于放进错误信息，保证在多字节字符边界上切。

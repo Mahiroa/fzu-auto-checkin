@@ -479,7 +479,7 @@ Go 侧注意：`json.Marshal` 对 `float64` 用最短往返表示（与 Python `
 - **技术**：原生 ESM（`<script type="module">`）+ 手写 CSS 变量主题，**零构建、零依赖**；`fetch` 统一封装（自动带 `X-Requested-With`、`credentials:'same-origin'`、401 → 跳登录）。
 - **布局（v1.1，左右分栏）**：`#shell` 为 CSS Grid `248px minmax(0,1fr)`——左侧 `<aside class="sidebar">` 固定 `sticky` 全高（品牌 / `#nav` 竖排导航 / 底部「退出登录 + 版本号」），右侧 `#main` 内容区（`max-width 1180px` 居中）。`≤860px` 侧栏转为顶部横向条（导航横向滚动），`≤480px` 隐藏品牌文字、导航四等分。`<a class="skip">` 跳到主内容保留。
 - **控件全部自绘**（不使用浏览器默认外观）：`select` / `checkbox` / `time` / `date` / `text` / `password` / `textarea` 一律 `appearance:none`，`number` 用 `appearance:textfield` + 隐藏 spin button（同样不是原生外观）；图标用 data URI SVG（`#` 需写成 `%23`）；`time/date` 把原生指示器 `opacity:0` 覆盖在自绘图标上方，点击仍能弹出原生选择器；复选框自绘方框 + `::after` 勾；自绘滚动条与 `:focus-visible` 焦点环；颜色对比度按 WCAG AA 复核（白字面统一 `--accent-btn`，浅色主题的日志 INFO 用压深的 `--accent-lv`）。
-- **体积预算**：`index.html ≤ 40 KB`、`style.css ≤ 45 KB`、`app.js ≤ 80 KB`，三文件合计 **≤ 160 KB**（未压缩）；当前实测 23.6 / 32.1 / 64.6 KiB（合计 120.3 KiB）。体积门禁在 `zz_review_test.go` / `zz_layout_review_test.go` 里，超了就红。
+- **体积预算**：`index.html ≤ 40 KB`、`style.css ≤ 45 KB`、`app.js ≤ 80 KB`，三文件合计 **≤ 160 KB**（未压缩）；当前实测 28.8 / 34.8 / 76.3 KiB（合计 139.8 KiB）。体积门禁在 `zz_review_test.go` / `zz_layout_review_test.go` 里，超了就红。首屏之外还有一个**按需加载**的 `map-picker.js`（地图选点），单独上限 32 KiB，门禁在 `map_picker_test.go`——它不算进首屏三文件预算，因为它不点「在地图上选点」就一个字节都不下载。
 - **视图**（单页 + hash 路由 `#/dashboard|config|logs|runs`）：
   1. `#/dashboard`：今日状态卡（已签/待签/假期）、计划时段与迟到线、下一档倒计时（前端本地每秒递减，数据来自 `status.next_run_at`）、`slots` 时间轴（pending/done/missed 三色）、按钮「立即签到」「定位预检」「推送测试」、最近 5 次运行表格。
   2. `#/config`：分段表单（账号 / 位置（单点或池，可增删行、权重）/ 时间调度 / 假期 / 推送 / 服务），行内校验与警告展示、保存（PUT）、`导入 YAML`（弹窗粘贴 → 预览 → 应用）、`导出`。
@@ -491,9 +491,16 @@ Go 侧注意：`json.Marshal` 对 `float64` 用最短往返表示（与 Python `
   - **必须做坐标转换**：浏览器给的是 WGS-84，高德/学校要 GCJ-02；福州实测偏移约 590 米，不转换会直接「定位不在签到范围」。境外坐标（`outOfChina`）原样返回。
   - **安全上下文**：`getCurrentPosition` 只在 HTTPS 或 `localhost/127.0.0.1` 下可用；`isSecureContext === false` 时给出可执行提示（改用 127.0.0.1 或配 HTTPS），不能表现为「点了没反应」。
   - 错误按 `error.code` 分档（拒绝权限 / 定位源不可用 / 超时），状态行 + toast 双通道；精度 > 100 m 追加「可能在室内」提示。
+- **地图选点（v1.2）**：「位置」区有 `#btn-map-pick`（在地图上选点），位置池每行有 `.r-pick`；弹窗 `#map-picker` 由**动态 import** 的 `map-picker.js` 驱动（`app.js` 里 `import('./map-picker.js')`），首屏不下载、不用就零外部请求。
+  - **不接高德 JS API，直接铺高德公开瓦片**：`webrd0{1-4}.is.autonavi.com`（街道，`style=8`，PNG）与 `webst0{1-4}.is.autonavi.com`（卫星，`style=6`，JPEG）。理由是 JS API 2.0 要 key + 安全密钥、SDK 会注入行内 `<style>`（与 `style-src 'self'` 冲突），POI 检索/逆地理编码还要再配一套按量计费的 Web 服务 key；瓦片免 key、免额度，且本身就是 GCJ-02 投影——选出来的坐标可以直上报。
+  - **自绘地图引擎**（无第三方库）：Web 墨卡托投影、瓦片增量复用（拖动只改 `transform`，不重建 DOM，否则每帧闪）、指针拖动、滚轮锚点缩放、方向键 ±60 px 平移、`+/-` 缩放、点击落点、「用中心」精确微调；缩放 5–18 级（高德瓦片到 18 级为止）。
+  - **坐标系**：高德图层原生 GCJ-02；连续 4 张瓦片失败自动切 OpenStreetMap（WGS-84），切图层时中心与已选点一起换算（`gcjToWgs` 用「减偏移量迭代两次」求逆），状态行标注「已从 WGS-84 换算」，回填前再用 app.js 注入的 `wgs84ToGcj02` 换回 GCJ-02。
+  - **粘贴解析**：`经度,纬度`、`position=lng,lat`、`lng=/lat=`、高德 App「分享 → 复制链接」整段地址；写反成「纬度,经度」也能识别。
+  - **上报地点文字（格式同智汇福大）**：`旗山校区 福建省福州市闽侯县学府南路辅路28号靠近福州大学旗山校区生活区X号楼`，即「校区 + 详细地址 + 靠近 + 最近 POI」。三条来源按优先级：① 用户自己填的**高德 Web 服务 key** → 落点即 `restapi.amap.com/v3/geocode/regeo`（`extensions=all`，取 `formatted_address` + `pois[0]/aois[0]` 拼「靠近…」）；② 粘贴链接里的 `name=`；③ **点位记忆**（localStorage，按 4 位小数≈11 米取键，封顶 200 条）——没 key 的用户手写一次即可自动带出。key 只在 `localStorage`，不进配置、不随导出；只有落点变化且配了 key 才发请求（450 ms 防抖 + 请求序号防迟到覆盖），失败只影响文字、不影响坐标回填。
+  - **回填语义**：6 位小数、补发冒泡 `input`（行内校验 / 位置池提示 / 徽标同步）、不自动保存；位置池的按钮只改它那一行。空输入打开时**不许**落到 `(0,0)`（`Number('') === 0` 是最容易踩的坑），此时不预置图钉、确认时明确报「还没选点」。
 - **体验**：暗色为默认（跟随 `prefers-color-scheme`），键盘可达（所有交互 `button`/`label`），`aria-live="polite"` 播报运行结果与定位结果，无外部字体/CDN（离线可用）。
 - **错误呈现**：`error.details[]` 逐条列出，附「怎么改」文本（与后端 §6.2 同源）。
-- **CSP 约束（写前端时的三条硬线）**：不许 `style="…"` 内联属性、不许内联 `<style>`、不许外部资源；图标只能 CSS 绘制或 data URI；动态文本一律 `textContent`（无 `innerHTML`/`eval`）。
+- **CSP 约束（写前端时的三条硬线）**：不许 `style="…"` 内联属性、不许内联 `<style>`、不许外部**脚本/样式**资源；图标只能 CSS 绘制或 data URI；动态文本一律 `textContent`（无 `innerHTML`/`eval`）。地图选点是唯一例外，且只放行两类：`img-src` 白名单 `https://*.autonavi.com`、`https://tile.openstreetmap.org`（瓦片）；`connect-src` 白名单 `https://restapi.amap.com`（可选逆地理编码）。`script-src`/`style-src` 仍是 `'self'`，`map_picker_test.go` 把这条、以及「不许出现高德 JS SDK 域名/安全密钥」「key 不许调后端接口持久化」一起钉死。
 ## 14. 非功能预算
 
 | 指标 | 预算 | 测量方法 |

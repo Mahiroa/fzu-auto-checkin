@@ -116,43 +116,70 @@ func (s *Server) flowRun(req runRequest) {
 		return
 	}
 
-	// 2. token：没有就 SSO 换一个并回写配置（§11.2）。token 会过期，而账密
+	// 2. token：没有就换一个并回写配置（§11.2）。token 会过期，而 Cookie 与账密
 	// 不会，所以这是让服务能连续跑几个月不断签的关键一步。
 	token := strings.TrimSpace(cfg.User.Token)
+	mintedNow := false
 	if token == "" {
-		addLog("info", "没有可用的 user.token，使用学号密码登录 SSO…")
-		fresh, err := s.ssoLogin(cfg.User.Username, cfg.User.Password)
+		fresh, source, err := s.mintToken(cfg, addLog)
 		if err != nil {
 			rec.Status = model.StatusError
 			rec.Error = s.sanitizeError(err.Error(), cfg)
-			addLog("error", "SSO 登录失败：%s", rec.Error)
+			addLog("error", "换取晚点名 token 失败（%s）：%s", source, rec.Error)
 			return
 		}
-		token = strings.TrimSpace(fresh)
-		if token == "" {
-			rec.Status = model.StatusError
-			rec.Error = "SSO 登录返回了空 token（登录页结构可能已变化）"
-			addLog("error", "%s", rec.Error)
-			return
-		}
+		token = fresh
+		mintedNow = true
 		cfg.User.Token = token
 		// 回写配置会让 config.version +1：token 是配置的一部分（§7 不单独存 token）。
 		// 必须走 UpdateConfig（写锁内重读最新配置再改），否则会覆盖掉这十几秒里
 		// 用户刚通过 PUT /config 改的密码/坐标/推送凭据（lost update）。
 		if _, err := s.store.UpdateConfig(func(latest *model.Config) []string {
 			latest.User.Token = token
-			return []string{"已通过 SSO 登录自动刷新 user.token"}
+			return []string{"已通过" + source + "自动刷新 user.token"}
 		}); err != nil {
 			addLog("warn", "登录成功但回写 user.token 失败：%s", s.sanitizeError(err.Error(), cfg))
 		} else {
-			addLog("info", "SSO 登录成功，已回写 user.token=%s", maskSecret(token))
+			addLog("info", "已用%s换到晚点名 token=%s", source, maskSecret(token))
 		}
 	}
 
 	// 3. init：拿今日计划与学校端状态。
 	client := s.clientFactory(token)
 	initData, err := client.Init()
+	if err != nil && !mintedNow && hasLoginCredential(cfg) {
+		// token 过期最常见的表现就是 init 失败（网关把请求打回登录页/返回非 JSON）。
+		// 这里花一次登录把当晚救回来，而不是等到明天——漏签是不可逆的。
+		addLog("warn", "init 未成功，可能是 user.token 已过期，重新换取一次 token 后重试")
+		if fresh, source, mintErr := s.mintToken(cfg, addLog); mintErr == nil && fresh != "" && fresh != token {
+			token = fresh
+			cfg.User.Token = token
+			if _, saveErr := s.store.UpdateConfig(func(latest *model.Config) []string {
+				latest.User.Token = token
+				return []string{"init 失败后已通过" + source + "重新刷新 user.token"}
+			}); saveErr != nil {
+				addLog("warn", "刷新 token 成功但回写失败：%s", s.sanitizeError(saveErr.Error(), cfg))
+			}
+			client = s.clientFactory(token)
+			initData, err = client.Init()
+			if err == nil {
+				addLog("info", "换 token 后 init 成功（来源 %s）", source)
+			}
+		} else if mintErr != nil {
+			addLog("warn", "重新换取 token 也失败：%s", s.sanitizeError(mintErr.Error(), cfg))
+		}
+	}
 	if err != nil {
+		if errors.Is(err, fzu.ErrTokenRejected) {
+			// 上游回了 HTML 错误页 = 它不认这个 token。这跟"今天没有晚点名"
+			// 是两件完全不同的事，必须报成失败：用户看到「今日无计划」会以为
+			// 今晚不用签，然后漏签。
+			rec.Status = model.StatusError
+			rec.Error = s.sanitizeError(err.Error(), cfg)
+			addLog("error", "晚点名接口拒绝了当前 token：%s", rec.Error)
+			addLog("warn", "token 会过期，也可能填的是别的系统的凭据；在「浏览器 Cookie」里填 sso.fzu.edu.cn 的 SESSION 后服务会自动换新，也可以点「测试登录」当场验证。")
+			return
+		}
 		// §11.3：init 失败按 no_plan 处理。这类失败（网关 500、维护页）通常是
 		// 一时一过，不该每 30 秒推一次"签到失败"把人叫醒。
 		// 但必须留下上游原文：把"上游挂了"和"今天真的没有晚点名"混成同一句话，
@@ -353,13 +380,20 @@ func (s *Server) finishRun(rec *model.RunRecord, logs []string, startedAt time.T
 	s.updateState(func(st *model.State) {
 		st.LastAttemptAt = startedAt
 		st.LastRunID = rec.ID
-		if rec.Status == model.StatusSuccess && rec.Mode != "probe" {
+		switch {
+		case rec.Status == model.StatusSuccess && rec.Mode != "probe":
 			// 只有真正打卡成功才写 last_success_date 与 last_slot_key：
 			//  - 失败必须允许下一轮重试，否则一次网络抖动就把当晚补签名额用掉了；
 			//  - 预检（probe）只是回答"这个坐标能不能签"，把它记成已签会让调度器
 			//    整晚判定 already_checked_today 从而彻底漏签——最危险的一种"成功"。
 			st.LastSuccessDate = today
 			st.LastSlotKey = slotKeyOf(today, rec.Slot, rec.Target)
+		case rec.Status == model.StatusAlready:
+			// 学校端说今天已经签过了（用户自己在 App 里签的，或本服务更早一轮签的）。
+			// 对调度器而言这与"我们签成功"是同一件事：今天不必再跑。不写的话，
+			// 窗口内会每 30 秒打一次 init 去确认"还是已签"，纯属白烧上游请求。
+			// 不写 last_slot_key：那个字段记录的是"我们触发过哪一档"。
+			st.LastSuccessDate = today
 		}
 	})
 	s.hub.broadcast(eventRun, map[string]any{

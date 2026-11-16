@@ -36,10 +36,14 @@ func run() int {
 	// X-Forwarded-For，而那是客户端能随手写的头——可伪造的头不能当身份。
 	trustProxy := flag.Bool("trust-proxy", envBool("FZU_TRUST_PROXY"),
 		"采信 X-Forwarded-For（仅当服务前有可信反向代理时开启）")
+	// 本地调试/验收时必须能关掉自动签到：在窗口内起一个实例就会立刻 catch-up 跑一轮，
+	// 若配置里恰好有有效凭据，那就是一次真实的打卡——调试不该产生这种副作用。
+	noScheduler := flag.Bool("no-scheduler", envBool("FZU_NO_SCHEDULER"),
+		"只开面板与手动操作，不启用自动签到调度（本地调试、验收、截图用）")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(),
-			"用法：fzucheckin [-listen 127.0.0.1:8787] [-data ./data] [-trust-proxy] [-version]\n"+
-				"环境变量：FZU_LISTEN / FZU_DATA_DIR / FZU_LOG_LEVEL(debug|info|warn|error) / FZU_TRUST_PROXY=1\n\n")
+			"用法：fzucheckin [-listen 127.0.0.1:8787] [-data ./data] [-trust-proxy] [-no-scheduler] [-version]\n"+
+				"环境变量：FZU_LISTEN / FZU_DATA_DIR / FZU_LOG_LEVEL(debug|info|warn|error) / FZU_TRUST_PROXY=1 / FZU_NO_SCHEDULER=1\n\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -57,7 +61,7 @@ func run() int {
 		return 1
 	}
 
-	srv, err := server.New(server.Deps{Store: st, TrustProxy: *trustProxy})
+	srv, err := server.New(server.Deps{Store: st, TrustProxy: *trustProxy, DisableScheduler: *noScheduler})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "启动失败：服务装配失败：%v\n", err)
 		return 1

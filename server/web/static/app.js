@@ -327,8 +327,12 @@ async function apiFetch(path, opts) {
   const err = new ApiError(res.status, env.code, env.message, env.details);
 
   if (res.status === 401) {
-    S.session.authed = false;
-    showAuth('login');
+    /* 测试登录失败也可能回 401，但那是「这条凭据不通」，不是管理端会话失效：
+       keepSession 让调用方自己处理，别把用户踢回登录页。 */
+    if (!opts.keepSession) {
+      S.session.authed = false;
+      showAuth('login');
+    }
   } else if (res.status === 403) {
     if (/init|setup/i.test(err.code + err.message)) {
       await refreshSession().catch(function () {});
@@ -420,9 +424,64 @@ function enterApp() {
   /* /status 只在仪表盘路由轮询；这里补一次，保证配置页/日志页/历史页也能看到版本号
      （失败就保持「版本 —」，不为一个展示字段打扰用户）。 */
   apiFetch('/status', { quiet: true }).then(applyVersion).catch(function () {});
+  /* 控制台脚本交接过来的凭证：先落到配置页，再自动校验+保存 */
+  const handoff = takeTokenFromHash();
   if (ROUTES.indexOf(location.hash) < 0) { location.hash = '#/dashboard'; return; }
   onRoute();
+  if (handoff) applyHandoffToken(handoff);
 }
+
+/* ---------- 凭据交接：链接里的 #token=… ---------- */
+
+/* 用户在自己浏览器里跑一段控制台脚本，把晚点名页面地址栏里的 token 直接交给面板，
+   省掉"复制-粘贴"这一步。为什么只交接 token 而不是 Cookie：统一身份认证的 SESSION
+   是 HttpOnly，任何页面脚本都读不到（document.cookie 里根本没有它），而晚点名落地页
+   的地址栏里就写着 token，同源可读。 */
+function takeTokenFromHash() {
+  const m = /(?:^|[#&])token=([A-Za-z0-9]{8,})/.exec(location.hash || '');
+  if (!m) return '';
+  /* 立刻从地址栏抹掉：它是凭据，不该留在历史记录、截图或分享出去的链接里。
+     replaceState 不发请求，所以这个 token 从来没有经过网络。 */
+  history.replaceState(null, '', location.pathname + location.search + '#/config');
+  return m[1];
+}
+
+async function applyHandoffToken(token) {
+  await loadConfig(true);
+  const cfg = JSON.parse(JSON.stringify(S.config || {}));
+  cfg.user = cfg.user || {};
+  cfg.user.token = token;
+  loginTestStatus('已从链接取得免登凭证，正在校验…', '');
+  try {
+    /* 先验证再保存：和「获取并保存凭证」同一条规矩，不把不能用的东西写进配置 */
+    const probe = await apiFetch('/login/test', { method: 'POST', body: { token: token }, keepSession: true, quiet: true });
+    const r = await apiFetch('/config', { method: 'PUT', body: { config: cfg } });
+    if (r && r.version !== undefined && r.version !== null) pinVersion(r.version);
+    if (r && Array.isArray(r.warnings) && r.warnings.length) showWarnings('config-warnings', r.warnings);
+    S.configLoaded = false;
+    await loadConfig(true);
+    const parts = ['免登凭证已自动保存 ' + str(probe.token_hint)];
+    if (str(probe.plan)) parts.push(str(probe.plan));
+    loginTestStatus(parts.join(' · '), 'ok');
+    announce('已自动保存免登凭证');
+  } catch (e) {
+    setVal('cfg-token', token);
+    /* 只取第一行：校验失败时 e.message 后面会跟一大段逐条规则，塞进状态行就没法看了。
+       凭证已经填进输入框，用户补完其它项点「保存」即可，不用再跑一遍脚本。 */
+    const first = String((e && e.message) || '保存失败').split('\n')[0];
+    loginTestStatus('已取到凭证但没能自动保存：' + first + '（凭证已填进「免登凭证」框，补完其它项后点「保存」即可）', 'err');
+  }
+}
+
+/* 面板已经开着时再贴链接，只会发生同文档的 hash 变化（页面不重载）——
+   这条路也必须接住，否则用户"在已打开的标签里粘链接"就没反应。 */
+window.addEventListener('hashchange', function () {
+  if (!S.session.authed) return;
+  const later = takeTokenFromHash();
+  if (!later) return;
+  onRoute();
+  applyHandoffToken(later);
+});
 
 function onRoute() {
   if (!S.session.authed) { showAuth('login'); return; }
@@ -732,6 +791,7 @@ function fillConfig(cfg) {
   setVal('cfg-username', user.username);
   setVal('cfg-password', user.password);
   setVal('cfg-token', user.token);
+  setVal('cfg-user-cookie', user.cookie);
 
   setVal('cfg-lon', ck.longitude);
   setVal('cfg-lat', ck.latitude);
@@ -894,7 +954,8 @@ function applyNotifyType() {
 
 function applySecretBadges() {
   each(document.querySelectorAll('.has-secret'), function (wrap) {
-    const input = wrap.querySelector('input');
+    /* Cookie 是 textarea，password/token 是 input：两种都要能挂「已配置」徽标 */
+    const input = wrap.querySelector('input, textarea');
     const badge = wrap.querySelector('.mask-badge');
     if (!input || !badge) return;
     badge.hidden = !maskedLike(input.value);
@@ -908,7 +969,8 @@ function collectConfig() {
     user: {
       username: getVal('cfg-username'),
       password: getVal('cfg-password'),
-      token: getVal('cfg-token')
+      token: getVal('cfg-token'),
+      cookie: getVal('cfg-user-cookie')
     },
     checkin: {
       longitude: getVal('cfg-lon'),
@@ -987,7 +1049,9 @@ function validateLocal(cfg) {
 
   const hasToken = !!cfg.user.token;
   const hasPw = !!(cfg.user.username && cfg.user.password);
-  if (!hasToken && !hasPw) p.push('凭据为空：填免登 token，或填「学号 + 密码」（推荐后者，token 失效可自动换新）。');
+  /* Cookie 也是凭据：只填 Cookie 的人不该被本地校验拦住（脱敏哨兵同样算"已配置"） */
+  const hasCookie = !!cfg.user.cookie;
+  if (!hasToken && !hasPw && !hasCookie) p.push('凭据为空：填浏览器 Cookie，或填「学号 + 密码」，或填免登凭证（三选一）。');
 
   return p;
 }
@@ -1020,7 +1084,107 @@ async function saveConfig() {
   }
 }
 
-/* ---------- 6.1 浏览器定位：WGS-84 → 高德 GCJ-02 ---------- */
+/* ---------- 6.1 「测试登录」：POST /login/test ---------- */
+
+const LOGIN_MODE_TEXT = { cookie: 'Cookie', password: '学号 + 密码', token: '免登凭证' };
+
+/* 脱敏哨兵（••••/****）只是给眼睛看的，服务端不认识它：一律换成空串，
+   让服务端回落到已保存的值，而不是把哨兵当成真凭据发过去。 */
+function loginTestBody() {
+  const pick = function (id) {
+    const v = getVal(id);
+    return maskedLike(v) ? '' : v;
+  };
+  return {
+    cookie: pick('cfg-user-cookie'),
+    username: pick('cfg-username'),
+    password: pick('cfg-password'),
+    token: pick('cfg-token')
+  };
+}
+
+function loginTestStatus(text, kind) {
+  const el = $('login-test-status');
+  if (!el) return;
+  el.textContent = str(text);
+  el.className = 'hint login-test-line' + (kind ? ' ' + kind : '');
+}
+
+function loginModeText(v) {
+  const s = str(v);
+  return LOGIN_MODE_TEXT[s] || s || '未知方式';
+}
+
+/* 成功回包一行长度有限，hops 只报步数，details 也不整段铺开 */
+function loginTestResultText(r) {
+  const parts = ['登录成功（' + loginModeText(r && r.mode) + '）'];
+  if (r && str(r.message)) parts.push(str(r.message));
+  if (r && str(r.token_hint)) parts.push('免登凭证 ' + str(r.token_hint));
+  if (r && r.school_ok === true) parts.push('签到接口可访问');
+  else if (r && r.school_ok === false) parts.push('签到接口暂时不可访问');
+  if (r && str(r.plan)) parts.push('今日计划 ' + str(r.plan));
+  const hops = (r && Array.isArray(r.hops)) ? r.hops.length : 0;
+  if (hops) parts.push('走完 ' + hops + ' 步');
+  return parts.join(' · ');
+}
+
+function loginTestErrorText(e) {
+  let text = (e && e.message) ? str(e.message) : '测试登录失败';
+  const details = (e && Array.isArray(e.details)) ? e.details.map(str).filter(function (x) { return x.trim() !== ''; }) : [];
+  /* 逐跳诊断每步一行：挤成一行会把 GET 请求地址里的 service 参数这种关键信息截掉，
+     而这正是用户唯一能用来判断"断在哪一步"的东西 */
+  if (details.length) text += '\n' + details.join('\n');
+  return text.length > 600 ? text.slice(0, 600) + '…' : text;
+}
+
+async function testLogin(btn) {
+  const btnEl = btn || $('btn-login-test');
+  /* 框里是服务端回传的脱敏哨兵就不发送它（服务端不认识哨兵）：loginTestBody()
+     会换成空串，服务端随即回落到已保存的那份 Cookie——这恰好是最常问的问题
+     「我上次存的 Cookie 还能用吗」，所以这里不能直接拦住不测。 */
+  const usingSavedCookie = maskedLike(getVal('cfg-user-cookie'));
+  setBusy(btnEl, '测试中…');
+  loginTestStatus(usingSavedCookie ? '正在用已保存的 Cookie 试登录…' : '正在用当前填写的内容试登录…', '');
+  try {
+    /* quiet：结论就在下面这一行显示，别再叠一个 toast；
+       keepSession：登录失败可能回 502/401，那是「这条凭据不通」，不是管理端会话失效。 */
+    const r = await apiFetch('/login/test', { method: 'POST', body: loginTestBody(), keepSession: true, quiet: true });
+    loginTestStatus(loginTestResultText(r), 'ok');
+    announce('测试登录成功');
+  } catch (e) {
+    loginTestStatus(loginTestErrorText(e), 'err');
+  } finally {
+    clearBusy(btnEl);
+  }
+}
+
+/* ---------- 6.1 一键换新免登凭证 ---------- */
+
+/* 与「测试登录」的区别只有一条：这个会写配置。
+   换到的凭证先由服务端拿去做一次 init 校验，通过了才落盘 —— 所以按钮点完
+   不需要再点「保存」，页面上那个「已配置」徽标也会跟着刷新。 */
+async function refreshToken(btn) {
+  const btnEl = btn || $('btn-login-refresh');
+  setBusy(btnEl, '获取中…');
+  loginTestStatus('正在用当前凭据换新免登凭证…', '');
+  try {
+    const r = await apiFetch('/login/refresh', { method: 'POST', body: loginTestBody(), keepSession: true, quiet: true });
+    const parts = ['已获取免登凭证 ' + str(r.token_hint) + '，已写入配置'];
+    if (str(r.plan)) parts.push(str(r.plan));
+    if (r.cookie_saved === true) parts.push('浏览器 Cookie 也一并保存了');
+    loginTestStatus(parts.join(' · '), 'ok');
+    announce('已获取免登凭证');
+    /* 重新拉一次配置：token 框与「已配置」徽标要跟着变，否则界面上还是旧状态 */
+    S.configLoaded = false;
+    await loadConfig(true);
+  } catch (e) {
+    loginTestStatus(loginTestErrorText(e), 'err');
+  } finally {
+    clearBusy(btnEl);
+  }
+}
+
+/* ---------- 6.2 浏览器定位：WGS-84 → 高德 GCJ-02 ---------- */
 
 /* GCJ-02 偏移公式的椭球参数（克拉索夫斯基 1940），标准实现的固定值 */
 const GCJ_A = 6378245.0;
@@ -1080,12 +1244,13 @@ function geoStatus(text, kind) {
 }
 
 /* 直接改 value 不会触发配置表单的 input 监听（徽标/提示靠它同步），补发一次冒泡 input */
-function fillCoord(id, v) {
-  const el = $(id);
+function fillField(el, v) {
   if (!el) return;
-  setVal(id, v);
+  el.value = str(v);
   el.dispatchEvent(new Event('input', { bubbles: true }));
 }
+
+function fillCoord(id, v) { fillField($(id), v); }
 
 function onGeoOk(pos) {
   const c = (pos && pos.coords) || {};
@@ -1151,6 +1316,71 @@ function locateNow(btn) {
   }
 }
 
+/* ---------- 6.3 地图选点：懒加载 map-picker.js ---------- */
+
+/* 选点器自己实现了瓦片拼接、拖动缩放和坐标系换算，有 10 KB 出头；塞进 app.js 会顶到
+   体积预算（80 KiB）——所以走动态 import：不点「地图选点」就一个字节都不下载。
+   CSP 的 script-src 'self' 对同源 module 的动态导入一样放行，不需要放宽脚本策略。 */
+let pickerPromise = null;
+
+function loadPicker() {
+  if (!pickerPromise) {
+    pickerPromise = import('./map-picker.js').catch(function (e) {
+      pickerPromise = null; // 失败要能重试：一次网络抖动不该让按钮永久失效
+      throw e;
+    });
+  }
+  return pickerPromise;
+}
+
+/* row 为 null → 填上面那组单个坐标；给了行 → 只改位置池里这一行。
+   两处都要发 input 事件：位置池提示、已配置徽标都挂在 form-config 的 input 监听上。 */
+async function openMapPicker(row) {
+  let mod;
+  try {
+    mod = await loadPicker();
+  } catch (e) {
+    toast('error', '选点模块没加载起来：刷新页面后再点一次');
+    return;
+  }
+  const lonEl = row ? row.querySelector('.r-lon') : null;
+  const latEl = row ? row.querySelector('.r-lat') : null;
+  const actEl = row ? row.querySelector('.r-actual') : $('cfg-actual');
+  try {
+    mod.openPicker({
+      lng: row ? (lonEl ? lonEl.value.trim() : '') : getVal('cfg-lon'),
+      lat: row ? (latEl ? latEl.value.trim() : '') : getVal('cfg-lat'),
+      /* 把现有的「上报地点文字」带进去：空的话由选点器去取/带出记忆，非空就原样摆出来 */
+      name: actEl ? String(actEl.value || '').trim() : '',
+      toGcj: wgs84ToGcj02,
+      onConfirm: function (p) {
+        const lon = Number(p && p.lng);
+        const lat = Number(p && p.lat);
+        if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+        /* 6 位小数 ≈ 0.1 米，比 GPS 误差小得多，也跟手填的格式对齐 */
+        const lonTxt = lon.toFixed(6);
+        const latTxt = lat.toFixed(6);
+        if (row) {
+          fillField(lonEl, lonTxt);
+          fillField(latEl, latTxt);
+        } else {
+          fillCoord('cfg-lon', lonTxt);
+          fillCoord('cfg-lat', latTxt);
+        }
+        /* 地点文字跟坐标一起同步：选点器里确认过的那串就是标准答案，空着就不动原值 */
+        const name = String((p && p.name) || '').trim();
+        if (name) fillField(actEl, name);
+        const tail = name ? '，地点文字已同步' : '（地点文字没取到，可手动补）';
+        geoStatus('已在地图上选点：' + lonTxt + ', ' + latTxt + '（高德 GCJ-02，点「保存」后生效）' + tail, 'ok');
+        announce('已填入地图选点坐标与地点文字');
+        toast('ok', name ? '坐标与地点文字已填入，记得点「保存」' : '坐标已填入，地点文字可再补一句');
+      }
+    });
+  } catch (e) {
+    toast('error', '地图选点打不开：' + (e && e.message ? e.message : '未知错误'));
+  }
+}
+
 /* ---------- 7. 导入 / 导出 ---------- */
 
 function openImport() {
@@ -1200,7 +1430,7 @@ function renderImportPreview(cfg, warnings) {
   previewLine(ul, '假期：' + (ranges.length
     ? ranges.length + ' 段 · ' + ranges.map(function (r) { return (str(r.name) || '未命名') + ' ' + (str(r.start) || '?') + '~' + (str(r.end) || '?'); }).join('；')
     : '无'));
-  previewLine(ul, '凭据：免登凭证 ' + (user.token ? '已填' : '空') + ' · 学号 ' + (user.username ? '已填' : '空') + ' · 密码 ' + (user.password ? '已填' : '空'));
+  previewLine(ul, '凭据：Cookie ' + (user.cookie ? '已填' : '空') + ' · 免登凭证 ' + (user.token ? '已填' : '空') + ' · 学号 ' + (user.username ? '已填' : '空') + ' · 密码 ' + (user.password ? '已填' : '空'));
   previewLine(ul, '服务：访问地址 ' + (str(srv.listen) || '默认') + ' · 数据存放目录 ' + (str(srv.data_dir) || '默认'));
   showWarnings('import-warnings', warnings);
 }
@@ -1708,7 +1938,8 @@ function bindEvents() {
     cfgForm.addEventListener('input', function (ev) {
       const t = ev.target;
       if (!t || !t.classList) return;
-      if (t.type === 'password') applySecretBadges();
+      /* 密码框与 Cookie 框（textarea）都会改动「已配置」徽标的状态 */
+      if (t.closest && t.closest('.has-secret')) applySecretBadges();
       if (t.closest && t.closest('#pool-rows')) syncPoolNote();
     });
   }
@@ -1719,9 +1950,22 @@ function bindEvents() {
   if (exportBtn) exportBtn.addEventListener('click', exportConfig);
   const typeSel = $('cfg-notify-type');
   if (typeSel) typeSel.addEventListener('change', applyNotifyType);
+  /* 测试登录：只发当前表单里的内容，不写配置（写配置仍然只能点「保存」） */
+  const loginTestBtn = $('btn-login-test');
+  if (loginTestBtn) loginTestBtn.addEventListener('click', function () { testLogin(loginTestBtn); });
+  const loginRefreshBtn = $('btn-login-refresh');
+  if (loginRefreshBtn) loginRefreshBtn.addEventListener('click', function () { refreshToken(loginRefreshBtn); });
   /* 浏览器定位：按钮在「位置」区域，未登录/视图隐藏时可能压根不存在，必须判空 */
   const geoBtn = $('btn-geo');
   if (geoBtn) geoBtn.addEventListener('click', function () { locateNow(geoBtn); });
+  /* 地图选点：单个坐标一个按钮，位置池每行一个；行是动态加的，所以走事件委托 */
+  const mapPickBtn = $('btn-map-pick');
+  if (mapPickBtn) mapPickBtn.addEventListener('click', function () { openMapPicker(null); });
+  const poolPickBox = $('pool-rows');
+  if (poolPickBox) poolPickBox.addEventListener('click', function (ev) {
+    const btn = ev.target && ev.target.closest ? ev.target.closest('.r-pick') : null;
+    if (btn) openMapPicker(btn.closest('.row'));
+  });
 
   each(document.querySelectorAll('.clear-secret'), function (btn) {
     btn.addEventListener('click', function () {

@@ -27,3 +27,8 @@ dist/
 
 # ---- 部署记录里的真实基础设施信息：只留本机，不入库 ----
 deploy/README.local.md
+
+# ---- 浏览器导出的 Cookie / 抓包现场：含真实会话凭据，绝不入库 ----
+docs/**/cookies*.json
+docs/**/cookie*.txt
+.recon/

@@ -170,7 +170,7 @@
 
         <fieldset class="card">
           <legend>账号</legend>
-          <p class="hint">「学号 + 密码」和「免登凭证」二选一：填了凭证就优先用凭证；凭证过期时，服务会自动用学号密码重新登录，并把新的凭证写回配置。</p>
+          <p class="hint">三种登录方式任填一种：Cookie（不用存密码）、「学号 + 密码」、免登凭证。都填时由服务端定优先级，点下面「测试登录」能确认实际走的是哪条；凭证过期时服务会用学号密码自动重新登录，并把新凭证写回配置。</p>
           <div class="field has-secret">
             <div class="field-head">
               <label for="cfg-username">学号</label>
@@ -192,6 +192,20 @@
               <button class="link clear-secret" type="button" data-target="cfg-token">清空</button>
             </div>
             <input id="cfg-token" type="password" autocomplete="new-password" placeholder="留空则用学号密码自动登录">
+          </div>
+          <div class="field has-secret">
+            <div class="field-head">
+              <label for="cfg-user-cookie">浏览器 Cookie（可选，不用输密码登录）</label>
+              <span class="badge mask-badge" hidden>已配置</span>
+              <button class="link clear-secret" type="button" data-target="cfg-user-cookie">清空</button>
+            </div>
+            <textarea id="cfg-user-cookie" rows="4" spellcheck="false" placeholder="SESSION=……（也可以整段粘 cookies.json）"></textarea>
+            <p class="hint">在浏览器登录学校统一身份认证后，按 F12 → 应用 → Cookie → 找到 sso.fzu.edu.cn 的 SESSION，复制它的值粘到这里；也可以直接粘导出的 cookies.json 全文。留空表示不用。</p>
+          </div>
+          <div class="test-row">
+            <button id="btn-login-test" class="ghost" type="button">测试登录</button>
+            <button id="btn-login-refresh" class="ghost" type="button">获取并保存凭证</button>
+            <p id="login-test-status" class="hint login-test-line" role="status" aria-live="polite"></p>
           </div>
         </fieldset>
 
@@ -219,8 +233,13 @@
               <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></svg>
               获取当前位置
             </button>
+            <button id="btn-map-pick" class="ghost" type="button">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 2.6 3.4 4.8a.7.7 0 0 0-.4.6v15.1c0 .5.5.9 1 .7L9 19.1l5.6 2.3c.2.1.4.1.6 0l5.4-2.2c.3-.1.4-.3.4-.6V3.5c0-.5-.5-.9-1-.7L15 4.9 9.4 2.6a.9.9 0 0 0-.4 0Zm.6 2.3 4.8 2v13.8l-4.8-2V4.9Zm6.4 2 3.8-1.6v13.9l-3.8 1.6V6.9ZM4.6 6.8 8 5.4v13.8l-3.4 1.4V6.8Z"/></svg>
+              在地图上选点
+            </button>
             <p id="geo-status" class="geo-status" role="status" aria-live="polite"></p>
           </div>
+          <p class="hint">不知道精确数字就点「在地图上选点」：底图直接铺高德瓦片，不用注册、不用 key、不限次数，拖到宿舍楼点一下就行 —— 点出来的坐标本来就是高德那套（GCJ-02），跟学校判定用的是同一个坐标系。</p>
 
           <div class="sub">
             <h4>位置池 <span class="muted small">（这里填了点以后，就只用池子里的点，上面的单个坐标不再生效）</span></h4>
@@ -443,6 +462,66 @@
   </div>
 </div>
 
+<!-- 地图选点弹窗（高德公开瓦片：免 key、不花钱；逻辑在 map-picker.js，点到才加载） -->
+<div id="map-picker" class="drawer" hidden>
+  <div class="drawer-panel mp-panel" role="dialog" aria-modal="true" aria-labelledby="mp-title">
+    <div class="drawer-head">
+      <h3 id="mp-title">在地图上选点</h3>
+      <button id="mp-close" class="ghost" type="button">关闭</button>
+    </div>
+    <div class="drawer-body mp-body">
+      <div class="mp-bar">
+        <div class="mp-seg" role="group" aria-label="缩放">
+          <button id="mp-zoom-out" class="ghost" type="button" aria-label="缩小">−</button>
+          <button id="mp-zoom-in" class="ghost" type="button" aria-label="放大">＋</button>
+        </div>
+        <div class="mp-seg" role="group" aria-label="图层">
+          <button id="mp-layer-road" class="ghost" type="button" aria-pressed="true">街道</button>
+          <button id="mp-layer-sat" class="ghost" type="button" aria-pressed="false">卫星</button>
+        </div>
+        <button id="mp-center" class="ghost" type="button">用中心</button>
+        <a id="mp-open" class="mp-link" target="_blank" rel="noopener noreferrer">在高德网页版看这个点</a>
+      </div>
+      <div id="mp-map" class="mp-map" tabindex="0" role="application" aria-label="地图选点：拖动平移，点一下落点，滚轮或方向键微调">
+        <div id="mp-tiles" class="mp-tiles"></div>
+        <div id="mp-pin" class="mp-pin" hidden><span class="mp-pin-ring"></span></div>
+        <span id="mp-attr" class="mp-attr">© 高德地图</span>
+      </div>
+      <p id="mp-status" class="mp-status"></p>
+      <div class="row mp-name-row">
+        <div class="field grow">
+          <label for="mp-name">上报地点文字（智汇福大的格式：校区 + 详细地址靠近地点，能改）</label>
+          <input id="mp-name" type="text" autocomplete="off" spellcheck="false" placeholder="旗山校区 福建省福州市闽侯县学府南路辅路28号靠近福州大学旗山校区生活区X号楼">
+        </div>
+        <button id="mp-regeo" class="ghost" type="button" title="用高德逆地理编码重新生成一次">取地名</button>
+      </div>
+      <details id="mp-key-box" class="mp-key">
+        <summary>地名服务（可选）：填一个高德 Web 服务 key，就能自动生成上面那串地址</summary>
+        <p class="hint">免费额度够个人用（每天几千次），不用充值也能一直用；key 只存在这台电脑的浏览器里，不写进配置文件、也不随导出走。不填也能用：手写一次，同一个位置以后会自动带出。</p>
+        <div class="row">
+          <div class="field grow">
+            <label for="mp-key">高德 Web 服务 key</label>
+            <input id="mp-key" type="text" spellcheck="false" autocomplete="off" placeholder="在高德控制台按「Web服务」类型申请，形如 32 位字符串">
+          </div>
+          <button id="mp-key-save" class="ghost" type="button">保存 key</button>
+        </div>
+      </details>
+      <div class="row mp-paste-row">
+        <div class="field grow">
+          <label for="mp-paste">也可以粘高德 App「分享 → 复制链接」的整段地址（或「经度,纬度」）</label>
+          <input id="mp-paste" type="text" spellcheck="false" autocomplete="off" placeholder="119.209433,26.046112">
+        </div>
+        <button id="mp-parse" class="ghost" type="button">解析</button>
+      </div>
+      <p class="hint">左键拖动、点一下落点，滚轮或 ＋/− 缩放，手机上单指拖动。底图是高德的公开瓦片，不用申请 key、不占任何付费额度；万一网络挡住高德，会自动换成 OpenStreetMap 底图，并把选点结果换算回高德坐标。选完点后「上报地点文字」会按智汇福大的格式带出，跟着一起写进配置。</p>
+      <div class="actions mp-actions">
+        <button id="mp-cancel" class="ghost" type="button">取消</button>
+        <button id="mp-ok" class="primary" type="button">用这个点</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toasts" class="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
 <p id="live" class="vh" role="status" aria-live="polite" aria-atomic="true"></p>
 
@@ -461,6 +540,7 @@
     <div class="field narrow">
       <label><span>权重</span><input class="r-weight" type="number" step="any" min="0" placeholder="1"></label>
     </div>
+    <button class="ghost r-pick" type="button" title="在地图上选这一行的点">地图选点</button>
     <button class="ghost r-del" type="button">删除</button>
   </div>
 </template>

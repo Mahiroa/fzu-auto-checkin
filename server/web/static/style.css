@@ -653,7 +653,7 @@ fieldset.card > legend {
 .row.dyn .field { flex: 1 1 120px; }
 .row.dyn label { display: grid; gap: 4px; }
 .row.dyn label > span { font-size: 12px; }
-.row.dyn .r-del, .row.dyn .t-del, .row.dyn .v-del { flex: 0 0 auto; }
+.row.dyn .r-del, .row.dyn .t-del, .row.dyn .v-del, .row.dyn .r-pick { flex: 0 0 auto; }
 
 /* 复选框标签：整体可点、垂直居中 */
 .check {
@@ -926,6 +926,18 @@ svg.ico {
   fill: currentColor;
 }
 
+/* ---------- 12.1 「测试登录」按钮 + 一行结果 ---------- */
+.test-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0 2px;
+}
+.test-row .hint { margin: 0; flex: 1 1 100%; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.login-test-line.ok { color: var(--ok); }
+.login-test-line.err { color: var(--err); }
+
 @media (prefers-reduced-motion: reduce) {
   .spinner, .geo-status.busy::before { animation-duration: 3s; }
   * { scroll-behavior: auto !important; }
@@ -1041,4 +1053,81 @@ svg.ico {
   .row.dyn .field { flex: 1 1 100%; }
   .card { padding: 11px; }
   .geo-status { flex: 1 1 100%; }
+}
+
+/* ---------- 12.2 地图选点弹窗（高德公开瓦片；逻辑在 map-picker.js，按需加载） ---------- */
+.mp-panel { width: min(880px, 100%); }
+.mp-body { display: grid; gap: 10px; }
+.mp-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mp-seg { display: inline-flex; }
+.mp-seg button:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.mp-seg button:last-child {
+  border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -1px;
+}
+.mp-seg button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 16%, var(--card));
+  color: var(--fg);
+}
+.mp-link { font-size: 12.5px; color: var(--accent); margin-left: auto; cursor: pointer; text-decoration: underline; }
+.mp-map {
+  position: relative;
+  height: clamp(240px, 42vh, 420px);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--card2);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.mp-map.dragging { cursor: grabbing; }
+.mp-map:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mp-tiles { position: absolute; inset: 0; }
+.mp-tiles img {
+  position: absolute; left: 0; top: 0;
+  width: 256px; height: 256px; max-width: none;
+  user-select: none; -webkit-user-drag: none;
+}
+.mp-pin { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
+.mp-pin-ring {
+  display: block; width: 18px; height: 18px; border-radius: 50%;
+  border: 3px solid var(--accent); background: rgba(255, 255, 255, .7);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .85), 0 2px 8px rgba(0, 0, 0, .35);
+}
+.mp-pin-ring::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%;
+  background: var(--accent);
+}
+.mp-attr {
+  position: absolute; right: 6px; bottom: 4px;
+  font-size: 11px; color: #333; background: rgba(255, 255, 255, .8);
+  padding: 1px 5px; border-radius: 4px; pointer-events: none;
+}
+/* 不要写 min-height：它是 grid item 的「指定最小尺寸」，会顶掉自动最小尺寸（min-content），
+   于是窄屏下这行文字被压成一行高、第二行直接盖到下面的粘贴框上（实测 390x844）。
+   空行靠 :empty 收起，高度始终由内容决定。 */
+.mp-status { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--fg2); }
+.mp-status:empty { display: none; }
+.mp-status.ok { color: var(--ok); }
+.mp-status.warn { color: var(--warn); }
+.mp-status.err { color: var(--err); }
+.mp-paste-row { align-items: flex-end; }
+.mp-name-row { align-items: flex-end; }
+.mp-key { border: 1px dashed var(--line); border-radius: 8px; padding: 8px 10px; }
+.mp-key > summary { cursor: pointer; font-size: 12.5px; color: var(--fg2); }
+.mp-key[open] > summary { margin-bottom: 6px; color: var(--fg); }
+.mp-key .hint { margin: 0 0 8px; }
+/* 内容比弹窗高时（窄屏常见），底部按钮要一直看得见：贴住滚动容器下沿 */
+.mp-actions {
+  position: sticky; bottom: 0;
+  padding: 8px 0 2px;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 560px) {
+  .mp-map { height: clamp(200px, 34vh, 300px); }
+  .mp-link { margin-left: 0; }
 }

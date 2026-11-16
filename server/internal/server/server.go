@@ -35,7 +35,7 @@ import (
 )
 
 // Version 是服务版本号，/health 与 /status 都会带出去。
-const Version = "1.1.0"
+const Version = "1.3.2"
 
 // dateLayout 是 state.json / DayPlan 里日期的唯一写法。
 const dateLayout = "2006-01-02"
@@ -63,6 +63,7 @@ type Deps struct {
 
 	ClientFactory    func(token string) *fzu.Client
 	SSOLogin         func(user, pass string) (string, error)
+	SSOCookieLogin   func(cookie string) (fzu.CookieLoginResult, error)
 	Notifier         func(cfg model.Config, title, content string) error
 	DisableScheduler bool
 
@@ -82,9 +83,10 @@ type Server struct {
 	limits *loginLimiter
 	static fs.FS
 
-	clientFactory func(token string) *fzu.Client
-	ssoLogin      func(user, pass string) (string, error)
-	notifier      func(cfg model.Config, title, content string) error
+	clientFactory  func(token string) *fzu.Client
+	ssoLogin       func(user, pass string) (string, error)
+	ssoCookieLogin func(cookie string) (fzu.CookieLoginResult, error)
+	notifier       func(cfg model.Config, title, content string) error
 
 	schedulerDisabled bool
 	trustProxy        bool
@@ -161,6 +163,11 @@ func New(deps Deps) (*Server, error) {
 	if sso == nil {
 		sso = fzu.Login
 	}
+	// Cookie 登录：生产固定打 fzu.LoginWithCookie（sso.fzu.edu.cn + 晚点名回调）。
+	ssoCookie := deps.SSOCookieLogin
+	if ssoCookie == nil {
+		ssoCookie = fzu.LoginWithCookie
+	}
 	notifier := deps.Notifier
 	if notifier == nil {
 		// httpc 传 nil：fzu.Notify 会自己造一个 15s 超时的客户端。
@@ -181,6 +188,7 @@ func New(deps Deps) (*Server, error) {
 		static:            staticFS,
 		clientFactory:     factory,
 		ssoLogin:          sso,
+		ssoCookieLogin:    ssoCookie,
 		notifier:          notifier,
 		schedulerDisabled: deps.DisableScheduler,
 		startedAt:         now(),

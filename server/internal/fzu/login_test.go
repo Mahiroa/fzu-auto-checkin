@@ -237,8 +237,11 @@ func TestLoginWithoutErrorHint(t *testing.T) {
 	if err == nil {
 		t.Fatal("期望报错")
 	}
-	if !strings.Contains(err.Error(), "可能需要验证码") {
-		t.Errorf("没有 error-msg 时应提示验证码/页面变化: %v", err)
+	// 没有 #login-error-msg、页面里也没有可读中文、captchaId 也为空时，
+	// 唯一诚实的话就是"没给出可读原因，页面结构可能变了"。
+	// （要验证码的情形由 #captchaId 判定，见 TestLoginErrorHintCaptcha。）
+	if !strings.Contains(err.Error(), "结构可能已变化") {
+		t.Errorf("无任何可读线索时应提示页面结构变化: %v", err)
 	}
 }
 

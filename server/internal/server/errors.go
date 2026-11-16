@@ -32,6 +32,7 @@ const (
 	codeRunNotFound         = "run_not_found"
 	codeNotifyNotConfigured = "notify_not_configured"
 	codeNotifyFailed        = "notify_failed"
+	codeLoginFailed         = "login_failed"
 	codeSSELimit            = "sse_limit"
 	codeNotFound            = "not_found"
 	codeMethodNotAllowed    = "method_not_allowed"

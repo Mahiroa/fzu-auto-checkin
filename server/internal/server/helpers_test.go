@@ -57,6 +57,10 @@ type fakeSchool struct {
 	noCheckHit     bool
 	lateLine       string
 	gate           *schoolGate
+	// rejectTokens 里的 token 会让 init 直接 500：用来模拟"配置里的 token 已过期"。
+	rejectTokens map[string]bool
+	// initHTML=true 时 init 回一个 HTML 错误页：模拟"上游不认这个 token"。
+	initHTML bool
 }
 
 // schoolGate 让 init 请求挂住，用来构造"运行中"的并发场景。
@@ -98,13 +102,22 @@ func (f *fakeSchool) handleInit(w http.ResponseWriter, r *http.Request) {
 	checked := f.checked
 	noPlan := f.noPlan
 	late := f.lateLine
+	rejected := f.rejectTokens[f.lastToken]
+	htmlFail := f.initHTML
 	f.mu.Unlock()
 
 	if gate != nil {
 		gate.once.Do(func() { close(gate.entered) })
 		<-gate.release
 	}
-	if fail {
+	if htmlFail {
+		// 线上真实形态：HTTP 500 + 一个「信息提示」HTML 页面（带 yui 资源）。
+		w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = io.WriteString(w, `<html><head><title>信息提示</title></head><body>请重新登录</body></html>`)
+		return
+	}
+	if fail || rejected {
 		http.Error(w, "upstream exploded", http.StatusInternalServerError)
 		return
 	}
@@ -207,6 +220,23 @@ func (f *fakeSchool) setGate(g *schoolGate) {
 	f.mu.Unlock()
 }
 
+// rejectToken 让学校端对这个 token 回 500：模拟"配置里的 token 已经过期"。
+func (f *fakeSchool) rejectToken(token string) {
+	f.mu.Lock()
+	if f.rejectTokens == nil {
+		f.rejectTokens = map[string]bool{}
+	}
+	f.rejectTokens[token] = true
+	f.mu.Unlock()
+}
+
+// setInitHTML 让 init 回 HTML 错误页：模拟"上游根本不认这个 token"。
+func (f *fakeSchool) setInitHTML(v bool) {
+	f.mu.Lock()
+	f.initHTML = v
+	f.mu.Unlock()
+}
+
 // ============ 测试环境 ============
 
 type testEnv struct {
@@ -223,6 +253,9 @@ type testEnv struct {
 	ssoCalls    int
 	ssoToken    string
 	ssoErr      error
+	cookieCalls int
+	cookieToken string
+	cookieErr   error
 	notifyCalls []string
 	notifyErr   error
 }
@@ -245,6 +278,8 @@ func newTestEnv(t *testing.T, opts ...envOption) *testEnv {
 		store:    st,
 		school:   newFakeSchool(t),
 		ssoToken: "sso-token-0123456789abcdef0123456789",
+		// Cookie 与账密换出来的 token 故意不同：断言"到底走了哪条路"才有意义。
+		cookieToken: "cookie-token-0123456789abcdef0123456789",
 	}
 	deps := Deps{
 		Store: st,
@@ -264,6 +299,20 @@ func newTestEnv(t *testing.T, opts ...envOption) *testEnv {
 				return "", env.ssoErr
 			}
 			return env.ssoToken, nil
+		},
+		SSOCookieLogin: func(cookie string) (fzu.CookieLoginResult, error) {
+			env.mu.Lock()
+			defer env.mu.Unlock()
+			env.cookieCalls++
+			if env.cookieErr != nil {
+				// 真实实现会带上逐跳诊断，这里也带一条，保证上层拼错误详情的行为一致。
+				return fzu.CookieLoginResult{Hops: []string{"GET /login 带着 Cookie → 200 登录页"}}, env.cookieErr
+			}
+			return fzu.CookieLoginResult{
+				Token: env.cookieToken,
+				Hops:  []string{"GET /login 带着 Cookie → 302 回调 → token"},
+				Note:  "会话有效，CAS 直接签发了 service ticket，已换到晚点名 token",
+			}, nil
 		},
 		Notifier: func(cfg model.Config, title, content string) error {
 			env.mu.Lock()
@@ -309,6 +358,18 @@ func (e *testEnv) ssoCallCount() int {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return e.ssoCalls
+}
+
+func (e *testEnv) cookieCallCount() int {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.cookieCalls
+}
+
+func (e *testEnv) setCookieErr(err error) {
+	e.mu.Lock()
+	e.cookieErr = err
+	e.mu.Unlock()
 }
 
 func (e *testEnv) notifyTitles() []string {

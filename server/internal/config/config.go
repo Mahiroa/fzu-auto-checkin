@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -43,6 +44,7 @@ var notifyTypes = []string{"serverchan", "pushplus", "bark", "wecom", "none"}
 var sensitivePaths = []string{
 	"user.password",
 	"user.token",
+	"user.cookie",
 	"notify.serverchan_key",
 	"notify.pushplus_token",
 	"notify.bark_url",
@@ -146,8 +148,78 @@ func Normalize(cfg model.Config) (model.Config, []string) {
 func normalizeUser(cfg *model.Config, w *warnings) {
 	cfg.User.Username = strings.TrimSpace(cfg.User.Username)
 	cfg.User.Token = strings.TrimSpace(cfg.User.Token)
+	// Cookie 首尾空白一定不是值的一部分（粘贴时最常见的污染），可以放心 trim：
+	// 它和密码不同，`name=value; name=value` 里没有"合法的尾空格"。
+	cfg.User.Cookie = strings.TrimSpace(cfg.User.Cookie)
+
+	// token 的形状检查：晚点名的免登 token 只由字母数字组成（就是浏览器地址栏
+	// index.action?token= 后面那一长串）。带 '-'、'='、'.' 的值十有八九是从别的
+	// 系统复制过来的（最典型的就是一站式服务大厅 oss.fzu.edu.cn 的 Access-Token），
+	// 发过去对端只会回一个 HTML 错误页，而用户完全看不出哪里错了。
+	if tok := cfg.User.Token; tok != "" && tok != MaskSentinel {
+		// 先尝试从"整条页面地址"里抽 token：把地址当 token 发出去 100% 会被上游打回，
+		// 而用户粘地址的次数远多于粘裸 token 的次数。
+		if extracted, ok := extractAttnToken(tok); ok {
+			cfg.User.Token = extracted
+			w.add("user.token 里填的是一整条页面地址，已自动抽出其中的 token 参数（地址里的其他内容没有保存）。")
+		} else if !isAttnTokenShape(tok) {
+			w.add("user.token 里有非字母数字字符：晚点名的免登 token 只由字母和数字组成。\n" +
+				"  如果这段是从别的系统复制的（例如一站式服务大厅的 Access-Token），学校端会直接返回错误页。\n" +
+				"  取法：在浏览器里打开晚点名页面，地址栏 index.action?token= 后面那一串就是。")
+		}
+	}
 	// 密码不动：首尾空格可能就是密码的一部分，替用户"修好"等于让登录必然失败。
 	_ = w
+}
+
+// isAttnTokenShape 判断 token 是不是晚点名那种"纯字母数字"的形状。
+//
+// 只做形状判断、绝不硬拦：上游哪天换编码方式，这条提示会变成噪音，但
+// 硬拦会让服务直接不可用。所以它只产出 warning，最终由用户判断。
+func isAttnTokenShape(token string) bool {
+	for _, r := range token {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			continue
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// extractAttnToken 从"整条页面地址"或"半截查询串"里抽出 token 参数。
+//
+// 为什么值得做：用户拿到 token 的场景几乎都是「在浏览器里打开晚点名页面，
+// 地址栏变成 index.action?token=xxxx」，于是粘过来的常常是整条 URL。
+// 把 URL 当 token 发出去，上游只会回一个 HTML 错误页，而用户看不出原因。
+//
+// 返回 (token, 是否发生了抽取)：第二个值用来区分"本来就是裸 token"与
+// "刚从地址里抽出来"，只有后者才需要提示用户。
+func extractAttnToken(raw string) (string, bool) {
+	text := strings.TrimSpace(raw)
+	lower := strings.ToLower(text)
+	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
+		u, err := url.Parse(text)
+		if err != nil {
+			return "", false
+		}
+		if v := strings.TrimSpace(u.Query().Get("token")); v != "" {
+			return v, true
+		}
+		return "", false
+	}
+	// `?token=xxx` / `token=xxx` 这种半截粘贴
+	if i := strings.Index(lower, "token="); i >= 0 {
+		v := text[i+len("token="):]
+		if j := strings.IndexAny(v, "&#\r\n\t "); j >= 0 {
+			v = v[:j]
+		}
+		if v = strings.TrimSpace(v); v != "" {
+			return v, true
+		}
+	}
+	return "", false
 }
 
 func normalizeCheckin(cfg *model.Config, w *warnings) {
@@ -384,13 +456,17 @@ func Validate(cfg model.Config) error {
 
 	hasToken := strings.TrimSpace(cfg.User.Token) != ""
 	hasAccount := strings.TrimSpace(cfg.User.Username) != "" && strings.TrimSpace(cfg.User.Password) != ""
-	if !hasToken && !hasAccount {
+	hasCookie := strings.TrimSpace(cfg.User.Cookie) != ""
+	if !hasToken && !hasAccount && !hasCookie {
 		problems = append(problems, strings.Join([]string{
-			"认证信息没配好：user.token 与「user.username + user.password」二选一，至少要有一项。",
+			"认证信息没配好：user.token、user.cookie、「user.username + user.password」三种凭据至少要有一项。",
 			"  · 已经有晚点名 token（H5 免登 token，会过期）：",
 			"      user:",
 			"        token: \"粘贴 token\"",
-			"  · 没有 token（推荐，token 过期会自动用账密重新登录）：",
+			"  · 只有浏览器 Cookie（免密码，最省事；登录统一身份认证后复制 SESSION）：",
+			"      user:",
+			"        cookie: \"SESSION=粘贴这一整段\"",
+			"  · 只有学号密码（token 过期时自动重新登录，但学校可能要求验证码）：",
 			"      user:",
 			"        username: \"学号\"",
 			"        password: \"当前能登录智汇福大 App 的密码\"",
@@ -477,6 +553,8 @@ func secretField(cfg *model.Config, path string) *string {
 		return &cfg.User.Password
 	case "user.token":
 		return &cfg.User.Token
+	case "user.cookie":
+		return &cfg.User.Cookie
 	case "notify.serverchan_key":
 		return &cfg.Notify.ServerChanKey
 	case "notify.pushplus_token":
@@ -741,6 +819,7 @@ func applyYAML(cfg *model.Config, root *yamlNode, w *warnings) {
 			setStr(&cfg.User.Token, n.get("token"), "user.token", w)
 			setStr(&cfg.User.Username, n.get("username"), "user.username", w)
 			setStr(&cfg.User.Password, n.get("password"), "user.password", w)
+			setStr(&cfg.User.Cookie, n.get("cookie"), "user.cookie", w)
 		}
 	}
 
@@ -972,6 +1051,7 @@ func ToYAML(cfg model.Config) string {
 	fmt.Fprintf(&b, "  token: %s\n", yamlQuote(cfg.User.Token))
 	fmt.Fprintf(&b, "  username: %s\n", yamlQuote(cfg.User.Username))
 	fmt.Fprintf(&b, "  password: %s\n", yamlQuote(cfg.User.Password))
+	fmt.Fprintf(&b, "  cookie: %s\n", yamlQuote(cfg.User.Cookie))
 
 	b.WriteString("checkin:\n")
 	fmt.Fprintf(&b, "  longitude: %s\n", yamlQuote(cfg.Checkin.Longitude))

@@ -27,8 +27,12 @@ import (
 const (
 	layoutIndexBudget = 40 << 10 // index.html ≤ 40 KiB
 	layoutStyleBudget = 45 << 10 // style.css  ≤ 45 KiB
-	layoutAppBudget   = 80 << 10 // app.js     ≤ 80 KiB
-	layoutTotalBudget = 160 << 10
+	// app.js 从 80 KiB 提到 96 KiB：地图选点与凭据交接都是纯前端功能，且都要跑在
+	// 同一个模块里（动态 import 只能拆"整块的独立功能"，事件绑定与表单读写没法拆）。
+	// 提高上限是权衡后的选择：真正的约束是"零构建、可读、别变成框架工程"，不是这个数字。
+	// 继续加功能前请优先考虑拆成 map-picker.js 那样的懒加载文件，而不是继续堆 app.js。
+	layoutAppBudget   = 96 << 10 // app.js     ≤ 96 KiB
+	layoutTotalBudget = 192 << 10
 )
 
 // layoutStatic 从内嵌 FS 里读一个静态文件。读不到就失败——静态资源缺失是线上事故，
