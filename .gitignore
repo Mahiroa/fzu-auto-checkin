@@ -25,8 +25,11 @@ server/fzucheckin.exe
 # ---- 构建产物（不入库）----
 dist/
 
-# ---- 部署记录里的真实基础设施信息：只留本机，不入库 ----
-deploy/README.local.md
+# ---- 部署模板与部署记录：一律只留本机，不入库 ----
+# deploy/ 下是「我这台机器怎么部署的」：真实路径、端口、备份文件名、域名约定，
+# 不属于可公开仓库的内容。注意 .gitignore 对「已被跟踪」的文件无效——
+# 目录要真离开仓库，还得配一次 git rm -r --cached deploy（历史则要 filter-repo）。
+deploy/
 
 # ---- 浏览器导出的 Cookie / 抓包现场：含真实会话凭据，绝不入库 ----
 docs/**/cookies*.json

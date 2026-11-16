@@ -69,7 +69,7 @@ https://sso.fzu.edu.cn/login?service=https%3A%2F%2Fyzsxg.fzu.edu.cn%2Flivecloud%
 javascript:(()=>{const t=new URL(location.href).searchParams.get('token');if(!t)return alert('当前页面没有 token，请先打开晚点名页面');window.open('https://<你的面板域名>/#token='+t,'_blank')})()
 ```
 
-> `<你的面板域名>` 换成你自己部署时用的域名（即 `deploy/README.md` 里的 `PANEL_DOMAIN`，例如 `checkin.example.com`）。
+> `<你的面板域名>` 换成你自己部署时用的域名（nginx 反代里的 `server_name` / 证书域名，例如 `checkin.example.com`）。
 > 本仓库不写任何真实域名：面板入口一旦公开，唯一屏障只剩管理密码。
 
 > 控制台第一次粘贴代码时，Chrome 可能要求先输入 `允许粘贴`（allow pasting），
