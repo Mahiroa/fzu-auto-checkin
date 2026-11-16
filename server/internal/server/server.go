@@ -35,7 +35,7 @@ import (
 )
 
 // Version 是服务版本号，/health 与 /status 都会带出去。
-const Version = "1.0.0"
+const Version = "1.1.0"
 
 // dateLayout 是 state.json / DayPlan 里日期的唯一写法。
 const dateLayout = "2006-01-02"

@@ -25,7 +25,7 @@
 <section id="file-notice" class="boot-card" hidden aria-labelledby="file-h">
   <h1 id="file-h">请通过服务访问</h1>
   <p>本页面是「福大晚点名自动签到」Go 服务内嵌的前端，直接双击以 file:// 方式打开时无法调用接口。</p>
-  <p>请先启动服务，再用浏览器访问默认监听地址 <code>127.0.0.1:8787</code>（可用 <code>-listen</code> 或环境变量 <code>FZU_LISTEN</code> 修改）。</p>
+  <p>请先启动服务，再用浏览器打开 <code>127.0.0.1:8787</code>（想换端口的话，启动服务时加参数或设一个环境变量即可，详见项目说明）。</p>
 </section>
 
 <!-- 未登录：只显示这一张卡 -->
@@ -77,7 +77,7 @@
     </nav>
     <div class="sidebar-foot">
       <button id="btn-logout" class="ghost" type="button">退出登录</button>
-      <span class="side-version">v1.0.0</span>
+      <span class="side-version" id="side-version">版本 —</span>
     </div>
   </aside>
 
@@ -124,7 +124,7 @@
       <article class="card">
         <h3>时间轴 <span id="dash-slot-count" class="muted small"></span></h3>
         <ol id="dash-slots" class="timeline"></ol>
-        <p id="dash-slots-empty" class="empty" hidden>暂无有效档位（未配置 times 或全部落在窗口外）。</p>
+        <p id="dash-slots-empty" class="empty" hidden>暂无有效档位（没有设置签到时刻，或者设置的时刻都落在签到窗口之外）。</p>
       </article>
 
       <article class="card">
@@ -170,7 +170,7 @@
 
         <fieldset class="card">
           <legend>账号</legend>
-          <p class="hint">token 与「学号 + 密码」二选一：有 token 优先；token 失效时服务会用学号密码自动登录并回写新 token。</p>
+          <p class="hint">「学号 + 密码」和「免登凭证」二选一：填了凭证就优先用凭证；凭证过期时，服务会自动用学号密码重新登录，并把新的凭证写回配置。</p>
           <div class="field has-secret">
             <div class="field-head">
               <label for="cfg-username">学号</label>
@@ -187,7 +187,7 @@
           </div>
           <div class="field has-secret">
             <div class="field-head">
-              <label for="cfg-token">免登 token</label>
+              <label for="cfg-token">免登凭证（App 里叫 token）</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-token">清空</button>
             </div>
@@ -197,7 +197,7 @@
 
         <fieldset class="card" id="fs-location">
           <legend>位置</legend>
-          <p class="hint">高德 GCJ-02 坐标。填你在校区内常驻位置的真实坐标；抖动只做小范围漂移，不改变所在位置。</p>
+          <p class="hint">填你在校区里常待位置的真实经纬度（和高德地图上看到的是同一套坐标）。下面开了「位置抖动」只是在这个点附近小范围漂移，不会把位置换到别处去。</p>
           <p id="cfg-single-note" class="warn-line" hidden></p>
           <div class="row">
             <div class="field">
@@ -209,7 +209,7 @@
               <input id="cfg-lat" type="text" inputmode="decimal" placeholder="26.04920">
             </div>
             <div class="field grow">
-              <label for="cfg-actual">上报地址文案</label>
+              <label for="cfg-actual">上报地点文字</label>
               <input id="cfg-actual" type="text" placeholder="福州大学旗山校区生活区X号楼">
             </div>
           </div>
@@ -223,55 +223,49 @@
           </div>
 
           <div class="sub">
-            <h4>位置池 <span class="muted small">（非空时完全接管上面的单点坐标）</span></h4>
+            <h4>位置池 <span class="muted small">（这里填了点以后，就只用池子里的点，上面的单个坐标不再生效）</span></h4>
             <div id="pool-rows" class="rows"></div>
             <button id="btn-pool-add" class="ghost" type="button">+ 添加位置</button>
           </div>
 
-          <div class="row">
-            <div class="field">
-              <label for="cfg-jitter">抖动半径 location_jitter_m（米）</label>
-              <input id="cfg-jitter" type="number" step="any" min="0" placeholder="留空 = 默认 200">
-            </div>
-            <div class="field">
-              <label for="cfg-jitter-legacy">旧键 jitter_radius_m（米）</label>
-              <input id="cfg-jitter-legacy" type="number" step="any" min="0" placeholder="留空 = 默认 200">
-            </div>
+          <div class="field">
+            <label for="cfg-jitter">位置抖动半径（米）</label>
+            <input id="cfg-jitter" type="number" step="any" min="0" placeholder="留空按 200 米算">
           </div>
-          <p class="hint">以选中坐标为圆心、半径 N 米的圆内均匀取点（r = R·√U）。<code>location_jitter_m</code> 非空时优先；<code>0</code> 才是「关闭抖动」，留空/负数按默认 200 米。</p>
+          <p class="hint">以你的常用位置为圆心，在这个半径范围内随机取一个点上报，看起来更像人在附近走动。填 <code>0</code> 表示每次都报同一个点（也就是关掉抖动）；留空或填负数按 200 米算。</p>
         </fieldset>
 
         <fieldset class="card">
           <legend>时间调度</legend>
           <div class="row">
             <div class="field">
-              <label for="cfg-window-start">窗口起点 window_start</label>
+              <label for="cfg-window-start">签到窗口开始时间</label>
               <input id="cfg-window-start" type="time" step="60">
             </div>
             <div class="field">
-              <label for="cfg-window-end">窗口终点 window_end</label>
+              <label for="cfg-window-end">签到窗口结束时间</label>
               <input id="cfg-window-end" type="time" step="60">
             </div>
           </div>
-          <p class="hint">北京时间，起点与终点都含；终点写 <code>23:59</code> 时按 <code>23:59:59</code> 收尾。不支持跨日窗口，终点必须晚于起点。</p>
+          <p class="hint">北京时间。开始时间和结束时间当天都算在窗口内；结束时间写成 <code>23:59</code> 时会自动算到 <code>23:59:59</code>。窗口不能跨过半夜，结束时间必须晚于开始时间。</p>
 
           <div class="sub">
-            <h4>签到时刻 times <span class="muted small">（HH:MM，可多档）</span></h4>
+            <h4>签到时刻 <span class="muted small">（可以加多个，精确到分钟就行）</span></h4>
             <div id="time-rows" class="rows"></div>
             <button id="btn-time-add" class="ghost" type="button">+ 添加时刻</button>
             <div class="inline-note">
-              <label for="cfg-jitter-min">时间抖动 ± 分钟</label>
+              <label for="cfg-jitter-min">时刻浮动范围（± 分钟）</label>
               <input id="cfg-jitter-min" type="number" step="any" min="0" placeholder="0">
             </div>
             <div class="inline-note">
-              <label for="cfg-maxwait">最长等待（分钟）</label>
+              <label for="cfg-maxwait">早到最多等多久（分钟）</label>
               <input id="cfg-maxwait" type="number" step="any" min="0" placeholder="12">
             </div>
             <div class="inline-note">
-              <label for="cfg-tolerance">迟到容忍（分钟）</label>
+              <label for="cfg-tolerance">晚多少分钟还算准点</label>
               <input id="cfg-tolerance" type="number" step="any" min="0" placeholder="5">
             </div>
-            <p class="hint">抖动越出窗口时先重抽（最多 8 次），仍越界就贴边钳制到窗口内，执行前再校验一次 —— 抖多大都不会在窗口外打卡。最长等待：早到最多等多少分钟，等不起按 <code>wait_too_long</code> 跳过。迟到容忍：<code>now − target ≤ 该值</code> 记为准点，超出记为迟到但仍会签。</p>
+            <p class="hint">加了浮动以后，算出来的时刻要是跑出窗口，会重新抽（最多 8 次）；还是出界就贴到窗口边上，并在真正打卡前再核对一次 —— 浮动再多也不会在窗口外打卡。早到最多等多久：比目标时刻早到时最多等这么多分钟，等不到就不打这一档。晚多少分钟还算准点：比目标时刻晚不超过这个分钟数仍算准点，超过就算迟到，但照样会签。</p>
           </div>
         </fieldset>
 
@@ -282,7 +276,7 @@
             <span>命中假期时也推送提醒（默认静默跳过）</span>
           </label>
           <div class="sub">
-            <h4>跳过区间 <span class="muted small">（起止都含，格式 YYYY-MM-DD）</span></h4>
+            <h4>跳过区间 <span class="muted small">（开始和结束当天都算在假期里）</span></h4>
             <div id="vac-rows" class="rows"></div>
             <button id="btn-vac-add" class="ghost" type="button">+ 添加区间</button>
           </div>
@@ -294,11 +288,11 @@
           <div class="field">
             <label for="cfg-notify-type">通道</label>
             <select id="cfg-notify-type">
-              <option value="serverchan">Server酱（serverchan）</option>
-              <option value="pushplus">PushPlus（pushplus）</option>
-              <option value="bark">Bark（bark）</option>
-              <option value="wecom">企业微信群机器人（wecom）</option>
-              <option value="none">不推送（none）</option>
+              <option value="serverchan">Server酱（推送到微信）</option>
+              <option value="pushplus">PushPlus（推送到微信）</option>
+              <option value="bark">Bark（推送到 iPhone）</option>
+              <option value="wecom">企业微信群机器人</option>
+              <option value="none">不推送</option>
             </select>
           </div>
           <div class="field has-secret" data-notify="serverchan">
@@ -311,7 +305,7 @@
           </div>
           <div class="field has-secret" data-notify="pushplus" hidden>
             <div class="field-head">
-              <label for="cfg-pushplus-token">PushPlus token</label>
+              <label for="cfg-pushplus-token">PushPlus 的 token</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-pushplus-token">清空</button>
             </div>
@@ -319,7 +313,7 @@
           </div>
           <div class="field has-secret" data-notify="bark" hidden>
             <div class="field-head">
-              <label for="cfg-bark-url">Bark 推送 URL</label>
+              <label for="cfg-bark-url">Bark 推送地址</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-bark-url">清空</button>
             </div>
@@ -327,11 +321,11 @@
           </div>
           <div class="field has-secret" data-notify="wecom" hidden>
             <div class="field-head">
-              <label for="cfg-wecom-webhook">企业微信 webhook</label>
+              <label for="cfg-wecom-webhook">企业微信群机器人地址</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-wecom-webhook">清空</button>
             </div>
-            <input id="cfg-wecom-webhook" type="password" autocomplete="new-password" placeholder="群机器人 webhook 完整地址">
+            <input id="cfg-wecom-webhook" type="password" autocomplete="new-password" placeholder="群机器人的完整地址">
           </div>
           <p id="notify-hint" class="hint">成功/越界/失败必推；已签到、跳过、假期默认静默。推送失败不影响签到结论。</p>
         </fieldset>
@@ -340,22 +334,22 @@
           <legend>服务</legend>
           <div class="row">
             <div class="field">
-              <label for="cfg-listen">监听地址 listen</label>
+              <label for="cfg-listen">服务访问地址</label>
               <input id="cfg-listen" type="text" spellcheck="false" placeholder="127.0.0.1:8787">
             </div>
             <div class="field">
-              <label for="cfg-datadir">数据目录 data_dir</label>
+              <label for="cfg-datadir">数据存放目录</label>
               <input id="cfg-datadir" type="text" spellcheck="false" placeholder="./data">
             </div>
           </div>
           <div class="field">
-            <label for="cfg-origins">跨源白名单 allow_origins <span class="muted small">（逗号或空格分隔，留空 = 仅同源）</span></label>
+            <label for="cfg-origins">允许哪些外部网址调用本服务 <span class="muted small">（一般留空；多个用逗号或空格隔开）</span></label>
             <input id="cfg-origins" type="text" spellcheck="false" placeholder="留空">
           </div>
-          <p class="hint">监听地址与数据目录改动需要重启服务才生效；跨源白名单用于把前端放在别的静态服务器上托管（切 <code>server.allow_origins</code>）。</p>
+          <p class="hint">访问地址和数据存放目录改完要重启服务才会生效。上面那一项只有在你把管理页面挂到别的网站上时才需要填，平时留空就好。</p>
         </fieldset>
 
-        <p class="hint">保存会先备份旧文件为 <code>config.json.bak</code>；凭据显示为 <code>••••</code> 时保持原样提交 = 保留原值。</p>
+        <p class="hint">保存前会先把旧配置备份成 <code>config.json.bak</code>；密码、密钥显示成 <code>••••</code> 表示已经存过，原样保存就是继续用原来的值。</p>
       </form>
     </section>
 
@@ -433,9 +427,9 @@
       <button id="btn-import-close" class="ghost" type="button">关闭</button>
     </div>
     <div class="drawer-body">
-      <p class="hint">把旧版 <code>config.yaml</code> 全文粘进来，先「预览」解析结果（不落盘），确认无误再「应用」保存。</p>
+      <p class="hint">这里只给从旧版配置搬过来用：把旧配置文件的全部内容（<code>config.yaml</code> 原文）粘进下面，先点「预览」看看识别成了什么——这一步不会保存；确认对得上，再点「应用并保存」。框里的示例是旧文件的写法，照着原样粘就行，不用改。</p>
       <div class="field">
-        <label for="import-yaml">YAML 内容</label>
+        <label for="import-yaml">旧配置原文（整段粘贴到这里）</label>
         <textarea id="import-yaml" rows="12" spellcheck="false" placeholder="user:&#10;  username: &quot;...&quot;&#10;checkin:&#10;  schedule:&#10;    times: [&quot;21:35&quot;]"></textarea>
       </div>
       <div id="import-err" class="err-box" hidden></div>
@@ -462,7 +456,7 @@
       <label><span>纬度</span><input class="r-lat" type="text" inputmode="decimal" placeholder="26.04920"></label>
     </div>
     <div class="field grow">
-      <label><span>上报文案</span><input class="r-actual" type="text" placeholder="福州大学旗山校区生活区X号楼"></label>
+      <label><span>地点文字</span><input class="r-actual" type="text" placeholder="福州大学旗山校区生活区X号楼"></label>
     </div>
     <div class="field narrow">
       <label><span>权重</span><input class="r-weight" type="number" step="any" min="0" placeholder="1"></label>

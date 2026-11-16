@@ -44,12 +44,17 @@ const DECISION_TEXT = {
   late_fallback: '补签兜底', no_slot_fallback: '无有效档，兜底执行', out_of_window: '窗口外跳过'
 };
 const NOTIFY_HINT = {
-  serverchan: 'Server酱 Turbo：填 SCT 开头的 SendKey，成功判据是 HTTP 200 且 code=0。',
-  pushplus: 'PushPlus：填 token，成功判据是 HTTP 200 且 code=200。',
-  bark: 'Bark：填完整的推送地址（含你的 device key）。',
-  wecom: '企业微信群机器人：填 webhook 完整地址，成功判据是 errcode=0。',
-  none: '不推送：签到结论只落在运行历史与日志里。'
+  serverchan: 'Server酱 Turbo：填以 SCT 开头的 SendKey，能收到一条测试消息就是配通了。',
+  pushplus: 'PushPlus：填你的 token，能收到一条测试消息就是配通了。',
+  bark: 'Bark：填完整的推送地址（里面含你的设备标识）。',
+  wecom: '企业微信群机器人：填群机器人的完整地址，能在群里看到测试消息就是配通了。',
+  none: '不推送：签到结果只留在「历史」和「日志」里。'
 };
+const NOTIFY_NAME = {
+  serverchan: 'Server酱', pushplus: 'PushPlus', bark: 'Bark',
+  wecom: '企业微信群机器人', none: '不推送'
+};
+const MODE_TEXT = { normal: '自动执行', force: '手动「立即签到」' };
 const CONN_TEXT = {
   idle: '未连接', connecting: '连接中…', open: '已连接',
   reconnecting: '重连中…', closed: '已断开（重连中…）', unsupported: '浏览器不支持 SSE'
@@ -222,9 +227,23 @@ function showWarnings(boxId, list) {
   box.append(ul);
 }
 
+/* 忙碌期间按钮原有的子节点（含内嵌 <svg class="ico"> 图标）整体搬到 DocumentFragment 里
+ * 存着，结束后原样搬回。为什么不把按钮内容序列化成一段标记塞进 dataset、回头再解析
+ * 回来：① dataset 只能存字符串，节点身份（图标、已绑定过的监听器）会全丢；② 那样就得
+ * 走「把字符串当标记写进文档」的路子，直接违反本仓库「动态内容一律 textContent」的约定
+ * （两份验收测试都把它钉成了门禁）。这里只是搬家，不重建、不解析标记，输入天然是自家
+ * 静态标记，没有注入面。 */
+const BUSY_NODES = new WeakMap();
+
 function setBusy(btn, text) {
   if (!btn) return;
+  /* dataset.label 保留纯文本口径（既有排障/脚本可能读它），但不是还原依据 */
   if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+  if (!BUSY_NODES.has(btn)) {
+    const stash = document.createDocumentFragment();
+    while (btn.firstChild) stash.append(btn.firstChild);
+    BUSY_NODES.set(btn, stash);
+  }
   btn.dataset.busy = '1';
   btn.disabled = true;
   btn.setAttribute('aria-busy', 'true');
@@ -237,10 +256,19 @@ function setBusy(btn, text) {
 
 function clearBusy(btn) {
   if (!btn) return;
+  const stash = BUSY_NODES.get(btn);
+  if (stash) {
+    /* 先还原内容、再解除 disabled / aria-busy：这样"可点击"的那一刻，按钮里已经是
+       最终标记，不会出现「能点了但图标还没回来」的中间帧。 */
+    BUSY_NODES.delete(btn);
+    btn.textContent = '';
+    btn.append(stash);
+  } else if (btn.dataset.label) {
+    btn.textContent = btn.dataset.label;
+  }
   delete btn.dataset.busy;
   btn.disabled = false;
   btn.removeAttribute('aria-busy');
-  if (btn.dataset.label) btn.textContent = btn.dataset.label;
 }
 
 /* 类数组（NodeList / HTMLCollection / Array）统一遍历：不依赖 NodeList.prototype.forEach */
@@ -376,12 +404,22 @@ function showAuth(mode) {
   if (focus) setTimeout(function () { focus.focus(); }, 30);
 }
 
+/* 侧栏版本号跟着 /status 的 version 走：写死在 HTML 里迟早和二进制对不上，
+   而运维核对版本时最先看的就是这个角落。 */
+function applyVersion(st) {
+  const v = str(st && st.version);
+  if (v) setText('side-version', 'v' + v);
+}
+
 function enterApp() {
   S.session.authed = true;
   setHidden('auth', true);
   setHidden('booting', true);
   setHidden('file-notice', true);
   setHidden('shell', false);
+  /* /status 只在仪表盘路由轮询；这里补一次，保证配置页/日志页/历史页也能看到版本号
+     （失败就保持「版本 —」，不为一个展示字段打扰用户）。 */
+  apiFetch('/status', { quiet: true }).then(applyVersion).catch(function () {});
   if (ROUTES.indexOf(location.hash) < 0) { location.hash = '#/dashboard'; return; }
   onRoute();
 }
@@ -469,6 +507,18 @@ function schedulerText(s) {
   return '空闲，等待下一档';
 }
 
+/* 推送通道的内部名字（serverchan / pushplus …）只在配置里出现，界面上给中文名 */
+function notifyName(v) {
+  const s = str(v);
+  return NOTIFY_NAME[s] || s || NOTIFY_NAME.none;
+}
+
+/* 执行方式同理：normal / force 是接口字段，人只看「自动」还是「手动」 */
+function modeText(v) {
+  const s = str(v);
+  return MODE_TEXT[s] || s || '—';
+}
+
 function patchDashboard() {
   const st = S.status || {};
   const day = st.day || {};
@@ -510,6 +560,7 @@ function patchDashboard() {
   setText('dash-decision', decisionText(sched.last_decision));
   setText('dash-scheduler', schedulerText(sched));
   setText('dash-version', 'v' + (str(st.version) || '—') + ' · 配置 v' + (st.config_version === undefined || st.config_version === null ? '—' : str(st.config_version)));
+  applyVersion(st);
 
   const hasPlan = plan.has_plan === true;
   setHidden('dash-plan', !hasPlan);
@@ -610,7 +661,7 @@ function tickCountdown() {
   const target = toMs(st.next_run_at);
   if (!Number.isFinite(target) || new Date(target).getFullYear() < 2000) {
     el.textContent = '--:--:--';
-    setText('dash-next-at', '没有后续档位（今日计划已结束，或 times 全在窗口外）');
+    setText('dash-next-at', '没有后续档位（今日计划已结束，或者设置的签到时刻都落在签到窗口之外）');
     return;
   }
   const now = Date.now() + (S.skew || 0);
@@ -630,7 +681,7 @@ async function startRun(mode, dryRun, btn, label) {
     const res = await apiFetch('/runs', { method: 'POST', body: { mode: mode, dry_run: !!dryRun } });
     const id = str(res && res.run_id);
     const what = dryRun ? '定位预检' : '签到';
-    toast('ok', what + '已受理' + (id ? '（run_id=' + id + '）' : '') + '，结果见日志与推送');
+    toast('ok', what + '已受理' + (id ? '（运行编号 ' + id + '）' : '') + '，结果见日志与推送');
     announce(what + '已受理，正在执行');
     setText('dash-action-hint', '已受理' + (id ? '：' + id : '') + '，稍后自动刷新结果…');
     setTimeout(function () { loadDashboard(true); }, 2000);
@@ -686,7 +737,6 @@ function fillConfig(cfg) {
   setVal('cfg-lat', ck.latitude);
   setVal('cfg-actual', ck.actual_location);
   setVal('cfg-jitter', numStr(ck.location_jitter_m));
-  setVal('cfg-jitter-legacy', numStr(ck.jitter_radius_m));
 
   setVal('cfg-window-start', timeVal(sch.window_start));
   setVal('cfg-window-end', timeVal(sch.window_end));
@@ -821,7 +871,7 @@ function syncPoolNote() {
   if (n > 0) {
     if (note) {
       note.hidden = false;
-      note.textContent = '位置池已有 ' + n + ' 项：上面的单点经度 / 纬度 / 上报文案已被位置池接管，不再生效（每次按 weight 加权随机挑一个点）。';
+      note.textContent = '位置池已有 ' + n + ' 项：上面的单个经度 / 纬度 / 地点文字已被位置池接管，不再生效（每次按各点填的权重随机挑一个点）。';
     }
     if (fs) fs.classList.add('superseded');
   } else {
@@ -866,7 +916,6 @@ function collectConfig() {
       actual_location: getVal('cfg-actual'),
       locations: readPool(),
       location_jitter_m: numOrNull(getVal('cfg-jitter')),
-      jitter_radius_m: numOrNull(getVal('cfg-jitter-legacy')),
       schedule: {
         window_start: getVal('cfg-window-start'),
         window_end: getVal('cfg-window-end'),
@@ -1018,12 +1067,15 @@ function wgs84ToGcj02(lng, lat) {
   return { lng: lng + dLng, lat: lat + dLat };
 }
 
-/* 状态行：类名 ok/err 由这里统一切，避免成功/失败两条路径各写一遍 */
+/* 状态行：类名 ok / err / busy 一律由这里先清空再按需挂上，避免成功、失败、
+   进行中三条路径各写一遍。'busy' 必须一起删——它是唯一驱动左侧转圈动画的类
+   （style.css 的 .geo-status.busy::before），只在调用方传 'busy' 时加回来；
+   少删一次就会在定位成功后一直转下去。 */
 function geoStatus(text, kind) {
   const el = $('geo-status');
   if (!el) return;
   el.textContent = str(text);
-  el.classList.remove('ok', 'err');
+  el.classList.remove('ok', 'err', 'busy');
   if (kind) el.classList.add(kind);
 }
 
@@ -1139,17 +1191,17 @@ function renderImportPreview(cfg, warnings) {
   const locs = Array.isArray(ck.locations) ? ck.locations : [];
   const ranges = Array.isArray(vac.skip_ranges) ? vac.skip_ranges : [];
 
-  previewLine(ul, '窗口：' + (str(sch.window_start) || '默认') + ' – ' + (str(sch.window_end) || '默认'));
-  previewLine(ul, '档位：' + (times.length ? times.join(' / ') : '默认 21:35'));
-  previewLine(ul, '位置：' + (locs.length ? ('位置池 ' + locs.length + ' 项') : ((str(ck.longitude) || '?') + ', ' + (str(ck.latitude) || '?'))));
-  previewLine(ul, '抖动：' + (numStr(ck.location_jitter_m) || numStr(ck.jitter_radius_m) || '默认 200') + ' 米 · 时间抖动 ±' + (numStr(sch.time_jitter_minutes) || '0') + ' 分钟');
-  previewLine(ul, '等待 / 容忍：' + (numStr(sch.max_wait_minutes) || '12') + ' / ' + (numStr(sch.tolerance_minutes) || '5') + ' 分钟');
-  previewLine(ul, '推送：' + (str(nt.type) || 'none'));
+  previewLine(ul, '签到窗口：' + (str(sch.window_start) || '默认') + ' – ' + (str(sch.window_end) || '默认'));
+  previewLine(ul, '签到时刻：' + (times.length ? times.join(' / ') : '默认 21:35'));
+  previewLine(ul, '位置：' + (locs.length ? ('位置池 ' + locs.length + ' 个点') : ((str(ck.longitude) || '?') + ', ' + (str(ck.latitude) || '?'))));
+  previewLine(ul, '位置抖动半径：' + (numStr(ck.location_jitter_m) || '默认 200') + ' 米 · 时刻浮动 ±' + (numStr(sch.time_jitter_minutes) || '0') + ' 分钟');
+  previewLine(ul, '早到最多等多久 / 晚多少分钟还算准点：' + (numStr(sch.max_wait_minutes) || '12') + ' / ' + (numStr(sch.tolerance_minutes) || '5') + ' 分钟');
+  previewLine(ul, '推送：' + notifyName(nt.type));
   previewLine(ul, '假期：' + (ranges.length
     ? ranges.length + ' 段 · ' + ranges.map(function (r) { return (str(r.name) || '未命名') + ' ' + (str(r.start) || '?') + '~' + (str(r.end) || '?'); }).join('；')
     : '无'));
-  previewLine(ul, '凭据：token ' + (user.token ? '已填' : '空') + ' · 学号 ' + (user.username ? '已填' : '空') + ' · 密码 ' + (user.password ? '已填' : '空'));
-  previewLine(ul, '服务：' + (str(srv.listen) || '默认') + ' · 数据目录 ' + (str(srv.data_dir) || '默认'));
+  previewLine(ul, '凭据：免登凭证 ' + (user.token ? '已填' : '空') + ' · 学号 ' + (user.username ? '已填' : '空') + ' · 密码 ' + (user.password ? '已填' : '空'));
+  previewLine(ul, '服务：访问地址 ' + (str(srv.listen) || '默认') + ' · 数据存放目录 ' + (str(srv.data_dir) || '默认'));
   showWarnings('import-warnings', warnings);
 }
 
@@ -1238,7 +1290,7 @@ function logNode(e) {
   msg.className = 'ln-msg';
   msg.textContent = str(e && e.msg);
   li.append(ts, lv, msg);
-  if (e && e.run_id) li.title = 'run_id=' + str(e.run_id);
+  if (e && e.run_id) li.title = '运行编号 ' + str(e.run_id);
   return li;
 }
 
@@ -1399,17 +1451,21 @@ function runsLimit() {
 async function loadRuns(showToast) {
   const quiet = !showToast;
   const btn = $('btn-runs-more');
+  let loaded = false;
   try {
     const d = await apiFetch('/runs?limit=' + runsLimit(), { quiet: quiet });
     S.runs = (d && Array.isArray(d.runs)) ? d.runs : [];
     S.runsExhausted = S.runs.length < runsLimit();
-    renderRuns();
+    loaded = true;
   } catch (e) {
     if (e.status !== 401 && !quiet) toast('error', e.message || '读取运行历史失败');
     else if (e.status !== 401) setText('runs-count', '读取失败，稍后重试');
   } finally {
     clearBusy(btn);
   }
+  /* renderRuns 会按「还有没有更多」把按钮 disabled 掉；必须排在 clearBusy 之后，
+     否则刚设好的 disabled 会被「解除忙碌」重新改成可点（加载到底还能一直点）。 */
+  if (loaded) renderRuns();
 }
 
 function renderRuns() {
@@ -1441,7 +1497,7 @@ function renderRuns() {
     const tail = document.createElement('span');
     const errText = str(r && r.error);
     tail.className = errText ? 'ri-err' : 'ri-ok';
-    tail.textContent = errText || ('decision ' + (str(r && r.decision) || '—'));
+    tail.textContent = errText || ('决策：' + decisionText(r && r.decision));
 
     btn.append(when, stBox, lat, tail);
     li.append(btn);
@@ -1496,14 +1552,14 @@ function renderRunDetail(r) {
     dl.append(box);
   };
   kv('状态', STATUS_TEXT[r.status] || str(r.status) || '—');
-  kv('decision', str(r.decision) || '—');
-  kv('mode', str(r.mode) || '—');
-  kv('slot', str(r.slot) || '—');
-  kv('target', str(r.target) || '—');
+  kv('决策', decisionText(r.decision));
+  kv('执行方式', modeText(r.mode));
+  kv('生效档位', str(r.slot) || '—');
+  kv('目标时刻', str(r.target) || '—');
   kv('开始', fmtDateTime(r.started_at));
   kv('结束', fmtDateTime(r.finished_at));
-  kv('latency_ms', fmtLatency(r.latency_ms));
-  kv('is_late', r.is_late === true ? '是' : '否');
+  kv('耗时', fmtLatency(r.latency_ms));
+  kv('是否迟到', r.is_late === true ? '是' : '否');
 
   const loc = r.location || null;
   kv('坐标', loc ? (fmtNum(loc.lon) + ', ' + fmtNum(loc.lat)) : '—');
@@ -1515,7 +1571,7 @@ function renderRunDetail(r) {
   kv('校区', school ? ((str(school.campus) || '—') + (school.matched ? '（命中）' : '（未命中）')) : '—');
 
   const notify = r.notify || null;
-  kv('推送', notify ? ((str(notify.channel) || '—') + (notify.ok ? ' 成功' : ' 失败')) : '未推送');
+  kv('推送', notify ? (notifyName(notify.channel) + (notify.ok ? ' 成功' : ' 失败')) : '未推送');
   body.append(dl);
 
   const errText = str(r.error);
