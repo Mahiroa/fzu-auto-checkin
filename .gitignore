@@ -35,3 +35,10 @@ deploy/
 docs/**/cookies*.json
 docs/**/cookie*.txt
 .recon/
+
+# ---- 截图一律不入库 ----
+# 任何 UI 截图都可能带出：本机绝对路径与用户名（C:\Users\<name>）、签到坐标（楼栋级）、
+# 学号 / token 的残留回显、日志里的真实接口地址。这些信息一旦进 git，撤回也删不干净
+# （fork、GitHub 的 SHA 缓存窗口）。截图只作为本地验收物，需要时就地生成、就地查看。
+# scripts/ui-verify.ps1 的输出目录就是这里，所以忽略整个目录最省事。
+docs/verify-shots/
