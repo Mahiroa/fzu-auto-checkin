@@ -7,6 +7,13 @@
 # betterleaks v2 不再有 `protect --staged`：暂存区扫描是把 git diff --cached
 # 喂给 `stdin --git-diff`（官方迁移文档给的就是这条命令）。
 #
+# 本机说明（2026-11-18 实测）：这台机器的 ~/.gitconfig 设了
+#   core.hooksPath = ~/.ai-secret-guard/hooks
+# 所以仓库内的 .git/hooks/pre-commit **不会被调用**——那个全局钩子会自己在仓库根找
+# betterleaks.toml（找不到才退回 ~/.ai-secret-guard/config.toml）。本脚本因此是
+# "同一套规则的手动入口"，而不是实际生效的钩子；换一台没有全局配置的机器时，
+# 仓库内的钩子会自动接管（它 source 本脚本）。
+#
 # 工具缺失时只提示、不阻塞（否则换台机器就没法提交）。
 
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
