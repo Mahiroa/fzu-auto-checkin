@@ -77,7 +77,7 @@
       <label>学号（登录智汇福大 App 用的）</label>
       <input type="text" id="username" placeholder="如 3xxxxxxxx">
       <label>密码（你现在登录 App 用的那个）</label>
-      <input type="password" id="password" placeholder="••••••••">
+      <input type="text" id="password" autocomplete="off" spellcheck="false" placeholder="填写你现在登录 App 用的那个密码（本页不联网，只用来生成配置）">
     </div>
     <div id="authToken" class="hide">
       <label>免登 token</label>
@@ -167,7 +167,7 @@
     <p class="hint">没有账号？走上面<b>第 4 步</b>。</p>
     <p class="hint">贴一个 Token 就行：自动替你创建<b>私有仓库</b>、写入全部代码和你的配置，之后每晚 21:35 / 21:50 自动签到。凭据只存在你自己的私有仓库里，不经过任何第三方服务器。</p>
     <label>GitHub Token</label>
-    <input type="password" id="ghPat" placeholder="粘贴 ghp_ 开头的 token">
+    <input type="text" id="ghPat" autocomplete="off" spellcheck="false" placeholder="粘贴 ghp_ 开头的 token">
     <p class="hint">没有？<a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=fzu-checkin" target="_blank">点这里创建</a>——直达创建表单（未登录会先让你登录；中途若要求输入 GitHub 密码确认一次，属正常安全校验）。<code>repo</code>、<code>workflow</code> 两项权限已自动勾好。三步：① <b>Expiration 选 No expiration</b>——默认只有 30 天，到期后「一键写入」会静默失效；② 拉到页面底部点绿色 <b>Generate token</b>；③ 页面出现 <code>ghp_</code> 开头的 token，点旁边的复制按钮（<b>只显示这一次</b>）→ 粘贴过来。部署完成后建议删除该 token。</p>
     <label>私有仓库名</label>
     <input type="text" id="repoName" value="fzu-auto-checkin">
@@ -189,7 +189,7 @@
       <p class="hint" id="vacWhyRow" style="margin-top:4px">点一下就把选好的假期写进你仓库的 <code>config.yaml</code>——<b>只替换 <code>vacation:</code> 那一段</b>，账号 / 坐标 / 推送设置全部原样保留。</p>
       <div id="vacTokRow">
         <label>GitHub Token</label>
-        <input type="password" id="vacPat" placeholder="粘贴 ghp_ 开头的 token">
+        <input type="text" id="vacPat" autocomplete="off" spellcheck="false" placeholder="粘贴 ghp_ 开头的 token">
         <p class="hint">没有？<a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=fzu-checkin" target="_blank">点这里创建</a>（<code>repo</code> 和 <code>workflow</code> 已自动勾好，缺 workflow 写不了签到工作流；<b>Expiration 选 No expiration</b>，默认 30 天会过期）。只在点下面按钮时用一次，本页不保存、不上传。</p>
       </div>
       <div id="vacRepoRow">
@@ -211,17 +211,13 @@
   <!-- 意见反馈 -->
   <div class="card" id="feedback">
     <h2>💬 意见反馈</h2>
-    <p class="hint" style="margin-top:0">用着有问题、发现 bug，或者想让它支持别的学校 / 别的签到平台，都欢迎直接找我 —— 项目会持续维护。</p>
-    <label>反馈邮箱</label>
-    <input type="text" id="fbMail" value="feedback@example.com" readonly>
+    <p class="hint" style="margin-top:0">用着有问题、发现 bug，或者想让它支持别的学校 / 别的签到平台，都欢迎在项目仓库里提 Issue —— 项目会持续维护。</p>
     <div class="row" style="margin-top:10px">
-      <div><a class="btn ghost" href="mailto:feedback@example.com?subject=%E7%A6%8F%E5%A4%A7%E7%AD%BE%E5%88%B0%E5%B7%A5%E5%85%B7%E5%8F%8D%E9%A6%88" style="margin-top:0">✉️ 发邮件给我</a></div>
-      <div><button class="btn ghost" data-copy="fbMail" style="margin-top:0">📋 复制</button></div>
+      <div><a class="btn ghost" href="https://github.com/Mahiroa/fzu-auto-checkin/issues" target="_blank" style="margin-top:0">🐞 去 GitHub 提 Issue</a></div>
     </div>
-    <p class="hint">也可以在项目 <a href="https://github.com/Mahiroa/fzu-auto-checkin/issues" target="_blank">GitHub Issues</a> 里提问题。</p>
   </div>
 
-  <footer>开源项目 <a href="https://github.com/Mahiroa/fzu-auto-checkin" target="_blank">fzu-auto-checkin</a> · 本页面为纯静态工具，不收集任何数据 · 反馈：feedback@example.com</footer>
+  <footer>开源项目 <a href="https://github.com/Mahiroa/fzu-auto-checkin" target="_blank">fzu-auto-checkin</a> · 本页面为纯静态工具，不收集任何数据 · 反馈：项目 GitHub Issues</footer>
 </div>
 
 <script>
