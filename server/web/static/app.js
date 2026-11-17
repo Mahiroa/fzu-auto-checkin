@@ -2086,3 +2086,27 @@ async function init() {
 
 bindEvents();
 init();
+
+/* ---- 外观：跟随系统 / 浅色 / 深色（localStorage 记一次选择） ---- */
+(function initTheme() {
+  const KEY = 'fzu.theme';
+  const root = document.documentElement;
+  const btn = document.getElementById('btn-theme');
+  const modes = ['auto', 'light', 'dark'];
+  const label = { auto: '跟随系统', light: '浅色', dark: '深色' };
+  function apply(mode) {
+    if (mode === 'auto') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', mode);
+    if (btn) btn.textContent = label[mode];
+  }
+  let saved = 'auto';
+  try { saved = localStorage.getItem(KEY) || 'auto'; } catch (e) { saved = 'auto'; }
+  if (modes.indexOf(saved) < 0) saved = 'auto';
+  apply(saved);
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    saved = modes[(modes.indexOf(saved) + 1) % modes.length];
+    try { localStorage.setItem(KEY, saved); } catch (e) { /* 隐私模式下忽略 */ }
+    apply(saved);
+  });
+})();

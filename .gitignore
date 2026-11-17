@@ -42,6 +42,7 @@ docs/**/cookie*.txt
 # （fork、GitHub 的 SHA 缓存窗口）。截图只作为本地验收物，需要时就地生成、就地查看。
 # scripts/ui-verify.ps1 的输出目录就是这里，所以忽略整个目录最省事。
 docs/verify-shots/
+.shots/
 
 # ---- 测试与测试数据：一律不入库 ----
 # 单元测试、E2E 验收脚本、以及它们依赖的语料/向量（Python↔Go 一致性语料、AES 向量）

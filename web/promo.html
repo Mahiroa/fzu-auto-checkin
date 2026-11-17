@@ -3,69 +3,116 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>福大晚点名自动签到 · 宣传卡</title>
 <style>
-  :root { --brand:#4f6ef2; --bg:#f6f7fb; --card:#fff; --line:#e5e8f0; --txt:#1c2333; --sub:#6b7280; }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--txt); line-height:1.65; padding:18px 12px 40px; }
-  .card { max-width:520px; margin:0 auto; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px 20px; box-shadow:0 6px 24px rgba(28,35,51,.06); }
-  .kicker { font-size:12px; color:var(--sub); letter-spacing:.06em; }
-  h1 { font-size:25px; margin:4px 0 6px; letter-spacing:.01em; }
-  hr { border:none; border-top:1px dashed var(--line); margin:18px 0; }
-  h2 { font-size:15px; margin-bottom:8px; }
-  .pain { font-size:14px; background:#fef2f2; color:#7f1d1d; border-radius:9px; padding:9px 12px; margin-top:8px; }
-  .sol { font-size:14px; background:#f0fdf4; color:#14532d; border-radius:9px; padding:9px 12px; margin-top:8px; }
-  .sol b { color:#166534; }
-  .qrbox { text-align:center; margin-top:20px; }
-  .qrbox img { width:170px; height:170px; border:1px solid var(--line); border-radius:12px; background:#fff; padding:6px; }
-  .qrbox p { font-size:13px; color:var(--sub); margin-top:8px; }
-  .btn { display:block; width:100%; padding:13px 0; border:none; border-radius:11px; background:var(--brand); color:#fff; font-size:16px; cursor:pointer; text-align:center; text-decoration:none; margin-top:14px; }
-  .btn.ghost { background:#eef1fe; color:var(--brand); font-size:14px; padding:10px 0; margin-top:10px; }
-  input[type=text] { width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:8px; font-size:13px; background:#fbfcfe; color:var(--sub); margin-top:10px; text-align:center; }
-  .note { font-size:12px; color:var(--sub); text-align:center; margin-top:16px; line-height:1.8; }
-  .note a { color:var(--brand); }
+  :root{
+    --bg:#f6f7f9; --card:#fff; --card-2:#f7f8fa; --line:#e2e5ea; --line-2:#eceef2;
+    --fg:#171b21; --fg-2:#5b6673; --fg-3:#8b95a1;
+    --accent:#2f6fd0; --accent-fg:#fff; --ring:rgba(47,111,208,.28);
+    --shadow:0 1px 2px rgba(23,27,33,.05),0 12px 32px rgba(23,27,33,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d0f12; --card:#14171c; --card-2:#1a1e24; --line:#262b33; --line-2:#1e232a;
+      --fg:#e7eaee; --fg-2:#9aa4b0; --fg-3:#6c7681;
+      --accent:#7aa2f7; --accent-fg:#0d0f12; --ring:rgba(122,162,247,.32);
+      --shadow:0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:14px;line-height:1.65;padding:24px 14px 40px}
+  .card{max-width:480px;margin:0 auto;background:var(--card);border:1px solid var(--line);
+    border-radius:16px;padding:26px 22px 22px;box-shadow:var(--shadow)}
+  .kicker{font-size:12px;color:var(--fg-2);letter-spacing:.04em}
+  h1{font-size:22px;line-height:1.3;font-weight:650;letter-spacing:-.01em;margin:6px 0 4px}
+  .lede{font-size:14px;color:var(--fg-2)}
+  section{margin-top:20px}
+  h2{font-size:12.5px;font-weight:600;color:var(--fg-3);letter-spacing:.08em;margin-bottom:8px}
+  .list{list-style:none;font-size:14px;line-height:1.65}
+  .list li{position:relative;padding-left:14px}
+  .list li + li{margin-top:7px}
+  .list li::before{content:"";position:absolute;left:0;top:.7em;width:4px;height:4px;border-radius:50%;background:var(--fg-3)}
+  .list b{font-weight:600}
+  .pains li{color:var(--fg-2)}
+  .pains b{color:var(--fg)}
+  .qr{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:22px;padding-top:20px;
+    border-top:1px solid var(--line-2)}
+  .qr img{width:150px;height:150px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:6px}
+  .qr p{font-size:12.5px;color:var(--fg-2)}
+  .qr img{image-rendering:pixelated}
+  .btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin-top:12px;
+    padding:11px 16px;border:1px solid transparent;border-radius:10px;background:var(--accent);color:var(--accent-fg);
+    font-family:inherit;font-size:15px;font-weight:500;text-align:center;text-decoration:none;cursor:pointer;
+    transition:background-color .15s ease,border-color .15s ease,transform .12s ease}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:var(--card-2);color:var(--fg);border-color:var(--line);font-size:14px;min-height:44px}
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .btn:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  input[type=text]{width:100%;height:38px;margin-top:10px;padding:0 10px;border:1px solid var(--line);
+    border-radius:8px;background:var(--card-2);color:var(--fg-2);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+    font-size:12px;text-align:center;text-overflow:ellipsis;outline:2px solid transparent}
+  /* 两条链接只是"看得见就够"，别和按钮抢注意力：无边框、再淡一档、更小 */
+  input[readonly]{height:30px;margin-top:8px;border-color:transparent;background:transparent;
+    color:var(--fg-3);font-size:10.5px;cursor:text}
+  .note{margin-top:20px;padding-top:14px;border-top:1px solid var(--line-2);font-size:12px;line-height:1.8;
+    color:var(--fg-2);text-align:center}
+  .note a{color:var(--fg);text-decoration:none}
+  .note a:hover{color:var(--accent)}
+  @media (prefers-reduced-motion: reduce){*{transition:none !important}}
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="kicker">福州大学 · 智汇福大</div>
-  <h1>晚点名自动签到</h1>
+<main class="card">
+  <header>
+    <p class="kicker">福州大学 / 智汇福大</p>
+    <h1>晚点名，交给定时任务</h1>
+    <p class="lede">21:30 那一次点名，不用守在手机前面。</p>
+  </header>
 
-  <hr>
+  <section>
+    <h2>现在这样</h2>
+    <ul class="list pains">
+      <li><b>21:30 点名</b>，人还在图书馆，手机在书包里。</li>
+      <li>在开黑、在洗澡、或者已经睡了，回过神已经过点。</li>
+    </ul>
+  </section>
 
-  <h2>😵 这说的是你吗？</h2>
-  <div class="pain">21:30 的晚点名，忙着作业 / 游戏 / 睡着了，一晃就过点 → <b>迟到缺勤通报</b></div>
-  <div class="pain">天天定闹钟提醒自己，还得掏出手机打开 App 手动点一遍</div>
+  <section>
+    <h2>配好之后</h2>
+    <ul class="list">
+      <li><b>每晚 21:35、21:50 各试一次</b>，在校的日子云端自动签，跑在 GitHub 上。</li>
+      <li><b>要自己配一次</b>：学号密码、一个坐标、一个 GitHub 账号，十分钟左右。</li>
+      <li><b>只在本人确实在校时用</b>。寒暑假、军训、调休可以加成跳过区间，<b>绝不补签</b>。</li>
+      <li><b>默认不响</b>，想收结果就开微信或 iPhone 推送；凭据只进你自己的私有仓库。</li>
+    </ul>
+  </section>
 
-  <h2 style="margin-top:16px">✅ 配好之后</h2>
-  <div class="sol"><b>配置一次，一学期清净</b>：在校的每晚 21:35 / 21:50 云端自动签到</div>
-  <div class="sol"><b>寒暑假自动跳过</b>：实训 / 调休等不用签的日子也能自己加区间，<b>绝不替你补签</b></div>
-  <div class="sol"><b>不打扰</b>：默认静默完成；想知道结果，可推送到微信 / iPhone</div>
-  <div class="sol"><b>不经手任何第三方</b>：凭据只进你自己的私有仓库</div>
-
-  <div class="qrbox">
-    <img src="qr.png" alt="配置页二维码">
-    <p>手机扫码直达 · 电脑端复制下方链接转发</p>
+  <div class="qr">
+    <img src="qr.png" alt="配置页二维码" width="150" height="150">
+    <p>手机扫码直接打开配置页</p>
   </div>
 
-  <a class="btn" id="openBtn" href="https://ab29158412654ce793c6cea3134abfb9.app.workbuddy.link" target="_blank">👉 打开配置页</a>
+  <a class="btn" id="openBtn" href="https://ab29158412654ce793c6cea3134abfb9.app.workbuddy.link" target="_blank" rel="noopener">打开配置页</a>
   <input type="text" id="cfgLink" readonly value="https://ab29158412654ce793c6cea3134abfb9.app.workbuddy.link">
-  <button class="btn ghost" data-copy="cfgLink">📋 复制配置页链接，发群里</button>
+  <button class="btn ghost" data-copy="cfgLink" type="button">复制配置页链接</button>
   <input type="text" id="promoLink" readonly value="https://04a8d547cb6c4c8c91a3e31b07ea326c.app.workbuddy.link">
-  <button class="btn ghost" data-copy="promoLink">🔗 复制本宣传卡链接，整张卡片转给同学</button>
+  <button class="btn ghost" data-copy="promoLink" type="button">复制这张卡片</button>
 
-  <p class="note">仅限本人确实在校时使用 · 不用于隐瞒在/离校状态 · 不用于代挂<br>开源项目 <a href="https://github.com/Mahiroa/fzu-auto-checkin" target="_blank">fzu-auto-checkin</a> · 反馈：项目 GitHub Issues</p>
-</div>
+  <p class="note">仅限本人确实在校时使用 / 不用于隐瞒在校或离校状态 / 不代挂<br>开源项目 <a href="https://github.com/Mahiroa/fzu-auto-checkin" target="_blank" rel="noopener">fzu-auto-checkin</a> / 反馈走项目 Issues</p>
+</main>
 <script>
   document.querySelectorAll('[data-copy]').forEach(b => {
     const label = b.textContent;
     b.addEventListener('click', () => {
       const t = document.getElementById(b.dataset.copy);
       navigator.clipboard.writeText(t.value).then(() => {
-        b.textContent = '✅ 已复制';
+        b.textContent = '已复制';
         setTimeout(() => { b.textContent = label; }, 1500);
       });
     });

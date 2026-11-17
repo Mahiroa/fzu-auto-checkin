@@ -36,10 +36,14 @@ import (
 
 // Version 是服务版本号，/health 与 /status 都会带出去。
 //
+// 1.3.4：管理界面整版重做（新配色/排版/响应式，外观切换、手机顶部条与表格重排），
+// 文案按"说事实和代价"重写；两张独立静态页（configurator / promo）同批重做。
+// 后端行为与 1.3.3 一致，没有接口与调度变更。
+//
 // 1.3.3：check.action 的 range 改为转发 FPosition 对象串（学校端 2026-11-17 起
 // 拒收摊平后的多边形数组，回「打卡地点校验发生异常」）；配置页凭据框改明文，
 // GET /config 回真实值，导出仍脱敏。
-const Version = "1.3.3"
+const Version = "1.3.4"
 
 // dateLayout 是 state.json / DayPlan 里日期的唯一写法。
 const dateLayout = "2006-01-02"

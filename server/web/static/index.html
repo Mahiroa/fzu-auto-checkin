@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark light">
 <meta name="robots" content="noindex, nofollow">
-<title>福大晚点名 · 自动签到管理</title>
-<meta name="description" content="fzu-auto-checkin 本地管理界面：今日状态、配置、实时日志与运行历史。">
+<title>福大晚点名自动签到 · 管理页</title>
+<meta name="description" content="福大晚点名自动签到的管理页：今天签没签、下一档几点、窗口和位置怎么改，都在这页。">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
 <link rel="stylesheet" href="./style.css">
 <script type="module" src="./app.js"></script>
@@ -17,15 +17,15 @@
 <!-- 启动探测：决定「设置密码 / 登录 / 进入应用」三态之一 -->
 <section id="booting" class="boot-card" aria-labelledby="boot-h">
   <h1 id="boot-h">福大晚点名 · 自动签到</h1>
-  <p id="boot-msg" class="muted" role="status">正在连接服务…</p>
-  <button id="btn-boot-retry" class="ghost" type="button" hidden>重试连接</button>
+  <p id="boot-msg" class="muted" role="status">正在连服务…</p>
+  <button id="btn-boot-retry" class="ghost" type="button" hidden>重连服务</button>
 </section>
 
 <!-- file:// 打开时的纯静态提示（不发起任何请求） -->
 <section id="file-notice" class="boot-card" hidden aria-labelledby="file-h">
-  <h1 id="file-h">请通过服务访问</h1>
-  <p>本页面是「福大晚点名自动签到」Go 服务内嵌的前端，直接双击以 file:// 方式打开时无法调用接口。</p>
-  <p>请先启动服务，再用浏览器打开 <code>127.0.0.1:8787</code>（想换端口的话，启动服务时加参数或设一个环境变量即可，详见项目说明）。</p>
+  <h1 id="file-h">要从服务里打开</h1>
+  <p>直接双击打开这个文件是调不到接口的。</p>
+  <p>先启动服务，再在浏览器打开 <code>127.0.0.1:8787</code>。端口要换就在启动时改监听地址，见项目说明。</p>
 </section>
 
 <!-- 未登录：只显示这一张卡 -->
@@ -35,7 +35,7 @@
     <p id="auth-sub" class="muted small">管理界面</p>
 
     <form id="form-setup" class="stack" hidden>
-      <p class="notice">首次使用：请为管理界面设置密码（至少 8 个字符）。密码只保存在本机，用于登录本管理界面。</p>
+      <p class="notice">第一次用，先设个管理密码，8 个字符以上。密码存在服务端，以后打开这页要用。</p>
       <div class="field">
         <label for="setup-pass">管理密码</label>
         <input id="setup-pass" type="password" autocomplete="new-password" minlength="8" placeholder="至少 8 个字符">
@@ -67,15 +67,31 @@
   <aside class="sidebar">
     <div class="brand">
       <img src="./favicon.svg" alt="" width="22" height="22" decoding="async">
-      <span>福大晚点名</span>
+      <span class="brand-text">
+        <b class="brand-name">福大晚点名</b>
+        <span class="brand-sub">自动签到</span>
+      </span>
     </div>
     <nav id="nav" aria-label="主导航">
-      <button class="nav-btn" type="button" data-route="#/dashboard">仪表盘</button>
-      <button class="nav-btn" type="button" data-route="#/config">配置</button>
-      <button class="nav-btn" type="button" data-route="#/logs">日志</button>
-      <button class="nav-btn" type="button" data-route="#/runs">历史</button>
+      <button class="nav-btn" type="button" data-route="#/dashboard">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z"/></svg>
+        <span>仪表盘</span>
+      </button>
+      <button class="nav-btn" type="button" data-route="#/config">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+        <span>配置</span>
+      </button>
+      <button class="nav-btn" type="button" data-route="#/logs">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 6h13v2H8zM8 11h13v2H8zM8 16h13v2H8zM3 6h3v2H3zM3 11h3v2H3zM3 16h3v2H3z"/></svg>
+        <span>日志</span>
+      </button>
+      <button class="nav-btn" type="button" data-route="#/runs">
+        <svg class="nav-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 2a7 7 0 1 1 0 14 7 7 0 0 1 0-14ZM11.2 7h1.6v6h-1.6zM12 11.2h5v1.6h-5z"/></svg>
+        <span>历史</span>
+      </button>
     </nav>
     <div class="sidebar-foot">
+      <button id="btn-theme" class="ghost theme-btn" type="button">跟随系统</button>
       <button id="btn-logout" class="ghost" type="button">退出登录</button>
       <span class="side-version" id="side-version">版本 —</span>
     </div>
@@ -85,16 +101,25 @@
 
     <!-- ==================== 仪表盘 ==================== -->
     <section id="view-dashboard" class="view" hidden>
-      <h2 class="vh">仪表盘</h2>
+      <div class="view-head">
+        <div class="view-head-main">
+          <h2>仪表盘</h2>
+          <p class="view-sub">今天签没签、下一档几点、最近一次结果</p>
+        </div>
+      </div>
 
       <article class="card">
-        <div class="chips">
-          <span id="dash-check" class="chip">读取中…</span>
-          <span id="dash-window" class="chip">—</span>
-          <span id="dash-vacation" class="chip warn" hidden></span>
+        <div class="card-head">
+          <h3 class="card-title">今日状态</h3>
+          <span class="card-note">15 秒自己刷一次</span>
         </div>
-        <p id="dash-summary" class="lead">正在读取服务状态…</p>
-        <dl class="kv">
+        <div class="chips">
+          <span id="dash-check" class="chip">正在读状态…</span>
+          <span id="dash-window" class="chip">窗口 —</span>
+          <span id="dash-vacation" class="chip warn" hidden>假期中</span>
+        </div>
+        <p id="dash-summary" class="lead">正在读服务状态…</p>
+        <dl class="kv kv-kpi">
           <div><dt>今日</dt><dd id="dash-date">—</dd></div>
           <div><dt>上次成功</dt><dd id="dash-last-success">—</dd></div>
           <div><dt>最近决策</dt><dd id="dash-decision">—</dd></div>
@@ -106,8 +131,11 @@
 
       <div class="cols">
         <article class="card">
-          <h3>今日考勤计划</h3>
-          <p id="dash-plan-empty" class="empty" hidden>今日无考勤计划</p>
+          <div class="card-head">
+            <h3 class="card-title">今日考勤计划</h3>
+            <span class="card-note">按学校当天开放的时间段算</span>
+          </div>
+          <p id="dash-plan-empty" class="empty" hidden>今天没有考勤计划</p>
           <dl id="dash-plan" class="kv">
             <div><dt>开始</dt><dd id="plan-start">—</dd></div>
             <div><dt>结束</dt><dd id="plan-end">—</dd></div>
@@ -115,30 +143,42 @@
           </dl>
         </article>
         <article class="card countdown-card">
-          <h3>下一档倒计时</h3>
+          <div class="card-head">
+            <h3 class="card-title">下一档倒计时</h3>
+            <span class="card-note">到点自己签，不用守着</span>
+          </div>
           <p id="dash-countdown" class="big" aria-live="off">--:--:--</p>
           <p id="dash-next-at" class="muted small">—</p>
         </article>
       </div>
 
       <article class="card">
-        <h3>时间轴 <span id="dash-slot-count" class="muted small"></span></h3>
+        <div class="card-head">
+          <h3 class="card-title">时间轴</h3>
+          <span id="dash-slot-count" class="card-note">按配置里的签到时刻算</span>
+        </div>
         <ol id="dash-slots" class="timeline"></ol>
-        <p id="dash-slots-empty" class="empty" hidden>暂无有效档位（没有设置签到时刻，或者设置的时刻都落在签到窗口之外）。</p>
+        <p id="dash-slots-empty" class="empty" hidden>现在没有可用的档位，去配置页补一个签到时刻。</p>
       </article>
 
       <article class="card">
-        <h3>操作</h3>
+        <div class="card-head">
+          <h3 class="card-title">操作</h3>
+          <span class="card-note">不用等调度，手动跑一次</span>
+        </div>
         <div class="actions">
           <button id="btn-force" class="primary" type="button">立即签到</button>
           <button id="btn-probe" type="button">定位预检</button>
           <button id="btn-notify" type="button">推送测试</button>
         </div>
-        <p id="dash-action-hint" class="muted small">「立即签到」会跳过等待与窗口外拦截，仍会校验时间窗口后真打一次卡。</p>
+        <p id="dash-action-hint" class="muted small">立即签到不等档位，窗口外也签一次，结果进记录。定位预检只查定位和接口，不签到。</p>
       </article>
 
       <article class="card">
-        <h3>最近 5 次运行</h3>
+        <div class="card-head">
+          <h3 class="card-title">最近 5 次运行</h3>
+          <span class="card-note">全部记录在「历史」</span>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -147,14 +187,17 @@
             <tbody id="dash-runs-body"></tbody>
           </table>
         </div>
-        <p id="dash-runs-empty" class="empty" hidden>还没有运行记录。</p>
+        <p id="dash-runs-empty" class="empty" hidden>还没跑过，最近 5 次会列在这。</p>
       </article>
     </section>
 
     <!-- ==================== 配置 ==================== -->
     <section id="view-config" class="view" hidden>
       <div class="view-head">
-        <h2>配置</h2>
+        <div class="view-head-main">
+          <h2>配置</h2>
+          <p class="view-sub">账号、位置、窗口、推送都在这页，改完点保存</p>
+        </div>
         <div class="view-head-actions">
           <span id="config-version" class="muted small"></span>
           <button id="btn-config-export" class="ghost" type="button">导出</button>
@@ -169,8 +212,8 @@
       <form id="form-config" class="stack" autocomplete="off">
 
         <fieldset class="card">
-          <legend>账号</legend>
-          <p class="hint">三种登录方式任填一种：Cookie（不用存密码）、「学号 + 密码」、免登凭证。都填时由服务端定优先级，点下面「测试登录」能确认实际走的是哪条；凭证过期时服务会用学号密码自动重新登录，并把新凭证写回配置。</p>
+          <legend><span class="legend-text">账号</span><span class="legend-note">登录方式三选一</span></legend>
+          <p class="hint">三种登录方式，填一种就够：Cookie、学号密码、免登凭证。都填了按服务端优先级走，点「测试登录」看实际用了哪条。</p>
           <div class="field">
             <div class="field-head">
               <label for="cfg-username">学号</label>
@@ -187,20 +230,21 @@
           </div>
           <div class="field has-secret" data-secret="user.token">
             <div class="field-head">
-              <label for="cfg-token">免登凭证（App 里叫 token）</label>
+              <label for="cfg-token">免登凭证</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-token">清空</button>
             </div>
-            <input id="cfg-token" type="text" autocomplete="off" spellcheck="false" placeholder="留空则用学号密码自动登录">
+            <input id="cfg-token" type="text" autocomplete="off" spellcheck="false" placeholder="App 里叫 token">
+            <p class="hint">填了就优先用它；过期后服务会拿学号密码续一份新的。留空只走学号密码。</p>
           </div>
           <div class="field has-secret" data-secret="user.cookie">
             <div class="field-head">
-              <label for="cfg-user-cookie">浏览器 Cookie（可选，不用输密码登录）</label>
+              <label for="cfg-user-cookie">浏览器 Cookie</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-user-cookie">清空</button>
             </div>
-            <textarea id="cfg-user-cookie" rows="4" spellcheck="false" placeholder="SESSION=……（也可以整段粘 cookies.json）"></textarea>
-            <p class="hint">在浏览器登录学校统一身份认证后，按 F12 → 应用 → Cookie → 找到 sso.fzu.edu.cn 的 SESSION，复制它的值粘到这里；也可以直接粘导出的 cookies.json 全文。留空表示不用。</p>
+            <textarea id="cfg-user-cookie" rows="4" spellcheck="false" placeholder="SESSION=……，也可以整段粘 cookies.json"></textarea>
+            <p class="hint">登录过学校认证页的话，F12 里找 sso.fzu.edu.cn 的 SESSION，把值粘过来。留空就不用这条。</p>
           </div>
           <div class="test-row">
             <button id="btn-login-test" class="ghost" type="button">测试登录</button>
@@ -210,8 +254,8 @@
         </fieldset>
 
         <fieldset class="card" id="fs-location">
-          <legend>位置</legend>
-          <p class="hint">填你在校区里常待位置的真实经纬度（和高德地图上看到的是同一套坐标）。下面开了「位置抖动」只是在这个点附近小范围漂移，不会把位置换到别处去。</p>
+          <legend><span class="legend-text">位置</span><span class="legend-note">签到上报的就是这个点</span></legend>
+          <p class="hint">填你平时待的地方，跟高德地图上看到的经纬度一致就行。</p>
           <p id="cfg-single-note" class="warn-line" hidden></p>
           <div class="row">
             <div class="field">
@@ -239,77 +283,82 @@
             </button>
             <p id="geo-status" class="geo-status" role="status" aria-live="polite"></p>
           </div>
-          <p class="hint">不知道精确数字就点「在地图上选点」：底图直接铺高德瓦片，不用注册、不用 key、不限次数，拖到宿舍楼点一下就行 —— 点出来的坐标本来就是高德那套（GCJ-02），跟学校判定用的是同一个坐标系。</p>
+          <p class="hint">不知道数字就点「在地图上选点」，底图是高德瓦片，不用注册、不用 key。点出来就是 GCJ-02，跟学校判定用的是同一套坐标。</p>
 
           <div class="sub">
-            <h4>位置池 <span class="muted small">（这里填了点以后，就只用池子里的点，上面的单个坐标不再生效）</span></h4>
+            <h4>位置池</h4>
+            <p class="hint">填了点就只用池子里的，上面那组单个坐标不再生效。</p>
             <div id="pool-rows" class="rows"></div>
-            <button id="btn-pool-add" class="ghost" type="button">+ 添加位置</button>
+            <button id="btn-pool-add" class="ghost" type="button">添加位置</button>
           </div>
 
           <div class="field">
             <label for="cfg-jitter">位置抖动半径（米）</label>
             <input id="cfg-jitter" type="number" step="any" min="0" placeholder="留空按 200 米算">
           </div>
-          <p class="hint">以你的常用位置为圆心，在这个半径范围内随机取一个点上报，看起来更像人在附近走动。填 <code>0</code> 表示每次都报同一个点（也就是关掉抖动）；留空或填负数按 200 米算。</p>
+          <p class="hint">以常用位置为圆心随机取点，看起来像人在附近走动。填 0 就每次报同一个点，留空或负数按 200 米算。</p>
         </fieldset>
 
         <fieldset class="card">
-          <legend>时间调度</legend>
+          <legend><span class="legend-text">时间调度</span><span class="legend-note">窗口内的档位才生效</span></legend>
           <div class="row">
             <div class="field">
-              <label for="cfg-window-start">签到窗口开始时间</label>
+              <label for="cfg-window-start">签到窗口开始</label>
               <input id="cfg-window-start" type="time" step="60">
             </div>
             <div class="field">
-              <label for="cfg-window-end">签到窗口结束时间</label>
+              <label for="cfg-window-end">签到窗口结束</label>
               <input id="cfg-window-end" type="time" step="60">
             </div>
           </div>
-          <p class="hint">北京时间。开始时间和结束时间当天都算在窗口内；结束时间写成 <code>23:59</code> 时会自动算到 <code>23:59:59</code>。窗口不能跨过半夜，结束时间必须晚于开始时间。</p>
+          <p class="hint">北京时间，两头都算在窗口内；写 <code>23:59</code> 按 <code>23:59:59</code> 算。窗口不能跨半夜，结束得晚于开始。</p>
 
           <div class="sub">
-            <h4>签到时刻 <span class="muted small">（可以加多个，精确到分钟就行）</span></h4>
+            <h4>签到时刻</h4>
+            <p class="hint">加几个都行，精确到分钟就够。</p>
             <div id="time-rows" class="rows"></div>
-            <button id="btn-time-add" class="ghost" type="button">+ 添加时刻</button>
+            <button id="btn-time-add" class="ghost" type="button">添加时刻</button>
             <div class="inline-note">
-              <label for="cfg-jitter-min">时刻浮动范围（± 分钟）</label>
+              <label for="cfg-jitter-min">浮动范围（± 分钟）</label>
               <input id="cfg-jitter-min" type="number" step="any" min="0" placeholder="0">
             </div>
+            <p class="hint">算出窗口外的时刻会重抽，最多 8 次；还出界就贴到窗口边上，签到前再核一次。</p>
             <div class="inline-note">
               <label for="cfg-maxwait">早到最多等多久（分钟）</label>
               <input id="cfg-maxwait" type="number" step="any" min="0" placeholder="12">
             </div>
+            <p class="hint">比目标时刻早到时最多等这么多分钟，等不到这次就跳过。</p>
             <div class="inline-note">
               <label for="cfg-tolerance">晚多少分钟还算准点</label>
               <input id="cfg-tolerance" type="number" step="any" min="0" placeholder="5">
             </div>
-            <p class="hint">加了浮动以后，算出来的时刻要是跑出窗口，会重新抽（最多 8 次）；还是出界就贴到窗口边上，并在真正打卡前再核对一次 —— 浮动再多也不会在窗口外打卡。早到最多等多久：比目标时刻早到时最多等这么多分钟，等不到就不打这一档。晚多少分钟还算准点：比目标时刻晚不超过这个分钟数仍算准点，超过就算迟到，但照样会签。</p>
+            <p class="hint">超过这个分钟数就算迟到，但照样会签。</p>
           </div>
         </fieldset>
 
         <fieldset class="card">
-          <legend>假期</legend>
+          <legend><span class="legend-text">假期</span><span class="legend-note">这几天全跳过</span></legend>
           <label class="check">
             <input id="cfg-vacation-notify" type="checkbox">
-            <span>命中假期时也推送提醒（默认静默跳过）</span>
+            <span>假期也发推送，默认静默跳过</span>
           </label>
           <div class="sub">
-            <h4>跳过区间 <span class="muted small">（开始和结束当天都算在假期里）</span></h4>
+            <h4>跳过区间</h4>
+            <p class="hint">开始和结束当天都算在假期里。</p>
             <div id="vac-rows" class="rows"></div>
-            <button id="btn-vac-add" class="ghost" type="button">+ 添加区间</button>
+            <button id="btn-vac-add" class="ghost" type="button">添加区间</button>
           </div>
           <p class="hint">区间内不签到、不推送、不留运行记录。</p>
         </fieldset>
 
         <fieldset class="card">
-          <legend>推送</legend>
+          <legend><span class="legend-text">推送</span><span class="legend-note">签完发条消息到手机</span></legend>
           <div class="field">
             <label for="cfg-notify-type">通道</label>
             <select id="cfg-notify-type">
-              <option value="serverchan">Server酱（推送到微信）</option>
-              <option value="pushplus">PushPlus（推送到微信）</option>
-              <option value="bark">Bark（推送到 iPhone）</option>
+              <option value="serverchan">Server酱 → 微信</option>
+              <option value="pushplus">PushPlus → 微信</option>
+              <option value="bark">Bark → iPhone</option>
               <option value="wecom">企业微信群机器人</option>
               <option value="none">不推送</option>
             </select>
@@ -346,36 +395,40 @@
             </div>
             <input id="cfg-wecom-webhook" type="text" autocomplete="off" spellcheck="false" placeholder="群机器人的完整地址">
           </div>
-          <p id="notify-hint" class="hint">成功/越界/失败必推；已签到、跳过、假期默认静默。推送失败不影响签到结论。</p>
+          <p id="notify-hint" class="hint">成功、越界、失败必推；已签到、跳过、假期默认静默。推送失败不影响签到结论。</p>
         </fieldset>
 
         <fieldset class="card">
-          <legend>服务</legend>
+          <legend><span class="legend-text">服务</span><span class="legend-note">改完要重启才生效</span></legend>
           <div class="row">
             <div class="field">
-              <label for="cfg-listen">服务访问地址</label>
+              <label for="cfg-listen">监听地址</label>
               <input id="cfg-listen" type="text" spellcheck="false" placeholder="127.0.0.1:8787">
             </div>
             <div class="field">
-              <label for="cfg-datadir">数据存放目录</label>
+              <label for="cfg-datadir">数据目录</label>
               <input id="cfg-datadir" type="text" spellcheck="false" placeholder="./data">
             </div>
           </div>
           <div class="field">
-            <label for="cfg-origins">允许哪些外部网址调用本服务 <span class="muted small">（一般留空；多个用逗号或空格隔开）</span></label>
+            <label for="cfg-origins">允许哪些外部站调用</label>
             <input id="cfg-origins" type="text" spellcheck="false" placeholder="留空">
           </div>
-          <p class="hint">访问地址和数据存放目录改完要重启服务才会生效。上面那一项只有在你把管理页面挂到别的网站上时才需要填，平时留空就好。</p>
+          <p class="hint">改地址和数据目录要重启才生效。允许外部调用那项平时留空，只有把管理页挂到别的站上才填。</p>
         </fieldset>
 
-        <p class="hint">保存前会先把旧配置备份成 <code>config.json.bak</code>；上面的密码、免登凭证、Cookie 与推送密钥都按<b>明文</b>显示已保存的值，方便核对与复制，改完点「保存」即可。只有「导出」下载的 config.yaml / config.json 会自动脱敏成 <code>••••</code>。</p>
+        <p class="hint">保存前会把旧配置备份成 <code>config.json.bak</code>。密码、免登凭证、Cookie、推送密钥都按<b>明文</b>回填，方便核对。</p>
+        <p class="hint">只有「导出」下载的文件会脱敏成 <code>••••</code>。</p>
       </form>
     </section>
 
     <!-- ==================== 日志 ==================== -->
     <section id="view-logs" class="view" hidden>
       <div class="view-head">
-        <h2>日志</h2>
+        <div class="view-head-main">
+          <h2>日志</h2>
+          <p class="view-sub">服务在跑什么，都写在这里</p>
+        </div>
         <div class="view-head-actions">
           <span id="logs-conn" class="chip">未连接</span>
           <label class="inline-label" for="log-level">级别</label>
@@ -384,7 +437,7 @@
             <option value="debug">debug 及以上</option>
             <option value="info">info 及以上</option>
             <option value="warn">warn 及以上</option>
-            <option value="error">仅 error</option>
+            <option value="error">只看 error</option>
           </select>
           <label class="check" for="log-autoscroll">
             <input id="log-autoscroll" type="checkbox" checked>
@@ -396,14 +449,17 @@
       </div>
       <article class="card log-card">
         <ol id="logs-list" class="logs" data-level="all"></ol>
-        <p id="logs-empty" class="empty">暂无日志，等待服务输出…</p>
+        <p id="logs-empty" class="empty">还没日志，服务一输出就有了。</p>
       </article>
     </section>
 
     <!-- ==================== 历史 ==================== -->
     <section id="view-runs" class="view" hidden>
       <div class="view-head">
-        <h2>运行历史</h2>
+        <div class="view-head-main">
+          <h2>运行历史</h2>
+          <p class="view-sub">每次跑完留一条，点开看细节</p>
+        </div>
         <div class="view-head-actions">
           <span id="runs-count" class="muted small"></span>
           <label class="inline-label" for="runs-limit">每页</label>
@@ -417,11 +473,11 @@
         </div>
       </div>
       <ul id="runs-list" class="run-list"></ul>
-      <p id="runs-empty" class="empty">还没有运行记录。</p>
+      <p id="runs-empty" class="empty">还没有运行记录，跑一次签到就有了。</p>
     </section>
 
     <footer class="foot">
-      <span class="muted small">零构建 · 零依赖 · 数据都在本机 <code>data/</code> 目录</span>
+      <span class="muted small">零构建 / 零依赖 / 数据都在 <code>data/</code> 目录</span>
     </footer>
 
   </main>
@@ -446,9 +502,9 @@
       <button id="btn-import-close" class="ghost" type="button">关闭</button>
     </div>
     <div class="drawer-body">
-      <p class="hint">这里只给从旧版配置搬过来用：把旧配置文件的全部内容（<code>config.yaml</code> 原文）粘进下面，先点「预览」看看识别成了什么——这一步不会保存；确认对得上，再点「应用并保存」。框里的示例是旧文件的写法，照着原样粘就行，不用改。</p>
+      <p class="hint">从旧版搬配置用这个：把旧 config.yaml 整段粘进来，先点「预览」对一遍，这步不会保存。确认无误再点「应用并保存」。</p>
       <div class="field">
-        <label for="import-yaml">旧配置原文（整段粘贴到这里）</label>
+        <label for="import-yaml">旧配置原文</label>
         <textarea id="import-yaml" rows="12" spellcheck="false" placeholder="user:&#10;  username: &quot;...&quot;&#10;checkin:&#10;  schedule:&#10;    times: [&quot;21:35&quot;]"></textarea>
       </div>
       <div id="import-err" class="err-box" hidden></div>
@@ -490,30 +546,32 @@
       <p id="mp-status" class="mp-status"></p>
       <div class="row mp-name-row">
         <div class="field grow">
-          <label for="mp-name">上报地点文字（智汇福大的格式：校区 + 详细地址靠近地点，能改）</label>
+          <label for="mp-name">上报地点文字</label>
           <input id="mp-name" type="text" autocomplete="off" spellcheck="false" placeholder="旗山校区 福建省福州市闽侯县学府南路辅路28号靠近福州大学旗山校区生活区X号楼">
         </div>
-        <button id="mp-regeo" class="ghost" type="button" title="用高德逆地理编码重新生成一次">取地名</button>
+        <button id="mp-regeo" class="ghost" type="button" title="用高德地名服务重新取一次">取地名</button>
       </div>
+      <p class="hint">智汇福大要的格式是「校区 + 详细地址靠近某点」，选完能改。</p>
       <details id="mp-key-box" class="mp-key">
-        <summary>地名服务（可选）：填一个高德 Web 服务 key，就能自动生成上面那串地址</summary>
-        <p class="hint">免费额度够个人用（每天几千次），不用充值也能一直用；key 只存在这台电脑的浏览器里，不写进配置文件、也不随导出走。不填也能用：手写一次，同一个位置以后会自动带出。</p>
+        <summary>地名服务：填个 key 就能自动取地名，可选</summary>
+        <p class="hint">高德免费额度每天几千次，够个人用；key 只存这台电脑的浏览器，不进配置也不随导出走。</p>
+        <p class="hint">不填也能用，手写一次，以后同一个位置会自动带出。</p>
         <div class="row">
           <div class="field grow">
             <label for="mp-key">高德 Web 服务 key</label>
-            <input id="mp-key" type="text" spellcheck="false" autocomplete="off" placeholder="在高德控制台按「Web服务」类型申请，形如 32 位字符串">
+            <input id="mp-key" type="text" spellcheck="false" autocomplete="off" placeholder="在高德控制台按「Web 服务」类型申请，32 位">
           </div>
           <button id="mp-key-save" class="ghost" type="button">保存 key</button>
         </div>
       </details>
       <div class="row mp-paste-row">
         <div class="field grow">
-          <label for="mp-paste">也可以粘高德 App「分享 → 复制链接」的整段地址（或「经度,纬度」）</label>
+          <label for="mp-paste">粘贴高德分享链接，或直接写「经度,纬度」</label>
           <input id="mp-paste" type="text" spellcheck="false" autocomplete="off" placeholder="119.209433,26.046112">
         </div>
         <button id="mp-parse" class="ghost" type="button">解析</button>
       </div>
-      <p class="hint">左键拖动、点一下落点，滚轮或 ＋/− 缩放，手机上单指拖动。底图是高德的公开瓦片，不用申请 key、不占任何付费额度；万一网络挡住高德，会自动换成 OpenStreetMap 底图，并把选点结果换算回高德坐标。选完点后「上报地点文字」会按智汇福大的格式带出，跟着一起写进配置。</p>
+      <p class="hint">左键拖动、点一下落点，滚轮或 ＋/− 缩放，手机上单指拖。底图高德公开瓦片，不用 key；高德被挡住会换 OpenStreetMap，点照样换算回高德坐标。</p>
       <div class="actions mp-actions">
         <button id="mp-cancel" class="ghost" type="button">取消</button>
         <button id="mp-ok" class="primary" type="button">用这个点</button>
@@ -570,7 +628,7 @@
 </template>
 
 <noscript>
-  <p class="err-box">本管理界面需要 JavaScript（原生 ES module）。请启用后刷新。</p>
+  <p class="err-box">这页要用 JavaScript，开了再刷新。</p>
 </noscript>
 </body>
 </html>

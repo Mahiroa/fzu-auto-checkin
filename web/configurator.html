@@ -3,221 +3,391 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>福大晚点名自动签到 · 配置生成器</title>
 <style>
-  :root { --brand:#4f6ef2; --bg:#f6f7fb; --card:#fff; --line:#e5e8f0; --txt:#1c2333; --sub:#6b7280; --ok:#16a34a; }
+  /* 令牌与主界面同一套（docs/ui-redesign.md §2.1）。这两个页面给人扫码看，浅色为默认。 */
+  :root{
+    --bg:#f6f7f9; --bg-2:#eef0f4; --surface:#fff; --surface-2:#f7f8fa;
+    --line:#e2e5ea; --line-2:#eceef2;
+    --fg:#171b21; --fg-2:#5b6673; --fg-3:#8b95a1;
+    --accent:#2f6fd0; --accent-fg:#fff; --accent-soft:#eaf1fb;
+    --ok:#1f7a4d; --warn:#8a6516; --err:#c0392b; --err-soft:#fdf1f0;
+    --ring:rgba(47,111,208,.28);
+    --code-bg:#171a20; --code-fg:#c6cfd9; --code-line:#2b313a;
+    --r-card:14px; --r-ctrl:10px; --r-sm:8px; --ctrl-h:38px;
+    --mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d0f12; --bg-2:#090b0d; --surface:#14171c; --surface-2:#1a1e24;
+      --line:#262b33; --line-2:#1e232a;
+      --fg:#e7eaee; --fg-2:#9aa4b0; --fg-3:#6c7681;
+      --accent:#7aa2f7; --accent-fg:#0d0f12; --accent-soft:#1d2637;
+      --ok:#5fbf8a; --warn:#d9a960; --err:#e06c75; --err-soft:#251a1c;
+      --ring:rgba(122,162,247,.32);
+      --code-bg:#090b0d; --code-fg:#aeb7c2; --code-line:#1e232a;
+    }
+  }
   * { box-sizing:border-box; margin:0; padding:0; }
-  html { scroll-behavior:smooth; }
-  body { font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--txt); line-height:1.6; padding:24px 12px 80px; }
-  .wrap { max-width:640px; margin:0 auto; }
-  h1 { font-size:22px; margin-bottom:4px; }
-  .sub { color:var(--sub); font-size:14px; margin-bottom:20px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:14px; }
-  /* 第 4 / 5 步：初始隐藏，点上面分流卡片后只出现对应的那张 */
+  html { -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
+  body { background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:14px; line-height:1.65; padding:20px 14px 60px; }
+  .wrap { max-width:700px; margin:0 auto; }
+
+  /* 页头：标题 + 一句话 + 回到仓库 */
+  .page-head { padding:4px 2px 18px; }
+  .head-top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .eyebrow { font-size:12px; color:var(--fg-2); letter-spacing:.02em; }
+  .back-link { display:inline-flex; align-items:center; min-height:44px; font-size:13px; color:var(--fg-2);
+    text-decoration:none; padding:0 2px; border-radius:var(--r-sm); }
+  .back-link:hover { color:var(--accent); }
+  h1 { font-size:22px; line-height:1.3; font-weight:650; letter-spacing:-.01em; margin:4px 0 6px; }
+  .sub { font-size:13px; color:var(--fg-2); max-width:62ch; }
+
+  /* 卡片 */
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-card);
+    padding:18px 16px; margin-bottom:14px; }
   .card.folded { display:none; }
-  .step { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:var(--brand); color:#fff; font-size:13px; margin-right:8px; }
-  .card h2 { font-size:16px; margin-bottom:12px; display:flex; align-items:center; }
-  label { display:block; font-size:13px; color:var(--sub); margin:10px 0 4px; }
-  input[type=text], input[type=password], input[type=date], select { width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px; background:#fbfcfe; }
-  input:focus, select:focus { outline:2px solid var(--brand); border-color:transparent; }
-  .row { display:flex; gap:10px; } .row>div { flex:1; }
-  .hint { font-size:12px; color:var(--sub); margin-top:4px; }
-  .hint a { color:var(--brand); }
-  .seg { display:flex; gap:0; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-bottom:4px; }
-  .seg button { flex:1; padding:8px 0; border:none; background:#fff; font-size:14px; cursor:pointer; color:var(--sub); }
-  .seg button.on { background:var(--brand); color:#fff; }
-  .chk { display:flex; align-items:flex-start; gap:8px; font-size:13px; margin-top:6px; }
-  .chk input { margin-top:4px; }
-  .btn { display:inline-block; width:100%; padding:11px 0; border:none; border-radius:10px; background:var(--brand); color:#fff; font-size:15px; cursor:pointer; margin-top:14px; text-decoration:none; text-align:center; }
-  .btn.ghost { background:#eef1fe; color:var(--brand); }
+  .card-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 10px;
+    padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--line-2); }
+  .card-title { font-size:17px; font-weight:600; letter-spacing:-.01em; line-height:1.4;
+    display:flex; align-items:center; gap:9px; }
+  .card-note { font-size:12.5px; color:var(--fg-2); }
+  .step { flex:none; display:inline-flex; align-items:center; justify-content:center;
+    width:23px; height:23px; border-radius:999px; background:var(--accent-soft); color:var(--accent);
+    font-size:12.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+
+  /* 表单 */
+  label { display:block; font-size:13px; color:var(--fg-2); margin:14px 0 6px; }
+  input[type=text],input[type=password],input[type=date],select,textarea {
+    width:100%; font-family:inherit; font-size:15px; color:var(--fg); background:var(--surface);
+    border:1px solid var(--line); border-radius:var(--r-ctrl); padding:0 12px; height:var(--ctrl-h);
+    outline:2px solid transparent; transition:border-color .15s ease,box-shadow .15s ease; }
+  input:focus-visible,select:focus-visible,textarea:focus-visible {
+    border-color:var(--accent); box-shadow:0 0 0 3px var(--ring); }
+  input[readonly] { background:var(--surface-2); color:var(--fg-2); }
+  ::placeholder { color:var(--fg-3); }
+  /* 高度按 9 行 × 20px + 上内边距对齐：下一行正好落在可视区外，不出现半行 */
+  textarea { height:193px; padding:11px 12px 0; white-space:pre; overflow:auto; resize:vertical;
+    font:12.5px/1.6 var(--mono); background:var(--code-bg); color:var(--code-fg); border-color:var(--code-line); }
+  .row { display:flex; gap:10px; }
+  .row > div { flex:1; min-width:0; }
+  .mt { margin-top:14px; }
+
+  /* 分段控件 */
+  .seg { display:flex; gap:4px; padding:4px; background:var(--surface-2);
+    border:1px solid var(--line-2); border-radius:calc(var(--r-ctrl) + 2px); }
+  .seg button { flex:1; min-height:38px; border:0; border-radius:var(--r-sm); background:transparent;
+    color:var(--fg-2); font-family:inherit; font-size:14px; cursor:pointer;
+    transition:background-color .15s ease,color .15s ease; }
+  .seg button:hover { color:var(--fg); }
+  .seg button.on { background:var(--accent); color:var(--accent-fg); font-weight:500; }
+  .seg button.on:hover { color:var(--accent-fg); }
+
+  /* 按钮 */
+  .btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    min-height:44px; margin-top:12px; padding:11px 16px; border:1px solid transparent;
+    border-radius:var(--r-ctrl); background:var(--accent); color:var(--accent-fg);
+    font-family:inherit; font-size:15px; font-weight:500; line-height:1.35; text-align:center;
+    text-decoration:none; cursor:pointer; transition:background-color .15s ease,border-color .15s ease,transform .12s ease; }
+  .btn:active { transform:translateY(1px); }
+  .btn.ghost { background:var(--surface-2); color:var(--fg); border-color:var(--line); }
+  .btn.ghost:hover { border-color:var(--accent); color:var(--accent); }
   .btn:disabled { opacity:.45; cursor:not-allowed; }
-  textarea { width:100%; height:190px; border:1px solid var(--line); border-radius:8px; padding:10px; font:12px/1.5 Consolas,monospace; background:#fbfcfe; white-space:pre; }
-  .ok-msg { color:var(--ok); font-size:13px; margin-top:6px; display:none; }
-  .hide { display:none; }
-  .plat-list { margin-top:6px; }
-  .plat { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; cursor:pointer; }
-  .plat.on { border-color:var(--brand); background:#f5f7ff; }
-  .plat input { accent-color:var(--brand); }
-  .plat b { font-size:14px; } .plat span { font-size:12px; color:var(--sub); display:block; }
-  footer { text-align:center; color:var(--sub); font-size:12px; margin-top:24px; }
-  footer a { color:var(--brand); }
-  pre#log { background:#10162a; color:#b8f5c0; font:12px/1.6 Consolas,monospace; padding:12px; border-radius:8px; max-height:260px; overflow:auto; white-space:pre-wrap; }
-  .guide { margin:12px 0 0; padding-left:20px; font-size:13px; }
-  .guide li { margin-top:8px; }
-  .guide code { background:#eef1f7; padding:1px 5px; border-radius:4px; font-size:12px; }
-  .vac-item { border:1px dashed var(--line); border-radius:8px; padding:10px; margin-top:10px; }
-  .vac-item.bad { border-color:#f0a8a8; background:#fff7f7; }
+  .btn:disabled:hover { border-color:var(--line); color:var(--fg); }
+  .btn:focus-visible,a:focus-visible,button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* 二选一 */
+  .card.decision { border-color:var(--accent); background:var(--accent-soft); }
+  .card.decision .card-head { border-bottom-color:var(--line); }
+  .card.decision .btn.opt { background:var(--surface); }
+  .card.decision .btn.opt:hover { border-color:var(--accent); }
+  .opts { display:grid; gap:10px; margin-top:12px; }
+  .btn.opt { flex-direction:column; align-items:flex-start; gap:2px; text-align:left;
+    margin-top:0; padding:13px 14px; }
+  .btn.opt b { font-size:15px; font-weight:600; }
+  .btn.opt small { font-size:12.5px; font-weight:400; line-height:1.55; opacity:.78; }
+
+  /* 说明文字 */
+  .hint { font-size:12.5px; line-height:1.65; color:var(--fg-2); margin-top:8px; }
+  .hint a { color:var(--accent); text-decoration:none; }
+  .hint a:hover { text-decoration:underline; text-underline-offset:2px; }
+  .hint code,.guide code { font:12px var(--mono); background:var(--surface-2); color:var(--fg);
+    border:1px solid var(--line-2); border-radius:5px; padding:1px 5px; }
+  .ok-msg { display:none; font-size:13px; line-height:1.6; color:var(--ok); margin-top:10px; }
+  .note-line { font-size:13px; color:var(--fg); margin-top:14px; padding-left:10px; border-left:2px solid var(--accent); }
+
+  /* 承诺勾选 */
+  .chk { display:flex; align-items:flex-start; gap:10px; margin:14px 0 0; padding:12px;
+    font-size:13px; line-height:1.6; color:var(--fg-2); background:var(--surface-2);
+    border:1px solid var(--line-2); border-radius:var(--r-ctrl); cursor:pointer; }
+  .chk input { flex:none; width:18px; height:18px; margin-top:3px; accent-color:var(--accent); }
+  .chk b { color:var(--fg); font-weight:600; }
+
+  /* 推送平台卡 */
+  .plat-list { display:grid; gap:8px; margin-top:12px; }
+  .plat { display:grid; grid-template-columns:auto 1fr; align-items:start; gap:10px;
+    margin:0; padding:12px; font-size:14px; color:var(--fg); background:var(--surface);
+    border:1px solid var(--line); border-radius:var(--r-ctrl); cursor:pointer;
+    transition:border-color .15s ease,background-color .15s ease; }
+  .plat:hover { border-color:var(--fg-3); }
+  .plat.on { border-color:var(--accent); background:var(--accent-soft); }
+  .plat input { grid-column:1; width:16px; height:16px; margin-top:3px; accent-color:var(--accent); }
+  .plat b,.plat span { grid-column:2; }
+  .plat b { font-size:14px; font-weight:600; }
+  .plat span { font-size:12.5px; color:var(--fg-2); margin-top:2px; }
+
+  /* 坐标 / 预览 */
+  pre { display:block; }
+  #log,#vacLog { background:var(--code-bg); color:var(--code-fg); border:1px solid var(--code-line);
+    font:12px/1.7 var(--mono); padding:12px 14px; border-radius:var(--r-ctrl); margin-top:10px;
+    max-height:260px; overflow:auto; white-space:pre-wrap; word-break:break-word; }
+  .guide { margin:14px 0 0; padding-left:20px; font-size:13px; line-height:1.7; color:var(--fg-2); }
+  .guide li { margin-top:10px; }
+  .guide li::marker { color:var(--fg-3); }
+  .guide a { color:var(--accent); }
+  .guide b { color:var(--fg); }
+
+  /* 假期条目 */
+  #vacList:empty { display:none; }
+  .vac-item { border:1px solid var(--line); border-radius:var(--r-ctrl); padding:12px; margin-top:10px; background:var(--surface); }
+  .vac-item.bad { border-color:var(--err); background:var(--err-soft); }
   .vac-head { display:flex; gap:8px; align-items:center; }
-  .vac-head .vname { flex:1; }
-  .vdel { flex:none; width:36px; height:36px; border:none; border-radius:8px; background:#f1f3f9; color:#8b93a7; font-size:14px; cursor:pointer; }
-  .vdel:hover { background:#fde8e8; color:#c0392b; }
-  .vnote { display:none; font-size:11px; color:#b91c1c; margin-top:6px; }
-  .vac-warn { display:none; font-size:12px; color:#b91c1c; margin-top:8px; }
-  .live { margin-top:16px; padding-top:14px; border-top:1px dashed var(--line); }
-  /* 坐标框：自动定位填入后只读 */
-  input[readonly] { background:#f1f3f9; color:var(--sub); }
+  .vac-head .vname { flex:1; min-width:0; }
+  .vac-item .row { margin-top:10px; }
+  .vdel { flex:none; width:44px; height:38px; border:1px solid var(--line); border-radius:var(--r-sm);
+    background:var(--surface-2); color:var(--fg-2); font-size:14px; line-height:1; cursor:pointer;
+    transition:border-color .15s ease,color .15s ease; }
+  .vdel:hover { border-color:var(--err); color:var(--err); }
+  .vnote { display:none; font-size:12.5px; color:var(--err); margin-top:8px; }
+  .vac-warn { display:none; font-size:12.5px; line-height:1.6; color:var(--err); margin-top:10px;
+    padding:10px 12px; border:1px solid var(--err); border-radius:var(--r-sm); background:var(--err-soft); }
+
+  /* 折叠区 + 二维码 */
+  .live { margin-top:16px; padding-top:16px; border-top:1px solid var(--line-2); }
+  .block-title { font-size:15px; font-weight:600; color:var(--fg); }
+  .qr-row { display:flex; gap:14px; align-items:center; margin-top:16px; padding-top:16px; border-top:1px solid var(--line-2); }
+  .qr-row img { flex:none; width:112px; height:112px; border:1px solid var(--line); border-radius:var(--r-sm);
+    background:#fff; padding:4px; image-rendering:pixelated; }
+  .qr-copy { margin:0; }
+  .qr-copy b { color:var(--fg); }
+
+  .hide { display:none; }
+  #step4card,#step5card { scroll-margin-top:14px; }
+  footer { margin-top:26px; padding:0 8px; font-size:12px; line-height:1.8; color:var(--fg-2); text-align:center; }
+  footer a { color:var(--fg); text-decoration:none; }
+  footer a:hover { color:var(--accent); }
+
+  @media (max-width:520px){
+    body { padding:16px 12px 48px; }
+    .card { padding:16px 13px; }
+    h1 { font-size:21px; }
+    .card-title { font-size:16px; }
+    input[type=text],input[type=password],input[type=date],select,textarea { font-size:16px; }
+    input[type=text],input[type=password],input[type=date],select { height:44px; }
+    .row { flex-direction:column; gap:10px; }
+    .seg button { min-height:44px; }
+    .vdel { height:44px; }
+    .qr-row { flex-direction:column; align-items:flex-start; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    * { transition:none !important; scroll-behavior:auto !important; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🎓 福大晚点名自动签到 · 配置生成器</h1>
-  <p class="sub">全程在你的浏览器里完成，任何信息都不会上传。填完 1~3 步后，按你有没有 GitHub 账号二选一。</p>
+  <header class="page-head">
+    <div class="head-top">
+      <span class="eyebrow">福大晚点名自动签到</span>
+      <a class="back-link" href="https://github.com/Mahiroa/fzu-auto-checkin" target="_blank" rel="noopener">回到仓库</a>
+    </div>
+    <h1>配置生成器</h1>
+    <p class="sub">填完 1~3 步，页面生成一段 YAML。部署那一步直接打 GitHub 接口，不经过别的服务器。</p>
+  </header>
 
   <!-- 第 1 步 账号 -->
   <div class="card">
-    <h2><span class="step">1</span>登录账号</h2>
+    <div class="card-head">
+      <h2 class="card-title"><span class="step">1</span>登录账号</h2>
+      <span class="card-note">只用来拼配置，本页不保存</span>
+    </div>
     <div class="seg" id="authSeg">
-      <button class="on" data-v="pwd">学号 + 密码（推荐，全自动）</button>
-      <button data-v="token">只用 token</button>
+      <button class="on" data-v="pwd" type="button">学号 + 密码</button>
+      <button data-v="token" type="button">免登 token</button>
     </div>
     <div id="authPwd">
-      <label>学号（登录智汇福大 App 用的）</label>
+      <label for="username">学号</label>
       <input type="text" id="username" placeholder="如 3xxxxxxxx">
-      <label>密码（你现在登录 App 用的那个）</label>
-      <input type="text" id="password" autocomplete="off" spellcheck="false" placeholder="填写你现在登录 App 用的那个密码（本页不联网，只用来生成配置）">
+      <p class="hint">智汇福大 App 登录页填的那个学号。</p>
+      <label for="password">密码</label>
+      <input type="text" id="password" autocomplete="off" spellcheck="false" placeholder="现在登录 App 用的那个">
+      <p class="hint">本页不联网，密码只在这台设备的浏览器里待着，不会上传。</p>
     </div>
     <div id="authToken" class="hide">
-      <label>免登 token</label>
-      <input type="text" id="token" placeholder="从 docs/protocol.md §4 的方式获取">
-      <p class="hint">token 会过期，过期需重新获取；没有这个顾虑就用学号密码。</p>
+      <label for="token">免登 token</label>
+      <input type="text" id="token" placeholder="从 docs/protocol.md §4 的方式拿">
+      <p class="hint">token 会过期，过期要重新抓。没有这个顾虑就用学号密码，能自动续。</p>
     </div>
   </div>
 
   <!-- 第 2 步 位置 -->
   <div class="card">
-    <h2><span class="step">2</span>签到位置（你在校区内的宿舍楼）</h2>
-    <button class="btn ghost" id="locate">📍 获取当前位置</button>
+    <div class="card-head">
+      <h2 class="card-title"><span class="step">2</span>签到位置</h2>
+      <span class="card-note">高德坐标，学校判定用同一套</span>
+    </div>
+    <button class="btn ghost" id="locate" type="button">获取当前位置</button>
     <p class="ok-msg" id="locOk"></p>
     <div id="coordBox" class="hide">
       <div class="row">
-        <div><label>经度 longitude（已自动填好）</label><input type="text" id="lng" readonly placeholder="119.xxxxx"></div>
-        <div><label>纬度 latitude（已自动填好）</label><input type="text" id="lat" readonly placeholder="26.xxxxx"></div>
+        <div><label for="lng">经度</label><input type="text" id="lng" readonly placeholder="119.xxxxx"></div>
+        <div><label for="lat">纬度</label><input type="text" id="lat" readonly placeholder="26.xxxxx"></div>
       </div>
-      <p class="hint">想核对坐标是否就在你宿舍楼：<a href="https://lbs.amap.com/tools/picker" target="_blank">高德坐标拾取器</a>里搜一下。</p>
+      <p class="hint">定位成功会自动填进上面两格。想核对：在<a href="https://lbs.amap.com/tools/picker" target="_blank" rel="noopener">高德坐标拾取器</a>里搜宿舍楼，数字应该对得上。</p>
     </div>
-    <div style="margin-top:10px">
-      <label>坐标随机抖动半径（米，0 = 关闭）</label>
+    <div class="mt">
+      <label for="jitter">抖动半径（米）</label>
       <input type="text" id="jitter" value="200">
-      <p class="hint">每次打卡在上面坐标的周围这个半径内随机取一点上报，避免每晚上报完全相同的坐标。填 0 则按上面的坐标原样上报。</p>
+      <p class="hint">每次打卡在这个点周围随机取一点，看起来像人在附近走动。填 0 就每次报同一个点。</p>
     </div>
-    <p class="hint" id="coordFallback" style="display:none">定位不成功？<a href="#" id="coordManual">手动填写坐标</a>（格式 119.xxxxx / 26.xxxxx）</p>
-    <p class="hint">浏览器定位需授权且要求 HTTPS：微信内打不开时，用 Safari/Chrome 打开本页。工具不伪造定位。</p>
+    <p class="hint" id="coordFallback" style="display:none">定位没成功？<a href="#" id="coordManual">手动填坐标</a>，格式 119.xxxxx / 26.xxxxx。</p>
+    <p class="hint">浏览器定位要授权，而且只在 HTTPS 下能用。微信里打不开就换 Safari 或 Chrome。这一项不会伪造定位。</p>
   </div>
 
   <!-- 第 3 步 推送 -->
   <div class="card">
-    <h2><span class="step">3</span>消息提醒（可选，不选则完全静默）</h2>
+    <div class="card-head">
+      <h2 class="card-title"><span class="step">3</span>消息提醒</h2>
+      <span class="card-note">不选就完全静默</span>
+    </div>
     <div class="plat-list" id="platList">
-      <label class="plat on"><input type="radio" name="plat" value="none" checked><b>不提醒</b><span>签到在云端静默完成</span></label>
-      <label class="plat"><input type="radio" name="plat" value="pushplus"><b>PushPlus（微信）</b><span>扫码登录 pushplus.plus 拿 token，最简单</span></label>
-      <label class="plat"><input type="radio" name="plat" value="serverchan"><b>Server酱（微信）</b><span>sct.ftqq.com 扫码拿 SendKey</span></label>
-      <label class="plat"><input type="radio" name="plat" value="bark"><b>Bark（iPhone 通知）</b><span>App Store 装 Bark，把复制的 URL 整段贴进来就行</span></label>
+      <label class="plat on"><input type="radio" name="plat" value="none" checked><b>不提醒</b><span>签到在云端静默完成，手机不响</span></label>
+      <label class="plat"><input type="radio" name="plat" value="pushplus"><b>PushPlus（微信）</b><span>pushplus.plus 微信扫码登录，首页复制 token</span></label>
+      <label class="plat"><input type="radio" name="plat" value="serverchan"><b>Server酱（微信）</b><span>sct.ftqq.com 微信扫码，复制 SendKey</span></label>
+      <label class="plat"><input type="radio" name="plat" value="bark"><b>Bark（iPhone 通知）</b><span>App Store 装 Bark，把 App 复制的推送 URL 整段贴进来</span></label>
     </div>
     <div id="platField" class="hide">
-      <label id="platLabel">Key / Token</label>
-      <input type="text" id="platKey" placeholder="粘贴 key，或 App 复制的推送 URL（自动提取）">
-      <button class="btn ghost" id="testPush">📤 发一条测试推送到我手机</button>
-      <p class="ok-msg" id="testOk">已发出！10 秒内手机没收到，多半是 key 复制错了，回去核对一下。</p>
+      <label id="platLabel" for="platKey">Key / Token</label>
+      <input type="text" id="platKey" placeholder="粘贴 key，或整段推送 URL（key 会自动取出来）">
+      <button class="btn ghost" id="testPush" type="button">发一条测试推送</button>
+      <p class="ok-msg" id="testOk">已经发出。10 秒内手机没收到，多半是 key 粘错了，回去对一遍。</p>
       <p class="hint" id="platHint"></p>
     </div>
   </div>
 
   <!-- 分流：先选有没有 GitHub 账号 -->
-  <div class="card" style="border:2px solid var(--brand);">
-    <h2>先选你的情况 👇</h2>
-    <p class="hint">签到跑在 GitHub 云端，需要一个 GitHub 账号。按你的情况选一条路：</p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-      <a class="btn ghost" id="btnNoAcc" href="#step4card" style="flex:1;min-width:220px">🙋 我没有 GitHub 账号<br><small>走第 4 步：先注册，跟着引导一步步配</small></a>
-      <a class="btn ghost" id="btnHasAcc" href="#step5card" style="flex:1;min-width:220px">⚡ 我有 GitHub 账号<br><small>走第 5 步：贴 Token 一键部署，最快</small></a>
+  <div class="card decision">
+    <div class="card-head">
+      <h2 class="card-title">先选一条路</h2>
+      <span class="card-note">签到跑在 GitHub 服务器上，所以得有个账号</span>
+    </div>
+    <p class="hint">没有账号走第 4 步，有账号走第 5 步。两条路配出来的东西一样。</p>
+    <div class="opts">
+      <a class="btn ghost opt" id="btnNoAcc" href="#step4card"><b>没有 GitHub 账号</b><small>走第 4 步：先注册，再照 1~4 条手动粘配置</small></a>
+      <a class="btn ghost opt" id="btnHasAcc" href="#step5card"><b>已有 GitHub 账号</b><small>走第 5 步：贴一个 token，页面替你建私有仓库、写配置</small></a>
     </div>
   </div>
 
   <!-- 第 4 步 手动（没有账号） -->
   <div class="card folded" id="step4card">
-    <h2><span class="step">4</span>没有 GitHub 账号？手动配置</h2>
-    <p class="hint" style="margin-bottom:8px">📌 生成配置后，下面有完整的一步步引导，照着做就行。</p>
-    <p class="hint" style="margin-bottom:8px">🌐 关于梯子：GitHub 国内直连时好时坏，<b>只有注册和配置那几分钟</b>可能打不开——换个时间、用校园网 / 手机热点，或挂梯子都行。<b>配好之后就不用了</b>：签到跑在 GitHub 服务器上，日常零操作、零网络要求。</p>
-    <button class="btn ghost" id="ghCheck" style="margin-top:0">🔗 测一下当前网络能不能打开 GitHub</button>
-    <p class="hint" id="ghCheckResult" style="display:none;margin-top:6px"></p>
-    <label class="chk"><input type="checkbox" id="agree"><span>我承诺仅在<b>本人确实在校</b>时使用，不用于隐瞒在/离校状态，不用于代挂。</span></label>
-    <button class="btn" id="gen" disabled>生成配置</button>
+    <div class="card-head">
+      <h2 class="card-title"><span class="step">4</span>手动配置</h2>
+      <span class="card-note">没有 GitHub 账号</span>
+    </div>
+    <p class="hint">生成配置后，下面有一步一步的引导，照着做。</p>
+    <p class="hint">GitHub 国内直连时好时坏，只有注册和配置那几分钟可能打不开：换个时间、用校园网或手机热点，有梯子就开着。配好之后就不用了，签到跑在 GitHub 服务器上，日常零操作。</p>
+    <button class="btn ghost" id="ghCheck" type="button">测一下现在能不能打开 GitHub</button>
+    <p class="hint" id="ghCheckResult" style="display:none"></p>
+    <label class="chk"><input type="checkbox" id="agree"><span>我确认：只在<b>本人确实在校</b>时使用，不用于隐瞒在校或离校状态，也不代挂。</span></label>
+    <button class="btn" id="gen" disabled type="button">生成配置</button>
     <div id="out" class="hide">
-      <label>方式 A：云端自动签到（推荐）—— 把下面这段配置放进你自己的私有仓库</label>
+      <label for="outSecret">方式 A：云端自动签到</label>
+      <p class="hint">这段贴进你自己的私有仓库就行。</p>
       <textarea id="outSecret" readonly></textarea>
-      <button class="btn ghost" data-copy="outSecret">📋 复制配置内容</button>
+      <button class="btn ghost" data-copy="outSecret" type="button">复制这段配置</button>
       <ol class="guide">
-        <li>没有 GitHub 账号？<a href="https://github.com/signup" target="_blank">点这里免费注册</a>，1 分钟搞定（需要邮箱）。</li>
-        <li><a href="https://github.com/new/import" target="_blank">点这里把项目导入到你自己的私有仓库</a>：① "Your old repository's clone URL" 填 <code>https://github.com/Mahiroa/fzu-auto-checkin</code>；② 仓库名随意；③ 选择 <b>Private</b>（私有，重要！你的密码只有你自己能看到）；④ 点 Begin import。</li>
-        <li>导入完成后，在你的仓库页面依次打开：<code>Settings → Secrets and variables → Actions → New repository secret</code>，Name 填 <code>CONFIG_YAML</code>，Secret 粘贴上面复制的内容，点 Add secret。</li>
-        <li>完成！之后每晚 <b>21:35 / 21:50</b> 自动签到，可在仓库的 <code>Actions</code> 标签页查看签到记录。签到结果可回第 3 步配置微信推送。</li>
+        <li>没有账号先注册：<a href="https://github.com/signup" target="_blank" rel="noopener">点这里免费注册</a>，一分钟，要邮箱。</li>
+        <li><a href="https://github.com/new/import" target="_blank" rel="noopener">把项目导入你自己的私有仓库</a>：clone URL 填 <code>https://github.com/Mahiroa/fzu-auto-checkin</code>，仓库名随意，可见性选 <b>Private</b>，点 Begin import。</li>
+        <li>导入完进仓库的 Settings → Secrets and variables → Actions → New repository secret，Name 填 <code>CONFIG_YAML</code>，Secret 粘上面复制的那段，点 Add secret。</li>
+        <li>到此为止。之后每晚 <b>21:35 和 21:50</b> 自动签到，记录在仓库的 Actions 页。想收微信通知回第 3 步开推送。</li>
       </ol>
-      <label style="margin-top:14px">方式 B：本地运行 —— 保存为仓库根目录的 config.yaml（需要自己有台常开的电脑）</label>
+      <label for="outYaml">方式 B：本地运行</label>
+      <p class="hint">存成仓库根目录的 config.yaml，需要一台常开的电脑。</p>
       <textarea id="outYaml" readonly></textarea>
-      <button class="btn ghost" data-copy="outYaml">📋 复制 config.yaml</button>
-      <p class="hint">操作详情见仓库 README。</p>
+      <button class="btn ghost" data-copy="outYaml" type="button">复制 config.yaml</button>
+      <p class="hint">细节见仓库 README。</p>
     </div>
   </div>
 
   <!-- 第 5 步 一键部署（有账号） -->
   <div class="card folded" id="step5card">
-    <h2><span class="step">5</span>已有 GitHub 账号？一键部署（最快）</h2>
-    <p class="hint">没有账号？走上面<b>第 4 步</b>。</p>
-    <p class="hint">贴一个 Token 就行：自动替你创建<b>私有仓库</b>、写入全部代码和你的配置，之后每晚 21:35 / 21:50 自动签到。凭据只存在你自己的私有仓库里，不经过任何第三方服务器。</p>
-    <label>GitHub Token</label>
+    <div class="card-head">
+      <h2 class="card-title"><span class="step">5</span>一键部署</h2>
+      <span class="card-note">已有 GitHub 账号</span>
+    </div>
+    <p class="hint">没有账号回上面走第 4 步。</p>
+    <p class="hint">贴一个 token：页面替你建私有仓库、写入全部代码和你的配置，之后每晚 21:35 和 21:50 自动签到。凭据只存在你自己的私有仓库里。</p>
+    <label for="ghPat">GitHub Token</label>
     <input type="text" id="ghPat" autocomplete="off" spellcheck="false" placeholder="粘贴 ghp_ 开头的 token">
-    <p class="hint">没有？<a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=fzu-checkin" target="_blank">点这里创建</a>——直达创建表单（未登录会先让你登录；中途若要求输入 GitHub 密码确认一次，属正常安全校验）。<code>repo</code>、<code>workflow</code> 两项权限已自动勾好。三步：① <b>Expiration 选 No expiration</b>——默认只有 30 天，到期后「一键写入」会静默失效；② 拉到页面底部点绿色 <b>Generate token</b>；③ 页面出现 <code>ghp_</code> 开头的 token，点旁边的复制按钮（<b>只显示这一次</b>）→ 粘贴过来。部署完成后建议删除该 token。</p>
-    <label>私有仓库名</label>
+    <p class="hint">没有？<a href="https://github.com/settings/tokens/new?scopes=repo,workflow&amp;description=fzu-checkin" target="_blank" rel="noopener">点这里创建</a>，直达创建表单，repo 和 workflow 两项已经勾好。三件事：Expiration 选 <b>No expiration</b>，默认 30 天到期后写入会静默失败；拉到页面底部点 Generate token；复制出现的 <code>ghp_</code> 那串，只显示这一次。部署完建议把 token 删掉。</p>
+    <label for="repoName">私有仓库名</label>
     <input type="text" id="repoName" value="fzu-auto-checkin">
-    <label class="chk"><input type="checkbox" id="agree2"><span>我承诺仅在<b>本人确实在校</b>时使用，不用于隐瞒在/离校状态，不用于代挂。</span></label>
-    <button class="btn" id="deploy" disabled>🚀 一键部署，今晚开始自动签到</button>
+    <label class="chk"><input type="checkbox" id="agree2"><span>我确认：只在<b>本人确实在校</b>时使用，不用于隐瞒在校或离校状态，也不代挂。</span></label>
+    <button class="btn" id="deploy" disabled type="button">部署，今晚开始自动签到</button>
     <pre id="log" class="hide"></pre>
   </div>
 
   <!-- 后续维护：补充假期 -->
   <div class="card">
-    <h2>🌴 后续补假期（不用签的日子）</h2>
-    <p class="hint">寒暑假已按《福州大学 2026—2027 学年校历》（福大教〔2026〕10号）预填好；法定节假日、军训、调休、请假离校等日子点「添加一段假期」补上——<b>选好的日子会直接包含在生成的配置里</b>，一键部署后即生效。</p>
+    <div class="card-head">
+      <h2 class="card-title">补假期</h2>
+      <span class="card-note">不用签的日子</span>
+    </div>
+    <p class="hint">寒暑假已按《福州大学 2026—2027 学年校历》（福大教〔2026〕10号）填好。法定节假日、军训、调休、请假离校各加一段，选好的日子会写进生成的配置。</p>
     <div id="vacList"></div>
-    <button class="btn ghost" id="vacAdd" type="button" style="margin-top:8px">＋ 添加一段假期</button>
+    <button class="btn ghost" id="vacAdd" type="button">添加一段假期</button>
     <p class="vac-warn" id="vacWarn"></p>
-    <p class="hint" id="vacWriteOpenRow" style="margin-top:12px">🔒 部署之后想补/改假期？<a href="#" id="vacWriteOpen">展开「一键写入」</a>（首次配置不用管，选好的日子已随部署写入）</p>
+    <p class="hint" id="vacWriteOpenRow">部署之后想改假期？<a href="#" id="vacWriteOpen">展开「一键写入」</a>。首次配置不用管，选好的日子已经随部署写进去了。</p>
     <div class="live hide" id="vacWriteBox">
-      <b style="font-size:14px">🚀 一键写入我的仓库</b>
-      <p class="hint" id="vacWhyRow" style="margin-top:4px">点一下就把选好的假期写进你仓库的 <code>config.yaml</code>——<b>只替换 <code>vacation:</code> 那一段</b>，账号 / 坐标 / 推送设置全部原样保留。</p>
+      <h3 class="block-title">写回我的仓库</h3>
+      <p class="hint" id="vacWhyRow">点一下就把上面选好的假期写进仓库的 <code>config.yaml</code>，只替换 <code>vacation:</code> 这一段，账号、坐标、推送设置原样保留。</p>
       <div id="vacTokRow">
-        <label>GitHub Token</label>
+        <label for="vacPat">GitHub Token</label>
         <input type="text" id="vacPat" autocomplete="off" spellcheck="false" placeholder="粘贴 ghp_ 开头的 token">
-        <p class="hint">没有？<a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=fzu-checkin" target="_blank">点这里创建</a>（<code>repo</code> 和 <code>workflow</code> 已自动勾好，缺 workflow 写不了签到工作流；<b>Expiration 选 No expiration</b>，默认 30 天会过期）。只在点下面按钮时用一次，本页不保存、不上传。</p>
+        <p class="hint">没有？<a href="https://github.com/settings/tokens/new?scopes=repo,workflow&amp;description=fzu-checkin" target="_blank" rel="noopener">点这里创建</a>，repo 和 workflow 已经勾好，缺 workflow 写不了签到工作流。Expiration 选 No expiration。只在你点下面按钮时用一次，本页不保存、不上传。</p>
       </div>
       <div id="vacRepoRow">
-        <label>你的私有仓库</label>
-        <input type="text" id="vacRepo" placeholder="如 Mahiroa/fzu-checkin；只填仓库名则默认在你账号下">
+        <label for="vacRepo">你的私有仓库</label>
+        <input type="text" id="vacRepo" placeholder="如 Mahiroa/fzu-checkin；只填仓库名就默认在你的账号下">
       </div>
-      <button class="btn" id="vacPush">🚀 写入 config.yaml</button>
+      <button class="btn" id="vacPush" type="button">写入 config.yaml</button>
       <pre id="vacLog" class="hide"></pre>
     </div>
-    <p class="hint" style="margin-top:14px"><b>假期是跳过不签，绝不会替你补签。</b></p>
+    <p class="note-line">假期只跳过，不会替你补签。</p>
     <textarea id="vacOut" class="hide" readonly></textarea>
-    <div style="display:flex;gap:14px;align-items:center;margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)">
-      <img src="qr.png" alt="本页二维码" style="width:112px;height:112px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:4px">
-      <div class="hint" style="margin:0">💡 <b>建议把这个二维码 / 本页链接存下来</b><br>以后要补假期，扫码回到本页。<b>上次填过的内容会自动带出来</b>，改改日期、点一下写入就行——不用重新配整个流程。</div>
+    <div class="qr-row">
+      <img src="qr.png" alt="本页二维码" width="104" height="104">
+      <div class="hint qr-copy"><b>把二维码存下来。</b>以后补假期扫码回这一页，上次填的内容会自动带出来，改日期、点写入就行。</div>
     </div>
-    <p class="hint">💾 本页会把你在<b>这台设备的浏览器</b>里填过的内容记下来（坐标、假期区间、仓库名），下次打开自动带出。<b>密码 / token / PAT 一律不记、不上传。</b>想清空：<a href="#" id="memClear">清空本机记忆</a></p>
+    <p class="hint">本页会把填在这台设备的东西记下来（坐标、假期、仓库名），下次打开自动带出。密码、token、PAT 一律不记、不上传。想清空：<a href="#" id="memClear">清空本机记忆</a>。</p>
   </div>
 
   <!-- 意见反馈 -->
   <div class="card" id="feedback">
-    <h2>💬 意见反馈</h2>
-    <p class="hint" style="margin-top:0">用着有问题、发现 bug，或者想让它支持别的学校 / 别的签到平台，都欢迎在项目仓库里提 Issue —— 项目会持续维护。</p>
-    <div class="row" style="margin-top:10px">
-      <div><a class="btn ghost" href="https://github.com/Mahiroa/fzu-auto-checkin/issues" target="_blank" style="margin-top:0">🐞 去 GitHub 提 Issue</a></div>
+    <div class="card-head">
+      <h2 class="card-title">反馈</h2>
+      <span class="card-note">bug、想加别的学校或平台</span>
     </div>
+    <p class="hint">用着有问题，或者想让它支持别的学校、别的签到平台，去仓库提 Issue，项目会继续维护。</p>
+    <a class="btn ghost" href="https://github.com/Mahiroa/fzu-auto-checkin/issues" target="_blank" rel="noopener">去 GitHub 提 Issue</a>
   </div>
 
-  <footer>开源项目 <a href="https://github.com/Mahiroa/fzu-auto-checkin" target="_blank">fzu-auto-checkin</a> · 本页面为纯静态工具，不收集任何数据 · 反馈：项目 GitHub Issues</footer>
+  <footer>开源项目 <a href="https://github.com/Mahiroa/fzu-auto-checkin" target="_blank" rel="noopener">fzu-auto-checkin</a> / 纯静态页面，不收集数据<br>反馈走项目 Issues</footer>
 </div>
 
 <script>
@@ -283,18 +453,18 @@ document.getElementById('locate').addEventListener('click', () => {
   const okEl = document.getElementById('locOk');
   const fb = document.getElementById('coordFallback');
   okEl.style.display = 'none'; fb.style.display = 'none';
-  if (!navigator.geolocation) { fb.style.display = 'block'; alert('当前环境不支持定位（用本地文件打开时浏览器会禁用）。请在线上链接打开本页。'); return; }
+  if (!navigator.geolocation) { fb.style.display = 'block'; alert('这个环境不支持定位，用本地文件打开时浏览器会禁用。换成线上链接打开本页再试。'); return; }
   navigator.geolocation.getCurrentPosition(pos => {
     const { latitude, longitude, accuracy } = pos.coords;
     const gcj = wgs2gcj(latitude, longitude);
     document.getElementById('lng').value = gcj.lng.toFixed(5);
     document.getElementById('lat').value = gcj.lat.toFixed(5);
     document.getElementById('coordBox').classList.remove('hide');
-    okEl.textContent = `✅ 已定位并换算为高德坐标（精度约 ${Math.round(accuracy)} 米），坐标已自动填好。`;
+    okEl.textContent = `已定位，换算成高德坐标（精度约 ${Math.round(accuracy)} 米），已填进上面两格。`;
     okEl.style.display = 'block';
   }, err => {
     fb.style.display = 'block';
-    alert('定位失败：' + err.message + '\n\n常见原因：① 微信内置浏览器受限 → 长按链接用 Safari/Chrome 打开；② 未授权定位 → 浏览器设置里允许本页定位；③ 站在室内深处信号弱 → 靠窗再试。也可以点下面的「手动填写坐标」。');
+    alert('定位失败：' + err.message + '\n\n常见原因：微信内置浏览器受限，长按链接用 Safari 或 Chrome 打开；浏览器没给定位权限，去设置里允许本页定位；站在室内深处信号弱，靠窗再试。也可以点下面的「手动填坐标」。');
   }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
 });
 // 定位失败时的手动兜底：点开才变成可填
@@ -308,9 +478,9 @@ if (coordManual) coordManual.addEventListener('click', e => {
 
 // —— 推送平台 ——
 const platMeta = {
-  pushplus:  { label:'PushPlus token', hint:'获取：<a href="https://www.pushplus.plus" target="_blank">pushplus.plus</a> 微信扫码登录 → 首页复制 token', url:k=>`https://www.pushplus.plus/send?token=${k}&title=福大晚点名测试推送&content=配置成功，每晚 21:35 自动签到。` },
-  serverchan:{ label:'Server酱 SendKey', hint:'获取：<a href="https://sct.ftqq.com" target="_blank">sct.ftqq.com</a> 微信扫码 → 复制 SendKey', url:k=>`https://sctapi.ftqq.com/${k}.send?title=福大晚点名测试推送&desp=配置成功，每晚 21:35 自动签到。` },
-  bark:      { label:'Bark key', hint:'获取：App Store 安装 Bark → 长按复制示例 URL，<b>整段粘贴到上面</b>，key 自动提取', url:k=>`https://api.day.app/${k}/福大晚点名测试推送/配置成功` },
+  pushplus:  { label:'PushPlus token', hint:'获取：<a href="https://www.pushplus.plus" target="_blank" rel="noopener">pushplus.plus</a> 微信扫码登录，首页复制 token', url:k=>`https://www.pushplus.plus/send?token=${k}&title=福大晚点名测试推送&content=配置成功，每晚 21:35 自动签到。` },
+  serverchan:{ label:'Server酱 SendKey', hint:'获取：<a href="https://sct.ftqq.com" target="_blank" rel="noopener">sct.ftqq.com</a> 微信扫码，复制 SendKey', url:k=>`https://sctapi.ftqq.com/${k}.send?title=福大晚点名测试推送&desp=配置成功，每晚 21:35 自动签到。` },
+  bark:      { label:'Bark key', hint:'获取：App Store 装 Bark，长按复制示例 URL，<b>整段粘到上面那个框</b>，key 会自动取出来', url:k=>`https://api.day.app/${k}/福大晚点名测试推送/配置成功` },
 };
 // 粘贴自动提取：Bark 整段推送 URL / Server酱 URL / PushPlus 带 token 的 URL，都能直接贴
 function extractKey(p, raw){
@@ -355,7 +525,7 @@ platList.addEventListener('click', e => {
 document.getElementById('platKey').addEventListener('input', normKey);
 document.getElementById('testPush').addEventListener('click', () => {
   const k = normKey();
-  if (!k) { alert('先粘贴 key'); return; }
+  if (!k) { alert('还没粘 key'); return; }
   fetch(platMeta[plat].url(k), { mode:'no-cors' }).finally(() => {
     document.getElementById('testOk').style.display = 'block';
   });
@@ -365,16 +535,16 @@ document.getElementById('testPush').addEventListener('click', () => {
 document.getElementById('ghCheck').addEventListener('click', async () => {
   const r = document.getElementById('ghCheckResult');
   r.style.display = 'block';
-  r.textContent = '⏳ 正在测，最多等 6 秒…';
+  r.textContent = '正在测，最多等 6 秒…';
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 6000);
   try {
     await fetch('https://api.github.com/zen?t=' + Date.now(), { signal: ctl.signal, cache: 'no-store' });
     clearTimeout(t);
-    r.textContent = '✅ 当前网络能直连 GitHub，直接往下走：勾选承诺 → 生成配置 → 按步骤 1~4 操作。';
+    r.textContent = '当前网络能直连 GitHub。往下走：勾选承诺，点生成配置，照 1~4 条做。';
   } catch (e) {
     clearTimeout(t);
-    r.textContent = '❌ 当前网络打不开 GitHub。建议：① 过会儿再试（高峰期容易卡）；② 换校园网或手机热点；③ 有梯子就开着再来——只需要注册+配置这几分钟。';
+    r.textContent = '当前网络打不开 GitHub。过会儿再试，高峰期容易卡；换校园网或手机热点；有梯子就开着再来，只需要注册和配置这几分钟。';
   }
 });
 
@@ -436,14 +606,14 @@ function vacRow(name='', s='', e=''){
   d.className='vac-item';
   d.innerHTML =
     '<div class="vac-head">' +
-      '<input type="text" class="vname" placeholder="名称（如 军训 / 调休）" value="'+name+'">' +
-      '<button type="button" class="vdel" title="删除这条">✕</button>' +
+      '<input type="text" class="vname" placeholder="名称，如 军训、调休" value="'+name+'">' +
+      '<button type="button" class="vdel" title="删除这段" aria-label="删除这段假期">✕</button>' +
     '</div>' +
     '<div class="row">' +
-      '<div><label style="margin-top:0">开始日期</label><input type="date" class="vstart" value="'+s+'"></div>' +
-      '<div><label style="margin-top:0">结束日期</label><input type="date" class="vend" value="'+e+'"></div>' +
+      '<div><label>开始日期</label><input type="date" class="vstart" value="'+s+'"></div>' +
+      '<div><label>结束日期</label><input type="date" class="vend" value="'+e+'"></div>' +
     '</div>' +
-    '<p class="vnote">⚠️ 开始日期不能晚于结束日期，这段不会被写入配置</p>';
+    '<p class="vnote">开始日期晚于结束日期，这段不会写进配置</p>';
   const sEl=d.querySelector('.vstart'), eEl=d.querySelector('.vend');
   // 选好开始日期后，结束日期若还空着就自动补成同一天（可再改）
   sEl.addEventListener('input', () => { if(sEl.value && !eEl.value) eEl.value = sEl.value; renderVac(); });
@@ -482,7 +652,7 @@ function renderVac(){
   document.getElementById('vacOut').value =
     'vacation:\n  notify: false\n  skip_ranges:\n' + vacPreset().concat(lines).join('\n');
   vacWarn.style.display = bad ? 'block' : 'none';
-  vacWarn.textContent = bad ? '⚠️ 有 '+bad+' 段日期没填全、或开始晚于结束，已跳过、不会写入配置。' : '';
+  vacWarn.textContent = bad ? '有 '+bad+' 段日期没填全，或者开始晚于结束，已跳过，不会写进配置。' : '';
 }
 document.getElementById('vacAdd').addEventListener('click',()=>{ vacRow(); renderVac(); });
 vacRow(); renderVac();
@@ -506,7 +676,7 @@ document.querySelectorAll('[data-copy]').forEach(b => {
   b.addEventListener('click', () => {
     const t = document.getElementById(b.dataset.copy);
     navigator.clipboard.writeText(t.value).then(() => {
-      b.textContent = '✅ 已复制';
+      b.textContent = '已复制';
       setTimeout(() => { b.textContent = label; }, 1500);
     });
   });
@@ -535,13 +705,13 @@ async function gh(path, opts = {}, raw = false) {
       res = await fetch('https://api.github.com' + path, Object.assign({}, opts, { headers }));
     } catch (e) {
       if (!retriable || i >= 3) throw new Error('网络请求失败，GitHub 连不上（国内直连时好时坏）@ ' + method + ' ' + path);
-      dlog(`　⚠️ 网络抖动，自动重试 ${i}/2 …`);
+      dlog(`　网络抖动，自动重试 ${i}/2 …`);
       await new Promise(r => setTimeout(r, 1500 * i));
       continue;
     }
     if (!res.ok) {
       if (retriable && res.status >= 500 && i < 3) {
-        dlog(`　⚠️ GitHub ${res.status}，自动重试 ${i}/2 …`);
+        dlog(`　GitHub ${res.status}，自动重试 ${i}/2 …`);
         await new Promise(r => setTimeout(r, 1500 * i));
         continue;
       }
@@ -559,45 +729,45 @@ document.getElementById('deploy').addEventListener('click', async () => {
   const btn = document.getElementById('deploy');
   pat = document.getElementById('ghPat').value.trim();
   const repo = document.getElementById('repoName').value.trim() || 'fzu-auto-checkin';
-  if (!pat) { alert('先粘贴 GitHub Token（第 5 步上面有创建入口）'); return; }
-  if (!document.getElementById('agree2').checked) { alert('请先勾选承诺条款（仅本人在校时使用，不用于代挂）'); return; }
+  if (!pat) { alert('还没粘 GitHub Token，第 5 步上面有创建入口'); return; }
+  if (!document.getElementById('agree2').checked) { alert('先勾一下上面的承诺'); return; }
   if (!/^[A-Za-z0-9_.-]+$/.test(repo)) { alert('仓库名只能包含字母、数字、. _ -'); return; }
   btn.disabled = true;
   logEl.textContent = '';
   logEl.classList.remove('hide');
   try {
-    dlog('⏳ 第 0 步：整理你的配置…');
+    dlog('第 0 步：整理配置…');
     let yaml;
     try { yaml = buildYaml(); }
-    catch (e) { throw new Error('第 1~3 步还没填完整（学号密码/坐标），填好后回来点部署'); }
-    dlog('✅ 配置就绪（只会写进你自己的私有仓库）');
+    catch (e) { throw new Error('第 1~3 步还没填完，学号密码或坐标缺了，填好后回来点部署'); }
+    dlog('配置就绪，只会写进你自己的私有仓库');
 
-    dlog('⏳ 第 1 步：验证 Token…');
+    dlog('第 1 步：验证 Token…');
     const me = await gh('/user');
-    dlog('✅ Token 有效，账号：' + me.login);
+    dlog('Token 有效，账号：' + me.login);
 
-    dlog('⏳ 第 2 步：创建私有仓库 ' + me.login + '/' + repo + ' …');
+    dlog('第 2 步：创建私有仓库 ' + me.login + '/' + repo + ' …');
     try {
       await gh('/user/repos', { method: 'POST', body: JSON.stringify({
         name: repo, private: true, has_issues: false, has_wiki: false,
         description: '福大晚点名自动签到（配置生成器部署）'
       })});
-      dlog('✅ 私有仓库已创建（只有你自己看得到）');
+      dlog('私有仓库已创建，只有你自己看得到');
     } catch (e) {
-      if (/422/.test(String(e))) dlog('ℹ️ 同名仓库已存在，直接复用并更新到最新代码');
+      if (/422/.test(String(e))) dlog('同名仓库已存在，直接复用并更新到最新代码');
       else throw e;
     }
     // 护栏：目标仓库绝不能是公开仓库（配置里含学号密码）
     const repoInfo = await gh(`/repos/${me.login}/${repo}`);
     if (!repoInfo.private) {
-      throw new Error(`仓库 ${repoInfo.full_name} 是公开的！配置里含你的学号密码，绝不能写进去。请换个仓库名（默认 fzu-checkin 就行）重新部署。`);
+      throw new Error(`仓库 ${repoInfo.full_name} 是公开的。配置里含你的学号密码，不能写进去。换个仓库名重新部署，默认的 fzu-auto-checkin 就行。`);
     }
-    dlog('✅ 确认目标仓库为私有');
+    dlog('确认目标仓库是私有的');
 
-    dlog('⏳ 第 3 步：复制项目代码…');
+    dlog('第 3 步：复制项目代码…');
     const tree = await gh(`/repos/${SRC_REPO}/git/trees/main?recursive=1`);
     const files = tree.tree.filter(x => x.type === 'blob');
-    dlog(`共 ${files.length} 个文件，开始逐个写入（约 1~3 分钟，别关页面）…`);
+    dlog(`共 ${files.length} 个文件，逐个写入，约 1~3 分钟，别关页面…`);
     let done = 0;
     for (const f of files) {
       // 断点续传：目标已存在且内容一致(sha 相同)就跳过，重试不用从头再传
@@ -614,24 +784,24 @@ document.getElementById('deploy').addEventListener('click', async () => {
       done++;
       if (done % 5 === 0 || done === files.length) dlog(`　进度 ${done}/${files.length}`);
     }
-    dlog('⏳ 写入你的专属配置 config.yaml…');
+    dlog('写入你的配置 config.yaml…');
     await gh(`/repos/${me.login}/${repo}/contents/config.yaml`, {
       method: 'PUT',
       body: JSON.stringify({ message: 'deploy: config.yaml', content: b64utf8(yaml) })
     });
-    dlog('✅ 代码和配置全部就位');
+    dlog('代码和配置都写好了');
 
-    dlog('⏳ 第 4 步：手动触发一次签到验证…');
+    dlog('第 4 步：手动触发一次签到验证…');
     try {
       await gh(`/repos/${me.login}/${repo}/actions/workflows/checkin.yml/dispatches`, {
         method: 'POST', body: JSON.stringify({ ref: repoInfo.default_branch })
       });
-      dlog('✅ 已触发！1 分钟后到仓库 Actions 页看签到结果');
+      dlog('已触发，1 分钟后到仓库 Actions 页看结果');
     } catch (e) {
-      dlog('ℹ️ 自动触发没成功（不影响定时签到），可到 Actions 页手动 Run workflow 验证');
+      dlog('自动触发没成功，不影响定时签到。到 Actions 页手动 Run workflow 验证一下。');
     }
 
-    dlog('🎉 部署完成！今晚 21:35 / 21:50 自动开始。Token 建议现在去 GitHub 删掉（Settings → Developer settings → Tokens）。');
+    dlog('部署完成。今晚 21:35 和 21:50 自动开始。Token 现在可以去 GitHub 删掉：Settings → Developer settings → Tokens。');
 
     // 补假期复用同一个 Token：只存在本次打开的内存里，不落盘、不上传
     const vp = document.getElementById('vacPat');
@@ -639,14 +809,14 @@ document.getElementById('deploy').addEventListener('click', async () => {
     // 部署成功 = 已经有仓库了，自动展开「一键写入」，以后补假期点一下就行
     if (typeof openVacWrite === 'function') openVacWrite();
   } catch (e) {
-    dlog('❌ 失败：' + e.message);
-    dlog('常见原因：Token 粘贴有误 / 网络超时（GitHub 国内时好时坏）。已传好的文件不会丢——稍等片刻点上面的「重试 / 继续部署」，会从断点接着传。');
+    dlog('失败：' + e.message);
+    dlog('常见原因：Token 粘错，或者网络超时，GitHub 国内时好时坏。已传好的文件不会丢，等一会儿点上面的「重试 / 继续部署」会从断点接着传。');
     if (/404/.test(e.message) && /workflows/.test(e.message)) {
-      dlog('💡 这个 404 的原因基本确定：Token 缺 workflow 权限（旧链接只勾了 repo，写不了签到工作流）。用上面「点这里创建」重新生成一个（已同时勾好 repo + workflow），粘贴后点「重试 / 继续部署」，已传好的文件会自动跳过。');
+      dlog('这个 404 基本能确定：Token 缺 workflow 权限，旧链接只勾了 repo，写不了签到工作流。用上面「点这里创建」重新生成一个，repo 和 workflow 都勾好的，粘回来点「重试 / 继续部署」，已传好的文件会自动跳过。');
     }
   } finally {
     btn.disabled = false;
-    btn.textContent = '🚀 重试 / 继续部署';
+    btn.textContent = '重试 / 继续部署';
   }
 });
 
@@ -681,29 +851,29 @@ document.getElementById('vacPush').addEventListener('click', async () => {
   let repo = document.getElementById('vacRepo').value.trim()
     .replace(/^https?:\/\/github\.com\//i, '').replace(/\.git$/, '').replace(/^\/+|\/+$/g, '');
   vacLogEl.textContent = '';
-  if (!token) { alert('先粘贴 GitHub Token'); return; }
+  if (!token) { alert('还没粘 GitHub Token'); return; }
   btn.disabled = true;
   try {
     pat = token;
-    vlog('⏳ 验证 Token…');
+    vlog('验证 Token…');
     const me = await gh('/user');
     if (!repo) repo = me.login + '/' + (document.getElementById('repoName').value.trim() || 'fzu-auto-checkin');
     else if (repo.indexOf('/') === -1) repo = me.login + '/' + repo;
-    vlog('✅ 账号 ' + me.login + '，目标仓库 ' + repo);
+    vlog('账号 ' + me.login + '，目标仓库 ' + repo);
     const rinfo = await gh('/repos/' + repo);
     if (!rinfo.private) {
-      throw new Error('仓库 ' + rinfo.full_name + ' 是公开的！配置里含你的学号密码，绝不能写入。请填你自己的私有签到仓库（如 Mahiroa/fzu-checkin）。');
+      throw new Error('仓库 ' + rinfo.full_name + ' 是公开的。配置里含你的学号密码，不能写入。填你自己的私有签到仓库。');
     }
 
-    vlog('⏳ 读取现有 config.yaml…');
+    vlog('读取现有 config.yaml…');
     let cur = null, sha = null;
     try {
       const f = await gh('/repos/' + repo + '/contents/config.yaml');
       sha = f.sha;
       cur = decodeURIComponent(escape(atob((f.content || '').replace(/\n/g, ''))));
-      vlog('✅ 已读到 ' + cur.split('\n').length + ' 行，只替换 vacation: 段，其他原样保留');
+      vlog('已读到 ' + cur.split('\n').length + ' 行，只替换 vacation: 段，其余原样保留');
     } catch (e) {
-      if (/404/.test(String(e))) vlog('ℹ️ 该仓库还没有 config.yaml，将新建');
+      if (/404/.test(String(e))) vlog('该仓库还没有 config.yaml，会新建一个');
       else throw e;
     }
 
@@ -711,15 +881,15 @@ document.getElementById('vacPush').addEventListener('click', async () => {
     const next = cur ? replaceVacation(cur, block)
                      : 'user:\n  username: ""\n  password: ""\n\ncheckin:\n  longitude: ""\n  latitude: ""\n  actual_location: ""\n\n' + block + '\n';
 
-    vlog('⏳ 写回仓库…');
+    vlog('写回仓库…');
     await gh('/repos/' + repo + '/contents/config.yaml', {
       method: 'PUT',
       body: JSON.stringify({ message: 'vacation: 更新假期跳过区间', content: b64utf8(next), sha: sha || undefined })
     });
-    vlog('🎉 写入成功！这段时间就自动跳过了，不会签到。');
+    vlog('写入成功，这段时间自动跳过，不会签到。');
   } catch (e) {
-    vlog('❌ 失败：' + e.message);
-    vlog('常见原因：Token 没勾 repo 权限 / 仓库名写错 / 网络超时（GitHub 国内时好时坏，等会儿重试通常就过）。');
+    vlog('失败：' + e.message);
+    vlog('常见原因：Token 没勾 repo 权限，仓库名写错，或者网络超时，等会儿重试通常就过。');
   } finally {
     btn.disabled = false;
   }
