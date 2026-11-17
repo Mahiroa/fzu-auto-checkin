@@ -7,9 +7,9 @@
  *   2) 仪表盘 #/dashboard：每 15 s 拉 GET /status + GET /runs?limit=5；
  *              倒计时用 next_run_at 在本地每秒递减（不额外轮询接口）。
  *              按钮 → POST /runs {mode} / POST /notify/test → 重新拉 status+runs。
- *   3) 配置   #/config：GET /config（脱敏）→ fillConfig 填表 → PUT /config {config}；
- *              导入走 POST /config/import-yaml 预览 → PUT 应用；
- *              导出是 GET /config/export?format=yaml 附件下载。
+ *   3) 配置   #/config：GET /config（明文回显）→ fillConfig 填表 → PUT /config {config}；
+ *              导入 POST /config/import-yaml 预览（同样明文）→ PUT 应用；
+ *              导出 GET /config/export?format=yaml（脱敏版）附件下载。
  *   4) 日志   #/logs：先 GET /logs?limit=200 快照，再 EventSource /logs/stream
  *              （event: log / event: run）增量追加；仅 DOM 局部追加，不整页重渲染。
  *   5) 历史   #/runs：GET /runs?limit=N（limit 分页），点开 GET /runs/{id} 渲染抽屉。
@@ -69,7 +69,7 @@ const S = {
   status: null, skew: 0, runs5: [], slotsSig: '', runsSig: '', zeroGuard: 0,
   statusTimer: 0, tickTimer: 0,
   /* 配置 */
-  config: null, configVersion: 0, configLoaded: false, importPreview: null,
+  config: null, configVersion: 0, configLoaded: false, importPreview: null, maskedFields: {},
   /* 日志 */
   logs: [], logKeys: new Set(), logsSnapshotted: false, autoScroll: true,
   es: null, esRetry: 0, esTimer: 0,
@@ -387,7 +387,7 @@ async function refreshSession() {
 
 function resetData() {
   S.status = null; S.skew = 0; S.runs5 = []; S.slotsSig = ''; S.runsSig = '';
-  S.config = null; S.configVersion = 0; S.configLoaded = false; S.importPreview = null;
+  S.config = null; S.configVersion = 0; S.configLoaded = false; S.importPreview = null; S.maskedFields = {};
   S.logs = []; S.logKeys = new Set(); S.logsSnapshotted = false;
   S.runs = []; S.runsPages = 1; S.runsExhausted = false;
 }
@@ -769,6 +769,7 @@ async function loadConfig(force) {
   try {
     const d = await apiFetch('/config');
     S.config = (d && d.config) ? d.config : {};
+    S.maskedFields = (d && d.masked_fields) ? d.masked_fields : {};
     S.configVersion = (d && d.version !== undefined && d.version !== null) ? d.version : (S.config.version || 0);
     S.configLoaded = true;
     fillConfig(S.config);
@@ -958,7 +959,7 @@ function applySecretBadges() {
     const input = wrap.querySelector('input, textarea');
     const badge = wrap.querySelector('.mask-badge');
     if (!input || !badge) return;
-    badge.hidden = !maskedLike(input.value);
+    badge.hidden = !(input.value.trim() !== '' || S.maskedFields[wrap.dataset.secret]);
   });
 }
 
@@ -1088,8 +1089,8 @@ async function saveConfig() {
 
 const LOGIN_MODE_TEXT = { cookie: 'Cookie', password: '学号 + 密码', token: '免登凭证' };
 
-/* 脱敏哨兵（••••/****）只是给眼睛看的，服务端不认识它：一律换成空串，
-   让服务端回落到已保存的值，而不是把哨兵当成真凭据发过去。 */
+/* 明文回显时就是原样发送；框里还留着旧服务端的脱敏哨兵时换成空串（服务端不认识
+   哨兵，空串会让它回落到已保存的值，而不是把哨兵当真凭据）。 */
 function loginTestBody() {
   const pick = function (id) {
     const v = getVal(id);
@@ -1139,7 +1140,7 @@ function loginTestErrorText(e) {
 
 async function testLogin(btn) {
   const btnEl = btn || $('btn-login-test');
-  /* 框里是服务端回传的脱敏哨兵就不发送它（服务端不认识哨兵）：loginTestBody()
+  /* 框里是旧服务端回传的脱敏哨兵就不发送它（服务端不认识哨兵）：loginTestBody()
      会换成空串，服务端随即回落到已保存的那份 Cookie——这恰好是最常问的问题
      「我上次存的 Cookie 还能用吗」，所以这里不能直接拦住不测。 */
   const usingSavedCookie = maskedLike(getVal('cfg-user-cookie'));
@@ -1938,7 +1939,7 @@ function bindEvents() {
     cfgForm.addEventListener('input', function (ev) {
       const t = ev.target;
       if (!t || !t.classList) return;
-      /* 密码框与 Cookie 框（textarea）都会改动「已配置」徽标的状态 */
+      /* 凭据框（密码/token/推送 key 的 input 与 Cookie 的 textarea）都会改动「已配置」徽标 */
       if (t.closest && t.closest('.has-secret')) applySecretBadges();
       if (t.closest && t.closest('#pool-rows')) syncPoolNote();
     });

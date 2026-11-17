@@ -44,6 +44,8 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 // ---------- GET /api/v1/config ----------
 
 // configResponse 是 GET /config 的形状（§9 + 前端硬假设 4）。
+// Config 是明文真实值（不再做哨兵替换）；MaskedFields 保留原有语义，
+// 供前端渲染「已配置 / 未填」徽标。
 type configResponse struct {
 	Config       model.Config    `json:"config"`
 	Version      int64           `json:"version"`
@@ -60,8 +62,11 @@ func (s *Server) handleConfigGet(w http.ResponseWriter, r *http.Request) {
 	if warnings == nil {
 		warnings = []string{}
 	}
+	// config 里是真实值（含明文凭据）：配置页的输入框按明文显示，管理员要能
+	// 核对/复制自己填过的东西。敏感字段是否已配置仍由 masked_fields 告诉前端，
+	// 而真正对外流转的出口（导出、日志、SSE、运行记录）继续走脱敏路径。
 	writeJSON(w, http.StatusOK, configResponse{
-		Config:       config.Mask(cfg),
+		Config:       cfg,
 		Version:      s.store.ConfigVersion(),
 		Warnings:     warnings,
 		MaskedFields: config.MaskedFields(cfg),
@@ -114,8 +119,12 @@ func (s *Server) handleConfigPut(w http.ResponseWriter, r *http.Request) {
 
 // ---------- POST /api/v1/config/import-yaml ----------
 
-// handleConfigImportYAML 只解析预览、不落盘（§9）。响应必须脱敏：
-// 用户粘进来的 YAML 里就带着明文密码，回显回去等于把它又写进浏览器缓存。
+// handleConfigImportYAML 只解析预览、不落盘（§9）。
+//
+// 预览同样回显真实值：它和 GET /config 是同一个"给我看看现在的配置"语义，
+// 配置页的输入框按明文显示；而且预览里的凭据会被「应用」原样 PUT 回去，
+// 若换成哨兵，回写时 MergeMasked 会把它翻译成"保持旧值"——导入的新密码反而
+// 存不进去。导出（handleConfigExport）保持脱敏，不受这里影响。
 func (s *Server) handleConfigImportYAML(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		YAML string `json:"yaml"`
@@ -139,7 +148,7 @@ func (s *Server) handleConfigImportYAML(w http.ResponseWriter, r *http.Request) 
 		warnings = []string{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"config":        config.Mask(cfg),
+		"config":        cfg,
 		"warnings":      warnings,
 		"masked_fields": config.MaskedFields(cfg),
 	})

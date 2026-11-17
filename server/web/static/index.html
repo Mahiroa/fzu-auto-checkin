@@ -171,29 +171,29 @@
         <fieldset class="card">
           <legend>账号</legend>
           <p class="hint">三种登录方式任填一种：Cookie（不用存密码）、「学号 + 密码」、免登凭证。都填时由服务端定优先级，点下面「测试登录」能确认实际走的是哪条；凭证过期时服务会用学号密码自动重新登录，并把新凭证写回配置。</p>
-          <div class="field has-secret">
+          <div class="field">
             <div class="field-head">
               <label for="cfg-username">学号</label>
             </div>
             <input id="cfg-username" type="text" spellcheck="false" placeholder="登录智汇福大 App 的学号">
           </div>
-          <div class="field has-secret">
+          <div class="field has-secret" data-secret="user.password">
             <div class="field-head">
               <label for="cfg-password">密码</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-password">清空</button>
             </div>
-            <input id="cfg-password" type="password" autocomplete="new-password" placeholder="登录智汇福大 App 的密码">
+            <input id="cfg-password" type="text" autocomplete="off" spellcheck="false" placeholder="登录智汇福大 App 的密码">
           </div>
-          <div class="field has-secret">
+          <div class="field has-secret" data-secret="user.token">
             <div class="field-head">
               <label for="cfg-token">免登凭证（App 里叫 token）</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-token">清空</button>
             </div>
-            <input id="cfg-token" type="password" autocomplete="new-password" placeholder="留空则用学号密码自动登录">
+            <input id="cfg-token" type="text" autocomplete="off" spellcheck="false" placeholder="留空则用学号密码自动登录">
           </div>
-          <div class="field has-secret">
+          <div class="field has-secret" data-secret="user.cookie">
             <div class="field-head">
               <label for="cfg-user-cookie">浏览器 Cookie（可选，不用输密码登录）</label>
               <span class="badge mask-badge" hidden>已配置</span>
@@ -314,37 +314,37 @@
               <option value="none">不推送</option>
             </select>
           </div>
-          <div class="field has-secret" data-notify="serverchan">
+          <div class="field has-secret" data-notify="serverchan" data-secret="notify.serverchan_key">
             <div class="field-head">
               <label for="cfg-serverchan-key">Server酱 SendKey</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-serverchan-key">清空</button>
             </div>
-            <input id="cfg-serverchan-key" type="password" autocomplete="new-password" placeholder="SCT 开头的 SendKey">
+            <input id="cfg-serverchan-key" type="text" autocomplete="off" spellcheck="false" placeholder="SCT 开头的 SendKey">
           </div>
-          <div class="field has-secret" data-notify="pushplus" hidden>
+          <div class="field has-secret" data-notify="pushplus" data-secret="notify.pushplus_token" hidden>
             <div class="field-head">
               <label for="cfg-pushplus-token">PushPlus 的 token</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-pushplus-token">清空</button>
             </div>
-            <input id="cfg-pushplus-token" type="password" autocomplete="new-password" placeholder="PushPlus 的 token">
+            <input id="cfg-pushplus-token" type="text" autocomplete="off" spellcheck="false" placeholder="PushPlus 的 token">
           </div>
-          <div class="field has-secret" data-notify="bark" hidden>
+          <div class="field has-secret" data-notify="bark" data-secret="notify.bark_url" hidden>
             <div class="field-head">
               <label for="cfg-bark-url">Bark 推送地址</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-bark-url">清空</button>
             </div>
-            <input id="cfg-bark-url" type="password" autocomplete="new-password" placeholder="完整的 Bark 推送地址">
+            <input id="cfg-bark-url" type="text" autocomplete="off" spellcheck="false" placeholder="完整的 Bark 推送地址">
           </div>
-          <div class="field has-secret" data-notify="wecom" hidden>
+          <div class="field has-secret" data-notify="wecom" data-secret="notify.wecom_webhook" hidden>
             <div class="field-head">
               <label for="cfg-wecom-webhook">企业微信群机器人地址</label>
               <span class="badge mask-badge" hidden>已配置</span>
               <button class="link clear-secret" type="button" data-target="cfg-wecom-webhook">清空</button>
             </div>
-            <input id="cfg-wecom-webhook" type="password" autocomplete="new-password" placeholder="群机器人的完整地址">
+            <input id="cfg-wecom-webhook" type="text" autocomplete="off" spellcheck="false" placeholder="群机器人的完整地址">
           </div>
           <p id="notify-hint" class="hint">成功/越界/失败必推；已签到、跳过、假期默认静默。推送失败不影响签到结论。</p>
         </fieldset>
@@ -368,7 +368,7 @@
           <p class="hint">访问地址和数据存放目录改完要重启服务才会生效。上面那一项只有在你把管理页面挂到别的网站上时才需要填，平时留空就好。</p>
         </fieldset>
 
-        <p class="hint">保存前会先把旧配置备份成 <code>config.json.bak</code>；密码、密钥显示成 <code>••••</code> 表示已经存过，原样保存就是继续用原来的值。</p>
+        <p class="hint">保存前会先把旧配置备份成 <code>config.json.bak</code>；上面的密码、免登凭证、Cookie 与推送密钥都按<b>明文</b>显示已保存的值，方便核对与复制，改完点「保存」即可。只有「导出」下载的 config.yaml / config.json 会自动脱敏成 <code>••••</code>。</p>
       </form>
     </section>
 

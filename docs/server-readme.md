@@ -160,7 +160,7 @@ python ../scripts/gen_parity.py   # 重新生成 Python↔Go 一致性语料（3
 - **跨语言一致性**：`internal/schedule/parity_test.go` 重放 Python 版生成的 323 例决策语料（含六条分支、抖动钳制、边界秒）。
 - **加密字节级对齐**：`internal/secure/secure_test.go` 用 Python 生成的密文/明文向量断言 AES-CBC 与 AES-ECB 输出逐字节相同（含中文 `\uXXXX` 转义）。
 - **竞态检测**：本机默认没有 gcc，`go test -race` 需要 MinGW；也可用 Clang/MSVC 包装器（见下）。
-- **端到端冒烟**：`pwsh -File scripts/smoke.ps1`（构建 → 启动 → 初始化 → 配置校验 → 脱敏 → SSE → 资源占用 → 优雅退出）。
+- **端到端冒烟**：`pwsh -File scripts/smoke.ps1`（构建 → 启动 → 初始化 → 配置校验 → 明文回显与导出脱敏 → SSE → 资源占用 → 优雅退出）。
 - **浏览器验收**：`pwsh -File scripts/ui-verify.ps1`（Chrome + CDP 跑四视图并截图到 `docs/verify-shots/`）。
 
 ```powershell
@@ -213,7 +213,7 @@ schtasks /create /tn fzucheckin /tr "C:\path\fzucheckin.exe -listen 127.0.0.1:87
 - 首次启动必须设置管理密码；密码以 PBKDF2-HMAC-SHA256（12 万轮）存储，Session 为 HMAC 签名 Cookie（7 天）。
 - 登录失败同 IP 15 分钟 5 次触发限速（429）；**限速身份默认取 TCP 来源地址**，只有 `-trust-proxy` 时才采信 `X-Forwarded-For`（否则换一个头就能绕过）。
 - 所有非 GET 请求需带 `X-Requested-With: fzu-web`（CSRF）；API 响应统一 `Cache-Control: no-store`，CSP 只加在自有页面上。
-- 配置接口只回显 `••••` 哨兵；导出为脱敏版本；日志与 SSE 不打印 token/密码/推送 key。
+- 配置页的凭据输入框与 `GET /config` 按**明文**回显（本机单人使用，方便核对/复制）；导出仍是脱敏版本；日志与 SSE 不打印 token/密码/推送 key。
 - **「定位预检」不会产生签到记录、不会推送、不会把当天标成已签**——它是只读探测，可以放心在白天用。
 - `data/` 含凭据与密钥，已在 `.gitignore` 中排除，切勿提交或共享。
 

@@ -219,7 +219,7 @@ func DoCheckin(c *Client, cfg model.Config, init map[string]any, rng *rand.Rand,
 // package config
 func Normalize(cfg model.Config) (model.Config, []string)     // 修 YAML 60 进制、坏坐标等，返回警告
 func Validate(cfg model.Config) error                        // 硬失败：无凭据/无坐标
-func Mask(cfg model.Config) model.Config                     // 敏感字段→"••••"，只用于响应
+func Mask(cfg model.Config) model.Config                     // 敏感字段→"••••"，只用于导出（GET /config 回明文）
 func MergeMasked(oldCfg, incoming model.Config) model.Config // 收到 "••••" 视为"保持原值"
 func ImportYAML(text string) (model.Config, []string, error)
 
@@ -298,7 +298,7 @@ data/
 | Session | Cookie `fzu_sess=<base64url(payload)>.<hmac>`；payload `{sub:"admin",iat,exp}`；`HttpOnly; SameSite=Strict; Path=/; Max-Age=604800`；TLS 或 `X-Forwarded-Proto: https` 时追加 `Secure` |
 | CSRF | 所有非 GET 请求必须带 `X-Requested-With: fzu-web`（前端统一 fetch 包装）+ SameSite=Strict 双保险；缺失返回 403 |
 | CORS | 默认同源。`server.allow_origins` 非空时按白名单回显 `Access-Control-Allow-Origin`，`Access-Control-Allow-Credentials: true`，`Vary: Origin` |
-| 脱敏 | `config.Mask`：`user.password`/`user.token`/`notify.*_key|token|url|webhook` → `"••••"`；同时返回 `has_password` 等布尔供前端显示"已配置" |
+| 脱敏 | `config.Mask`（导出与写入口径）：`user.password`/`user.token`/`notify.*_key|token|url|webhook` → `"••••"`；`GET /config` 与 import 预览按明文回显，另返回 `masked_fields` 布尔供前端显示"已配置" |
 | 日志 | 任何日志/SSE 事件禁止出现 token、密码、推送 key 原文；只允许 `token=st***（len=64）` 形式 |
 | HTTP 加固 | `ReadHeaderTimeout=5s`、`ReadTimeout=15s`、`WriteTimeout=30s`（SSE 路由单独用 `0`）、`MaxHeaderBytes=64KB`、请求体 `http.MaxBytesReader 1MB` |
 | 上游加固 | 客户端 `Timeout=15s`，`CheckRedirect` 最多 5 跳（SSO 需要），关闭 `http.DefaultClient` 复用 |
@@ -596,7 +596,7 @@ go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
 - [x] 假上游下六种 `status` 全部可达（success/already_checked/no_plan/out_of_range/vacation/error）
 - [x] SSE 实时日志在浏览器可见，断线自动重连（`logs-conn` 显示「已连接」，快照+增量）
 - [x] 未登录 401、无 CSRF 头 403、5 次错密 429（`Retry-After`）
-- [x] 配置 GET 不含任何明文凭据（浏览器断言密码框值为 `••••`）
+- [x] 配置 GET 按明文回显凭据（浏览器断言配置页密码框为 `type=text` 且值等于真实密码），导出仍是脱敏版
 - [x] 进程空闲 RSS 10.6 MB（≤30 MB），二进制 6.28 MB（≤12 MB）
 - [x] `SIGINT` 优雅退出，退出期间进行中的运行可完成（`TestRunGracefulShutdown` + 60s 兜底）
 - [x] 浏览器（Chrome 157.0.8103.78 · CDP:9225）四视图走查 + 8 张截图存档（28 项断言全过）
