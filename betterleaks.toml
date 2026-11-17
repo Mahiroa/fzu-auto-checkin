@@ -1,0 +1,78 @@
+# betterleaks 配置：内置默认规则 + 本项目踩过的那两类坑
+#
+# 背景（2026-11-16）：真实的 oss.fzu.edu.cn Access-Token（22 字符、无前缀 base64url）
+# 曾被当成测试夹具写进三个 *_test.go。默认规则集只认 ghp_/AKIA/SCT 这类带前缀的值，
+# 抓不到纯随机串，所以下面补了"高熵 token 字面量"与"SESSION Cookie 值"两条。
+#
+# 这个文件同时服务三处：pre-commit 钩子（scripts/pre-commit-secret-scan.sh）、
+# 本地手动扫描（scripts/secret-scan.ps1）、CI 全历史扫描（.github/workflows/secret-scan.yml）。
+#
+# v2 与 gitleaks 的写法差异（迁移自 .gitleaks.toml）：
+#   - allowlist → prefilter（按路径整体跳过）+ filter（按命中值丢弃），都是 Expr
+#   - rule 的 entropy = 3.9 → filter = 'entropy(finding.secret) <= 3.9'（返回 true 即丢弃）
+#   - secretGroup → valueGroup
+#   - 全局 prefilter/filter 必须写在 [extend] 之前：TOML 一旦进了表就回不到根表
+#
+# 原则：不把任何真实值写进本文件。豁免只豁免"路径"和"形状"（合成标记、中文说明文字）。
+
+title = "fzu-auto-checkin secret scan"
+
+# ---------------------------------------------------------------- 全局预过滤
+# 返回 true = 这个路径整个不扫。列出的都是"本来就不入库"或"已知是夹具"的地方：
+#   _test.go / testdata      —— 测试夹具与向量，历史里有一批（现在已被 .gitignore 挡住）
+#   .recon/                  —— 本机抓包现场与工具目录，绝不入库
+#   docs/verify-shots/       —— 验收截图
+#   scripts/ui-verify.*      —— 本机浏览器验收编排（含本机测试密码），已从树里删除
+#   scripts/smoke.ps1        —— 同上，历史里的本机冒烟脚本
+prefilter = '''matchesAny(attributes["path"], [
+  `(?i)_test\.go$`,
+  `(?i)(?:^|/)testdata/`,
+  `(?i)(?:^|/)\.recon/`,
+  `(?i)(?:^|/)docs/verify-shots/`,
+  `(?i)(?:^|/)scripts/ui-verify\.(?:ps1|mjs)$`,
+  `(?i)(?:^|/)scripts/smoke\.ps1$`
+])'''
+
+# ---------------------------------------------------------------- 全局过滤
+# 返回 true = 丢弃这条命中。只放行两类必然不是凭据的东西：
+#   1) 含汉字的值 —— 真实凭据是 ASCII，中文只会出现在说明文字里
+#      （如 README 的 password: "登录智汇福大 App 的密码"、app.js 的 password: '学号 + 密码'）
+#   2) 合成标记 —— 与旧 .gitleaks.toml 的 allowlist 一一对应，一条都没少
+filter = '''matchesAny(finding.secret, [`\p{Han}`])
+  || matchesAny(finding.secret, [
+    `SYNTHETIC[_-][A-Za-z0-9_-]*`,
+    `(?i)should-not-leak`,
+    `(?i)(fake|stale|preset|dummy|placeholder|hunter2)`,
+    `0123456789`,
+    `(?i)abcdefghij`,
+    `(?i)^abc123`,
+    `(?i)^sct(123456|secret)`,
+    `(?i)wecomsecret`,
+    `(?i)sctsecretkey`,
+    `(?i)(aaaa-bbbb|1111-2222|good-session|typed-just-now|static-session|google-session)`,
+    `(?i)xxxx`,
+    `(?i)your[-_]?(token|key|domain)`
+  ])'''
+
+[extend]
+useDefault = true
+
+# ---------------------------------------------------------------- 自定义规则
+
+[[rules]]
+id = "opaque-token-literal"
+description = "疑似真实 token 的字面量（无前缀、≥20 字符、高熵）"
+regex = '''(?i)(?:token|cookie|session|secret|passwd|password|api[_-]?key|access[_-]?key|send[_-]?key)\b[^\n]{0,16}?["']([A-Za-z0-9_\-+/=]{20,})["']'''
+valueGroup = 1
+# 阈值依据：真实值 aAvk… 的 Shannon 熵 = 4.005；英文短语型噪声
+# （wrong-from-other-ip 3.34、definitely-not-the-password 3.86）都低于 3.9。
+filter = '''entropy(finding.secret) <= 3.9'''
+keywords = ["token", "cookie", "session", "secret", "password", "key"]
+
+[[rules]]
+id = "session-cookie-literal"
+description = "疑似真实 SESSION Cookie 的值（24 字符以上）"
+regex = '''(?i)\bSESSION=([A-Za-z0-9._\-]{24,})'''
+valueGroup = 1
+filter = '''entropy(finding.secret) <= 3.5'''
+keywords = ["SESSION="]
