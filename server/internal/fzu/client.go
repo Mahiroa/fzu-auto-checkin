@@ -199,21 +199,21 @@ type checkPayload struct {
 //
 // 返回空列表 + nil error 表示"请求成功但没命中"——这与网络/协议失败是两回事，
 // 调用方要靠这个区别决定"换个点重试"还是"放弃并报错"。
-func (c *Client) Check(lon, lat float64, polygons []json.RawMessage) ([]model.Campus, error) {
-	// nil 切片会被 encoding/json 写成 "null"，而 Python 侧永远是 "[]"：
-	// 对端拿 range 去解析多边形，null 不是合法输入，先把形状摆正。
-	if polygons == nil {
-		polygons = []json.RawMessage{}
-	}
-	rangeJSON, err := compactJSON(polygons)
-	if err != nil {
-		return nil, fmt.Errorf("check 的 range 序列化失败: %w", err)
+//
+// rangePayload 是 init 里那份 FPosition 对象串（Plan.RangeJSON）原样转发：
+// 学校端会把 range 字段再解析成一个 FPosition，只发多边形数组会回「打卡地点
+// 校验发生异常」。空串/纯空白一律兜底成空范围对象——宁可拿到"没命中"，也不要
+// 发出对端根本解不了的东西。
+func (c *Client) Check(lon, lat float64, rangePayload string) ([]model.Campus, error) {
+	payload := strings.TrimSpace(rangePayload)
+	if payload == "" {
+		payload = emptyRangeJSON
 	}
 	env, err := c.encGet("check.action", checkPayload{
 		MapType:   "amap",
 		Longitude: lon,
 		Latitude:  lat,
-		Range:     string(rangeJSON),
+		Range:     payload,
 	})
 	if err != nil {
 		return nil, err
@@ -555,7 +555,7 @@ func DoCheckin(c *Client, cfg model.Config, init map[string]any, draw RandFunc,
 	if radius > 0 {
 		for attempt := 1; attempt <= jitterMaxAttempts; attempt++ {
 			jLon, jLat := JitterLocation(place.Lon, place.Lat, radius, draw)
-			got, checkErr := c.Check(jLon, jLat, plan.Polygons)
+			got, checkErr := c.Check(jLon, jLat, plan.RangeJSON)
 			if checkErr != nil {
 				return model.CheckinResult{}, checkErr
 			}
@@ -572,7 +572,7 @@ func DoCheckin(c *Client, cfg model.Config, init map[string]any, draw RandFunc,
 		if radius > 0 {
 			logf("抖动点均在范围外，回退到配置坐标打卡。")
 		}
-		got, checkErr := c.Check(place.Lon, place.Lat, plan.Polygons)
+		got, checkErr := c.Check(place.Lon, place.Lat, plan.RangeJSON)
 		if checkErr != nil {
 			return model.CheckinResult{}, checkErr
 		}

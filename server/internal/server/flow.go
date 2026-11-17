@@ -298,7 +298,7 @@ func (s *Server) runProbe(cfg model.Config, client *fzu.Client, plan fzu.Plan,
 		jittered = true
 	}
 
-	matched, err := client.Check(lon, lat, plan.Polygons)
+	matched, err := client.Check(lon, lat, plan.RangeJSON)
 	if err != nil {
 		rec.Status = model.StatusError
 		rec.Error = s.sanitizeError(err.Error(), cfg)
@@ -310,7 +310,7 @@ func (s *Server) runProbe(cfg model.Config, client *fzu.Client, plan fzu.Plan,
 		// 不是"这次随机偏出去的那一点能不能签"。
 		addLog("info", "抖动点不在任何签到范围内，回退到配置坐标重试")
 		lon, lat, jittered = place.Lon, place.Lat, false
-		matched, err = client.Check(lon, lat, plan.Polygons)
+		matched, err = client.Check(lon, lat, plan.RangeJSON)
 		if err != nil {
 			rec.Status = model.StatusError
 			rec.Error = s.sanitizeError(err.Error(), cfg)

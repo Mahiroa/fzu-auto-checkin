@@ -64,9 +64,18 @@ AES-128-CBC，KEY = IV = "apexinfoapexinfo"，PKCS7，输出 Base64
   "mapType": "amap",
   "longitude": 119.20463,
   "latitude": 26.04920,
-  "range": "<init 返回的 schoolPosition 序列化 JSON 字符串>"
+  // 注意：这里要的是 init 里那份 **FPosition 整串**，形如
+  //   {"range":[{...},{...}],"mapType":"amap"}
+  // 不是它内部那个 range 数组摊平后的 [{"id":...},...]。
+  "range": "{\"range\":[...],\"mapType\":\"amap\"}"
 }
 ```
+
+> ⚠️ **2026-11-17 线上实测的坑**：同一个 token、同一个坐标，只改 `range` 形状——
+> 发多边形数组 → `{"success":false,"code":0,"msg":"打卡地点校验发生异常"}`（HTTP 仍 200）；
+> 发 FPosition 对象串 → `{"success":true,"code":1,"data":[{...旗山校区...}]}`。
+> Go 版在 1.3.2 之前把数组当 range 发，因此每次都在 check 阶段被拒；Python 版
+> （`src/checkin.py` 把 `{"range": polygons}` 整体 dumps）一直是对象形状，才没踩到。
 
 ## 4. 获取 token
 

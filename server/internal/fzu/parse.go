@@ -23,6 +23,15 @@ type Plan struct {
 	CollUnit             string // userData.FCollUnit
 	Way                  int    // userData.FWay，缺省 1
 	Polygons             []json.RawMessage
+
+	// RangeJSON 是 check.action 的 range 参数原文：一个**完整的 FPosition 对象**
+	// 串 {"range":[...],"mapType":"amap"}，不是摊平后的多边形数组串。
+	//
+	// 为什么在这里就定型：学校端会把 range 字段再反序列化成一个 FPosition，
+	// 只发数组会直接回「打卡地点校验发生异常」（2026-11 线上对照实验：同一个
+	// token、同一个坐标，只有 range 形状不同，数组回 success=false）。把原文挂在
+	// Plan 上，flow 与 client 发的就是 init 里那一份，协议再变只改这一处。
+	RangeJSON string
 }
 
 const (
@@ -31,7 +40,24 @@ const (
 	// 幂等（FState 检查）会失效、同一晚重复打卡。
 	stateSuccessRaw = "SUCCESS"
 	stateCheckedCN  = "已签到"
+
+	// defaultMapType 是 range 对象里 mapType 的兜底值。H5 一直发 amap，而空串
+	// 会被对端当成"未知坐标系"，所以缺失时必须补上而不是留空。
+	defaultMapType = "amap"
+
+	// emptyRangeJSON 是"一个多边形都没有"时的 range 参数：仍然是一个完整
+	// FPosition 对象。绝不能退成空串——对端拿到空串会在反序列化阶段就抛
+	// 「打卡地点校验发生异常」，连"不在签到范围内"这个结论都换不回来。
+	emptyRangeJSON = `{"range":[],"mapType":"` + defaultMapType + `"}`
 )
+
+// fposition 是 FPosition 的 Go 影子类型。字段顺序有意与对端原文一致
+// （range 在前、mapType 在后）；check.action 的 range 参数必须是**这个对象**的
+// JSON 文本，而不是它内部那个 range 数组。
+type fposition struct {
+	Range   []json.RawMessage `json:"range"`
+	MapType string            `json:"mapType"`
+}
 
 // ParseInit 把 init 响应的 data 归一成 Plan。
 //
@@ -67,7 +93,67 @@ func ParseInit(init map[string]any) (Plan, error) {
 	school := sliceField(init, "schoolData")
 	plan.HasPlan = len(school) > 0
 	plan.Polygons = collectPolygons(school)
+	plan.RangeJSON = buildRangeJSON(plan.Polygons, firstMapType(school))
 	return plan, nil
+}
+
+// buildRangeJSON 把摊平后的多边形与地图类型打包成 check.action 的 range 参数
+// 原文：{"range":[...],"mapType":"amap"}。
+//
+// 为什么要专门一个构造器而不是各调用点现拼：这份文本会被对端**再解析一次**
+// 当成 FPosition，形状错一个括号就整晚签不上；只发 range 数组是本模块踩过的坑
+// （对端回「打卡地点校验发生异常」）。序列化走 compactJSON（关掉 HTML 转义），
+// 与 Python/H5 发出的原文一致，中文校区名、& 之类的字符不会被写成 \uXXXX。
+func buildRangeJSON(polygons []json.RawMessage, mapType string) string {
+	if polygons == nil {
+		// nil 切片会被写成 null，而对端要的是数组：空范围也得是 []。
+		polygons = []json.RawMessage{}
+	}
+	if strings.TrimSpace(mapType) == "" {
+		mapType = defaultMapType
+	}
+	data, err := compactJSON(fposition{Range: polygons, MapType: mapType})
+	if err != nil {
+		// 理论上到不了：range 里每一段都来自一次成功的 json.Unmarshal。
+		// 真到了也只能退空范围——退空串会让对端连"没命中"都答不出来。
+		return emptyRangeJSON
+	}
+	return string(data)
+}
+
+// firstMapType 取第一个能解析出来的 mapType。
+//
+// 为什么是"第一个能解析的"而不是要求全部一致：schoolData 可能有多条（多校区），
+// 只要有一条带了 mapType 就足以描述坐标系；全部缺失/写坏再退 amap。挑第一条
+// 而不是拼起来，是因为对端只认单个枚举值。
+func firstMapType(school []any) string {
+	for _, item := range school {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		position, ok := obj["FPosition"]
+		if !ok || position == nil {
+			continue
+		}
+		switch typed := position.(type) {
+		case string:
+			var parsed struct {
+				MapType string `json:"mapType"`
+			}
+			if err := json.Unmarshal([]byte(typed), &parsed); err != nil {
+				continue
+			}
+			if mt := strings.TrimSpace(parsed.MapType); mt != "" {
+				return mt
+			}
+		case map[string]any:
+			if mt := strings.TrimSpace(stringField(typed, "mapType")); mt != "" {
+				return mt
+			}
+		}
+	}
+	return defaultMapType
 }
 
 // collectPolygons 从 schoolData 里摊平出所有签到范围多边形。
