@@ -8,7 +8,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](requirements.txt)
-[![Tests](https://img.shields.io/badge/tests-129%20passed-brightgreen.svg)](tests)
+[![Tests](https://img.shields.io/badge/tests-145%20passed-brightgreen.svg)](tests)
 [![Cron](https://img.shields.io/badge/cron-21%3A00--23%3A59%20%2F%2010min-green.svg)](.github/workflows/checkin.yml)
 
 </div>
@@ -376,7 +376,7 @@ fzu-auto-checkin/
 
 ```bash
 pip install -r requirements.txt   # requests / PyYAML / pycryptodome
-python -m pytest tests -q         # 129 passed
+python -m pytest tests -q         # 本机 145 passed（tests/ 不入库，见下）
 ```
 
 测试全部离线：不联网、不读你的真实 `config.yaml`、随机源与当前时间都可注入，所以任何时刻、任何机器上结果一致。
@@ -384,6 +384,21 @@ python -m pytest tests -q         # 129 passed
 覆盖的东西：窗口边界（20:59:59 / 21:00:00 / 23:59:59 / 00:00:00）、抖动越界重抽与贴边、六种决策分支、位置池加权与坏坐标、位置抖动半径约束、`main()` 在窗口外零请求零推送、配置模板与 workflow 的键位一致性。
 
 改代码时的两个约定：调度逻辑只写在 `src/schedule.py`，不许在 `main.py` 里比较时刻；窗口判定只有 `in_window()` 一条路径。
+
+### 仓库里不放什么（四条硬规矩）
+
+**构建产物、冒烟脚本与冒烟产物、测试与测试数据、临时数据**一律不入库。三道闸门把着，规则只有一份（[scripts/repo-guard.sh](scripts/repo-guard.sh)）：
+
+- `.gitignore`：挡"还没被跟踪"的文件；
+- 仓库内 pre-commit（`.githooks/pre-commit`）：路径闸门 + 密钥扫描，任一不过就取消提交；
+- CI（`.github/workflows/repo-guard.yml`）：扫整棵已跟踪树，`git add -f` 或 `--no-verify` 绕过的提交照样红。
+
+新克隆先启用钩子（`core.hooksPath` 可能被全局配置指着别处，仓库内钩子默认不生效）：
+
+```bash
+git config core.hooksPath .githooks
+./scripts/repo-guard.sh --tree      # 手动全树体检，CI 跑的就是这条
+```
 
 ## 🔍 工作原理
 
