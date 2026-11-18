@@ -30,6 +30,11 @@ const LOG_INITIAL = 200;
 const LOG_CAP = 500;
 const LEVELS = { debug: 0, info: 1, warn: 2, error: 3 };
 
+/* MASK_SENTINEL 必须与服务端 config.MaskSentinel 逐字节一致。
+ * 语义（两边共用一份协议）：GET /config 把敏感字段换成它；前端原样回传 = "保持原值"，
+ * 回传空串 = "清空这一项"。因此这里既不能改字符，也不能在回传前 trim 成空。 */
+const MASK_SENTINEL = '••••';
+
 const STATUS_TEXT = {
   success: '签到成功', already_checked: '今日已签', no_plan: '无考勤计划',
   out_of_range: '位置越界', vacation: '假期跳过', skipped: '已跳过', error: '失败'
@@ -68,8 +73,12 @@ const S = {
   /* 仪表盘 */
   status: null, skew: 0, runs5: [], slotsSig: '', runsSig: '', zeroGuard: 0,
   statusTimer: 0, tickTimer: 0,
+  autoBusy: false, // 请求在飞时，轮询不许覆盖乐观状态
   /* 配置 */
   config: null, configVersion: 0, configLoaded: false, importPreview: null, maskedFields: {},
+  /* Cookie 的填写栏已经去掉：老配置里那份默认保留，点过「清掉它」才置位 */
+  dropCookie: false,
+  pendingReveal: null, // 正在等管理密码的那一项凭据（见 openReveal）
   /* 日志 */
   logs: [], logKeys: new Set(), logsSnapshotted: false, autoScroll: true,
   es: null, esRetry: 0, esTimer: 0,
@@ -90,7 +99,25 @@ function setVal(id, v) { const el = $(id); if (el) el.value = str(v); }
 function getVal(id) { const el = $(id); return el ? String(el.value).trim() : ''; }
 function setText(id, t) { const el = $(id); if (el) el.textContent = str(t); }
 function setHidden(id, hidden) { const el = $(id); if (el) el.hidden = !!hidden; }
-function isHidden(id) { const el = $(id); return !el || el.hidden; }
+function isHidden(id) { const el = $(id); if (!el) return true; return !!el.hidden; }
+
+/* 打开一层覆盖层，并把它抬到最上面。
+ *
+ * 四个面层（drawer / 导入 / 显示凭据 / 登录）共用 z-index 40：同一层级下"谁在 DOM
+ * 后面谁在上面"。所以每次**真正打开**时把节点挪到 body 末尾，后打开的永远压住先打开
+ * 的——弹窗里点眼睛打开的「显示凭据」必须落在弹窗之上，这是实测出来的次序错误。
+ * 已经开着就不再挪：否则 showSecondAuth 再叫一次 openLoginModal，会把登录弹窗又抬到
+ * 正在上面操作的「显示凭据」之上。
+ * 用 CSSOM 写 z-index 是被门禁禁止的（这段代码里出现 style 属性赋值就会红），挪 DOM
+ * 是同一效果的干净做法。 */
+function showOverlay(id) {
+  const el = $(id);
+  if (!el) return null;
+  const wasHidden = !!el.hidden;
+  el.hidden = false;
+  if (wasHidden) document.body.append(el);
+  return el;
+}
 
 function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
@@ -325,6 +352,7 @@ async function apiFetch(path, opts) {
 
   const env = (data && data.error) ? data.error : {};
   const err = new ApiError(res.status, env.code, env.message, env.details);
+  err.payload = data; // second_auth 这类 409 不走信封，原始体留着
 
   if (res.status === 401) {
     /* 测试登录失败也可能回 401，但那是「这条凭据不通」，不是管理端会话失效：
@@ -340,7 +368,9 @@ async function apiFetch(path, opts) {
     } else if (!opts.quiet) {
       toast('warn', '请求被拒（403）：CSRF 校验未通过，请刷新页面后重试');
     }
-  } else if (res.status === 429) {
+  } else if (res.status === 429 && !opts.localRate) {
+    /* localRate：这次的 429 是「这条短信刚发过/这个码刚试过」，调用方自己按住倒计时，
+       别把它算进管理员登录的 15 分钟限速里（那会把登录框的按钮也锁掉）。 */
     rateLimit(res.headers.get('Retry-After'), err.message);
   } else if (res.status >= 500) {
     if (!opts.quiet) toast('error', err.message || ('服务内部错误（HTTP ' + res.status + '）'));
@@ -387,6 +417,7 @@ async function refreshSession() {
 
 function resetData() {
   S.status = null; S.skew = 0; S.runs5 = []; S.slotsSig = ''; S.runsSig = '';
+  S.autoBusy = false;
   S.config = null; S.configVersion = 0; S.configLoaded = false; S.importPreview = null; S.maskedFields = {};
   S.logs = []; S.logKeys = new Set(); S.logsSnapshotted = false;
   S.runs = []; S.runsPages = 1; S.runsExhausted = false;
@@ -396,6 +427,8 @@ function showAuth(mode) {
   stopDashboardLoop();
   closeStream();
   resetData();
+  resetSecondAuthHints();
+  smsCollapse();
   setHidden('shell', true);
   setHidden('booting', true);
   setHidden('auth', false);
@@ -451,25 +484,25 @@ async function applyHandoffToken(token) {
   const cfg = JSON.parse(JSON.stringify(S.config || {}));
   cfg.user = cfg.user || {};
   cfg.user.token = token;
-  loginTestStatus('已从链接取得免登凭证，正在校验…', '');
+  tokenStatus('已从链接取得免登凭证，正在校验…', '');
   try {
     /* 先验证再保存：和「获取并保存凭证」同一条规矩，不把不能用的东西写进配置 */
     const probe = await apiFetch('/login/test', { method: 'POST', body: { token: token }, keepSession: true, quiet: true });
     const r = await apiFetch('/config', { method: 'PUT', body: { config: cfg } });
-    if (r && r.version !== undefined && r.version !== null) pinVersion(r.version);
     if (r && Array.isArray(r.warnings) && r.warnings.length) showWarnings('config-warnings', r.warnings);
     S.configLoaded = false;
     await loadConfig(true);
     const parts = ['免登凭证已自动保存 ' + str(probe.token_hint)];
     if (str(probe.plan)) parts.push(str(probe.plan));
-    loginTestStatus(parts.join(' · '), 'ok');
+    tokenStatus(parts.join(' · '), 'ok');
+    toast('ok', '免登凭证已自动保存');
     announce('已自动保存免登凭证');
   } catch (e) {
     setVal('cfg-token', token);
     /* 只取第一行：校验失败时 e.message 后面会跟一大段逐条规则，塞进状态行就没法看了。
        凭证已经填进输入框，用户补完其它项点「保存」即可，不用再跑一遍脚本。 */
     const first = String((e && e.message) || '保存失败').split('\n')[0];
-    loginTestStatus('已取到凭证但没能自动保存：' + first + '（凭证已填进「免登凭证」框，补完其它项后点「保存」即可）', 'err');
+    tokenStatus('已取到凭证但没能自动保存：' + first + '（凭证已填进「免登凭证」框，补完其它项后点「保存」即可）', 'err');
   }
 }
 
@@ -566,6 +599,44 @@ function schedulerText(s) {
   return '空闲，等待下一档';
 }
 
+/* ---------- 5.1 自动签到总开关（paused + POST /control） ---------- */
+
+/* paused 只认布尔，没给就当不可用 */
+function pausedOf(sched) {
+  return (sched && typeof sched.paused === 'boolean') ? sched.paused : null;
+}
+
+/* 只画不发请求；busy = 乐观更新 */
+function paintAutoSwitch(sched, busy) {
+  const btn = $('btn-auto-switch');
+  if (!btn) return;
+  const paused = pausedOf(sched);
+  btn.setAttribute('aria-checked', paused === false ? 'true' : 'false');
+  btn.disabled = (paused === null) || !!busy || S.autoBusy;
+  setText('auto-power-state', '自动签到 · ' + (paused === null ? '状态不可用，切不了'
+    : (paused ? '已暂停 · 手动「立即签到」照旧' : '已开启，到档位自动签到')));
+}
+
+async function toggleAutoSwitch() {
+  const from = pausedOf((S.status || {}).scheduler);
+  if (S.autoBusy || from === null) return;
+  S.autoBusy = true;
+  paintAutoSwitch({ paused: !from }, true);
+  try {
+    /* quiet：下面那条才有「已回到原样」，别让 5xx 的通用 toast 重复一遍 */
+    const r = await apiFetch('/control', { method: 'POST', body: { paused: !from }, keepSession: true, quiet: true });
+    S.autoBusy = false;
+    if (S.status && r && r.scheduler) S.status.scheduler = r.scheduler;
+    paintAutoSwitch(r && r.scheduler ? r.scheduler : { paused: !from });
+    toast('ok', from ? '已恢复自动签到' : '已暂停自动签到');
+  } catch (e) {
+    S.autoBusy = false;
+    paintAutoSwitch({ paused: from }); // 回滚到点击前
+    toast('error', '没能切换：' + (e.message || ('HTTP ' + e.status)) + '，已回到原样', 12000);
+  }
+  loadDashboard(false); // 以服务端为准
+}
+
 /* 推送通道的内部名字（serverchan / pushplus …）只在配置里出现，界面上给中文名 */
 function notifyName(v) {
   const s = str(v);
@@ -618,7 +689,9 @@ function patchDashboard() {
   setText('dash-last-success', str(day.last_success_date) || '—');
   setText('dash-decision', decisionText(sched.last_decision));
   setText('dash-scheduler', schedulerText(sched));
-  setText('dash-version', 'v' + (str(st.version) || '—') + ' · 配置 v' + (st.config_version === undefined || st.config_version === null ? '—' : str(st.config_version)));
+  if (!S.autoBusy) paintAutoSwitch(sched);
+  /* 只留服务版本号：配置版本不再对用户露出（/status 里仍带着 config_version，排障用） */
+  setText('dash-version', 'v' + (str(st.version) || '—'));
   applyVersion(st);
 
   const hasPlan = plan.has_plan === true;
@@ -720,11 +793,15 @@ function tickCountdown() {
   const target = toMs(st.next_run_at);
   if (!Number.isFinite(target) || new Date(target).getFullYear() < 2000) {
     el.textContent = '--:--:--';
+    el.classList.remove('is-urgent');
     setText('dash-next-at', '没有后续档位（今日计划已结束，或者设置的签到时刻都落在签到窗口之外）');
     return;
   }
   const now = Date.now() + (S.skew || 0);
   const left = Math.max(0, Math.floor((target - now) / 1000));
+  /* 最后一分钟给数字一点呼吸：这是整页唯一会自己变的数，动起来才有人盯得住 */
+  if (left > 0 && left <= 60) el.classList.add('is-urgent');
+  else el.classList.remove('is-urgent');
   el.textContent = pad2(Math.floor(left / 3600)) + ':' + pad2(Math.floor((left % 3600) / 60)) + ':' + pad2(left % 60);
   setText('dash-next-at', '目标 ' + fmtTime(target) + (left === 0 ? '（已到点，等待执行结果）' : ''));
   if (left === 0) {
@@ -746,9 +823,14 @@ async function startRun(mode, dryRun, btn, label) {
     setTimeout(function () { loadDashboard(true); }, 2000);
     setTimeout(function () { loadDashboard(true); }, 9000);
   } catch (e) {
-    const msg = e.status === 409 ? '已有一次运行正在进行中，等它结束后再试。' : ('提交失败：' + (e.message || ('HTTP ' + e.status)));
+    let msg = e.status === 409 ? '已有一次运行正在进行中，等它结束后再试。' : ('提交失败：' + (e.message || ('HTTP ' + e.status)));
+    if (isSecondAuth(e)) {
+      msg = '学校要求短信二次验证，这次没签：去配置页「账号」里点「打开登录弹窗」，用学号密码补一条验证码，或换一份免登凭证。';
+      toast('error', str(e.payload.message) || '学校要求短信二次验证', 12000);
+    } else {
+      toastLocal(e);
+    }
     setText('dash-action-hint', msg);
-    toastLocal(e);
   } finally {
     clearBusy(btn);
     updateActionState((S.status || {}).scheduler);
@@ -757,25 +839,19 @@ async function startRun(mode, dryRun, btn, label) {
 
 /* ---------- 6. 配置 ---------- */
 
-/* 保存成功后以 PUT 返回的版本为准：GET 回显可能因缓存/时序落后一步 */
-function pinVersion(version) {
-  if (version === null || version === undefined) return;
-  S.configVersion = version;
-  setText('config-version', '配置版本 v' + str(version));
-}
-
 async function loadConfig(force) {
   if (S.configLoaded && !force) return;
   try {
     const d = await apiFetch('/config');
     S.config = (d && d.config) ? d.config : {};
     S.maskedFields = (d && d.masked_fields) ? d.masked_fields : {};
-    S.configVersion = (d && d.version !== undefined && d.version !== null) ? d.version : (S.config.version || 0);
+    // 配置不再有版本号：这里也不再留一个 configVersion 的镜像，省得再把 version 塞回请求体。
     S.configLoaded = true;
     fillConfig(S.config);
     clearBox('config-msg');
     showWarnings('config-warnings', (d && d.warnings) || []);
-    setText('config-version', '配置版本 v' + (str(S.configVersion) || '—') + (d && d.source ? ' · 来源 ' + str(d.source) : ''));
+    /* 只报来源，不报版本号：/config 的响应已不带 version，界面上再拼就是假信息 */
+    setText('config-version', (d && d.source) ? '来源 ' + str(d.source) : '');
   } catch (e) {
     if (e.status !== 401) showError('config-msg', e, '配置读取失败：确认服务在运行且已登录。');
   }
@@ -792,7 +868,8 @@ function fillConfig(cfg) {
   setVal('cfg-username', user.username);
   setVal('cfg-password', user.password);
   setVal('cfg-token', user.token);
-  setVal('cfg-user-cookie', user.cookie);
+  /* 弹窗里那份只是这两项的镜像：值从服务端来，别让两边各存一份真相 */
+  syncLoginInputs();
 
   setVal('cfg-lon', ck.longitude);
   setVal('cfg-lat', ck.latitude);
@@ -835,9 +912,17 @@ function fillConfig(cfg) {
   const ranges = Array.isArray(vac.skip_ranges) ? vac.skip_ranges : [];
   ranges.forEach(function (r) { addVacRow(r || {}); });
 
+  /* 重新拉回来的配置里凭据是哨兵：所有「眼睛」按钮回到隐藏态，
+     否则会出现 input.type=text 里显示四个圆点的错觉（看起来像密码本身）。
+     类型和值一起复位 = 一个干净的初始态。 */
+  each(document.querySelectorAll('.peek'), function (btn) { setPeek(btn, false); });
+
   syncPoolNote();
   applyNotifyType();
   applySecretBadges();
+  syncCredNote();
+  syncAccountSummary();
+  syncCookieNote();
 }
 
 function addPoolRow(loc) {
@@ -955,7 +1040,7 @@ function applyNotifyType() {
 
 function applySecretBadges() {
   each(document.querySelectorAll('.has-secret'), function (wrap) {
-    /* Cookie 是 textarea，password/token 是 input：两种都要能挂「已配置」徽标 */
+    /* password / token / 推送密钥都是 input，弹窗里那份也在其中 */
     const input = wrap.querySelector('input, textarea');
     const badge = wrap.querySelector('.mask-badge');
     if (!input || !badge) return;
@@ -963,15 +1048,167 @@ function applySecretBadges() {
   });
 }
 
+/* 凭据全空也能保存：只提示，不进 validateLocal */
+function syncCredNote() {
+  const el = $('cfg-cred-note');
+  if (!el) return;
+  const empty = ['cfg-username', 'cfg-password', 'cfg-token'].every(function (id) { return !getVal(id); });
+  el.hidden = !empty;
+  el.textContent = empty ? '凭据留空 = 只保存其它设置，不会签到；补上学号密码或免登凭证后才会自动签到。' : '';
+}
+
+/* ---------- 6.0 登录弹窗：学号密码与短信码都在弹窗里，配置页只留一行摘要 ---------- */
+
+/* 弹窗输入框只是 #cfg-username / #cfg-password 两个隐藏域的可视镜像：
+   保存仍然读隐藏域，所以「在弹窗里填完不点保存」不会悄悄改动配置。 */
+function syncLoginInputs() {
+  setVal('lg-username', getVal('cfg-username'));
+  setVal('lg-password', getVal('cfg-password'));
+}
+
+/* 摘要只说配没配，不显示学号：这一行最容易被截图贴出去问问题 */
+function syncAccountSummary() {
+  const el = $('account-summary');
+  if (!el) return;
+  const user = getVal('cfg-username');
+  const pass = getVal('cfg-password');
+  const text = (user && pass) ? '已填学号 + 密码' : user ? '只填了学号' : pass ? '只填了密码' : '未配置';
+  el.textContent = text;
+  el.className = 'account-summary' + ((user || pass) ? '' : ' miss');
+}
+
+/* Cookie 的填写栏已经去掉：老配置里那份不再显示，但默认原样保留（flow 还会拿它
+   当备用）。这里只在确实存着一份时给一条明确的出口，免得有人想删却删不掉。 */
+function syncCookieNote() {
+  const note = $('cookie-note');
+  if (!note) return;
+  const saved = !!(((S.config && S.config.user) || {}).cookie);
+  note.hidden = !(saved && !S.dropCookie);
+}
+
+/* 弹窗里改了什么就同步回隐藏域 + 徽标 + 摘要，三处永远一致 */
+function mirrorAccount() {
+  setVal('cfg-username', getVal('lg-username'));
+  setVal('cfg-password', getVal('lg-password'));
+  syncAccountSummary();
+  applySecretBadges();
+  syncCredNote();
+}
+
+function openLoginModal() {
+  syncLoginInputs();
+  showOverlay('modal-login');
+  if (smsIsOpen()) { smsFocusCode(); return; }
+  /* 同步聚焦：hidden 去掉之后元素立刻可聚焦，没必要等一帧——等一帧反而会让人
+     先看到"没有光标"的一瞬，自动化里也会读到还没落位的焦点 */
+  const el = $(getVal('lg-username') ? 'lg-password' : 'lg-username');
+  if (el) { el.focus(); if (el.select) el.select(); }
+}
+
+function closeLoginModal() { setHidden('modal-login', true); }
+
+/* 换到凭证后要重拉配置，但服务端只写 token：弹窗里刚打的账密不能被刷回旧值，
+   否则「验证码过了 → 学号密码凭空消失 → 保存后什么都没存」。 */
+function reloadConfigKeepAccount() {
+  const user = getVal('lg-username');
+  const pass = getVal('lg-password');
+  S.configLoaded = false;
+  return loadConfig(true).then(function () {
+    if (user) { setVal('lg-username', user); setVal('cfg-username', user); }
+    if (pass) { setVal('lg-password', pass); setVal('cfg-password', pass); }
+    syncAccountSummary();
+    applySecretBadges();
+    syncCredNote();
+  }, function () { /* 刷新失败不影响这次登录结论 */ });
+}
+
+/* 眼睛按钮：只改 input.type，value 不动 */
+function setPeek(btn, plain) {
+  const input = $(btn.getAttribute('aria-controls'));
+  if (!input) return;
+  input.type = plain ? 'text' : 'password';
+  btn.setAttribute('aria-pressed', plain ? 'true' : 'false');
+  const label = (plain ? '隐藏' : '显示') + (btn.dataset.name || '');
+  btn.setAttribute('aria-label', label);
+  btn.title = label;
+}
+
+/* 眼睛按钮的完整行为：
+ *   - 已经显示（aria-pressed=true）→ 收回去；
+ *   - 框里是刚打的明文（不是哨兵）→ 只切 type，不打扰服务端；
+ *   - 是哨兵（已配置，页面不再持有真实值）→ 弹窗二次校验管理密码，取回**一项**。
+ * 第三种是这次改版的重点：读取路径不再明文回显，所以"看一眼"必须是一个显式动作，
+ * 而且要能证明人就在跟前（7 天的会话不够）。 */
+async function peekSecret(btn) {
+  const input = $(btn.getAttribute('aria-controls'));
+  if (!input) return;
+  if (btn.getAttribute('aria-pressed') === 'true') { setPeek(btn, false); return; }
+  if (input.value && input.value !== MASK_SENTINEL) { setPeek(btn, true); return; }
+  openReveal(btn);
+}
+
+function openReveal(btn) {
+  const input = $(btn.getAttribute('aria-controls'));
+  const wrap = (btn.closest && btn.closest('.has-secret')) ? btn.closest('.has-secret') : null;
+  const field = wrap ? str(wrap.dataset.secret) : '';
+  if (!input || !field) { setPeek(btn, true); return; } /* 没有字段路径就退化成单纯显示 */
+  S.pendingReveal = { btn: btn, input: input, field: field, label: str(btn.dataset.name) || field };
+  setText('reveal-field', S.pendingReveal.label);
+  clearBox('reveal-err');
+  const pass = $('reveal-pass');
+  if (pass) pass.value = '';
+  /* 从弹窗里的眼睛点进来时，这一层必须落在弹窗之上（见 showOverlay 的注释） */
+  showOverlay('modal-reveal');
+  if (pass) setTimeout(function () { pass.focus(); }, 30);
+}
+
+function closeReveal() {
+  setHidden('modal-reveal', true);
+  S.pendingReveal = null;
+  const pass = $('reveal-pass');
+  if (pass) pass.value = '';
+  clearBox('reveal-err');
+}
+
+async function submitReveal(btn) {
+  const pending = S.pendingReveal;
+  if (!pending) return;
+  const pass = $('reveal-pass');
+  const password = pass ? String(pass.value) : '';
+  clearBox('reveal-err');
+  if (!password) { showError('reveal-err', { message: '请输入管理密码' }, ''); return; }
+  setBusy(btn, '校验中…');
+  try {
+    const d = await apiFetch('/config/reveal', {
+      method: 'POST',
+      body: { field: pending.field, password: password },
+      /* keepSession：这个接口的 401 是「管理密码输错了」，不是登录失效。
+         走默认的 401 处理会把用户踢回登录页——输错一次赔上一整张面板，太贵。 */
+      keepSession: true
+    });
+    pending.input.value = str(d && d.value);
+    setPeek(pending.btn, true);
+    closeReveal();
+    toast('info', '已显示' + pending.label + '：不动它直接保存也不会改变内容');
+  } catch (e) {
+    showError('reveal-err', e,
+      (e && e.status === 429) ? '同一 IP 15 分钟内最多试 5 次，等一会儿再来。' : '连续输错会按 IP 限速，与登录共用同一套阈值。');
+  } finally {
+    clearBusy(btn);
+  }
+}
+
 function collectConfig() {
   const cur = S.config || {};
   return {
-    version: Number(S.configVersion) || Number(cur.version) || 0,
     user: {
       username: getVal('cfg-username'),
       password: getVal('cfg-password'),
       token: getVal('cfg-token'),
-      cookie: getVal('cfg-user-cookie')
+      /* Cookie 已经没有填写栏：默认把服务端那份原样带回去（哨兵值 = 保持原值，
+         MergeMasked 认得），只有点过「清掉它」才真的清空。配置没读到时也发哨兵——
+         那表示"我不知道你现在存着什么"，比发空串（等于删掉）安全。 */
+      cookie: S.dropCookie ? '' : (!S.config ? MASK_SENTINEL : str((S.config.user || {}).cookie))
     },
     checkin: {
       longitude: getVal('cfg-lon'),
@@ -1048,12 +1285,7 @@ function validateLocal(cfg) {
     else if (r.start > r.end) p.push('假期第 ' + (i + 1) + ' 段起始晚于结束：' + r.start + ' → ' + r.end);
   });
 
-  const hasToken = !!cfg.user.token;
-  const hasPw = !!(cfg.user.username && cfg.user.password);
-  /* Cookie 也是凭据：只填 Cookie 的人不该被本地校验拦住（脱敏哨兵同样算"已配置"） */
-  const hasCookie = !!cfg.user.cookie;
-  if (!hasToken && !hasPw && !hasCookie) p.push('凭据为空：填浏览器 Cookie，或填「学号 + 密码」，或填免登凭证（三选一）。');
-
+  /* 凭据不参与拦截：全留空也能存，提示走 syncCredNote */
   return p;
 }
 
@@ -1069,13 +1301,11 @@ async function saveConfig() {
   setBusy(btn, '保存中…');
   try {
     const r = await apiFetch('/config', { method: 'PUT', body: { config: cfg } });
-    const saved = (r && r.version !== undefined && r.version !== null) ? r.version : null;
     S.config = cfg;
     S.configLoaded = true;
     await loadConfig(true);
-    if (saved !== null) pinVersion(saved);
     if (r && Array.isArray(r.warnings) && r.warnings.length) showWarnings('config-warnings', r.warnings);
-    toast('ok', '配置已保存（v' + (str(S.configVersion) || '?') + '）');
+    toast('ok', '配置已保存');
     announce('配置已保存');
     loadDashboard(true);
   } catch (e) {
@@ -1085,27 +1315,71 @@ async function saveConfig() {
   }
 }
 
+/* ---------- 6.0 改管理密码：POST /auth/password ---------- */
+
+/* 这是"登录本面板"的密码，与学号密码无关。成功之后服务端会换会话代次：
+ * 包括本页在内的所有已登录设备都拿到新代次，旧 Cookie 立即作废（本页由响应里的
+ * Set-Cookie 自动续上）。 */
+async function changePassword(btn) {
+  const cur = getVal('pwd-current');
+  const next = getVal('pwd-new');
+  clearBox('pwd-msg');
+  if (!cur) { showError('pwd-msg', { message: '先填当前管理密码' }, ''); return; }
+  if (next.length < 8) { showError('pwd-msg', { message: '新密码至少 8 个字符' }, '口令我建议用一句长短语，比 8 位随机字符好记也更强。'); return; }
+  if (next === cur) { showError('pwd-msg', { message: '新密码与当前密码相同，等于没改' }, ''); return; }
+  setBusy(btn, '提交中…');
+  try {
+    await apiFetch('/auth/password', {
+      method: 'POST',
+      body: { current: cur, new: next },
+      /* 这里的 401 是「当前密码不对」，不是会话失效 */
+      keepSession: true
+    });
+    setVal('pwd-current', '');
+    setVal('pwd-new', '');
+    toast('ok', '管理密码已修改：其它设备上的登录已全部失效');
+    announce('管理密码已修改');
+  } catch (e) {
+    showError('pwd-msg', e, (e && e.status === 429) ? '失败次数太多，等限速窗口过去再试。' : '连续输错会按 IP 限速，和登录共用同一套阈值。');
+  } finally {
+    clearBusy(btn);
+  }
+}
+
 /* ---------- 6.1 「测试登录」：POST /login/test ---------- */
 
 const LOGIN_MODE_TEXT = { cookie: 'Cookie', password: '学号 + 密码', token: '免登凭证' };
 
-/* 明文回显时就是原样发送；框里还留着旧服务端的脱敏哨兵时换成空串（服务端不认识
-   哨兵，空串会让它回落到已保存的值，而不是把哨兵当真凭据）。 */
+/* 弹窗里只有学号密码两项，所以这里**只**发这两项：token 在配置页，由「验证这份
+   凭证」单独测。混在一起发过一次的坑很具体 —— 服务端按 cookie → token → 账密
+   的顺序挑（见 handleLoginTest 的 switch），填了 token 就再也不测密码，用户以为
+   在测密码、看到的却是 token 被拒。
+   框里还是脱敏哨兵时发空串：服务端不认识哨兵，空串会让它回落到已保存的那份。 */
 function loginTestBody() {
   const pick = function (id) {
     const v = getVal(id);
     return maskedLike(v) ? '' : v;
   };
-  return {
-    cookie: pick('cfg-user-cookie'),
-    username: pick('cfg-username'),
-    password: pick('cfg-password'),
-    token: pick('cfg-token')
-  };
+  return { username: pick('lg-username'), password: pick('lg-password') };
+}
+
+/* token 框里是哨兵（或空）时发空体：服务端会拿它自己那份按 token → Cookie →
+   账密走一遍，回答的正是「今晚到底会不会签上」。粘了新 token 就只测新的那个。 */
+function tokenTestBody() {
+  const v = getVal('cfg-token');
+  return (maskedLike(v) || !v) ? {} : { token: v };
 }
 
 function loginTestStatus(text, kind) {
   const el = $('login-test-status');
+  if (!el) return;
+  el.textContent = str(text);
+  el.className = 'hint login-test-line' + (kind ? ' ' + kind : '');
+}
+
+/* 配置页那行的状态（token 验证结果落在这里，弹窗收着也看得见） */
+function tokenStatus(text, kind) {
+  const el = $('token-status');
   if (!el) return;
   el.textContent = str(text);
   el.className = 'hint login-test-line' + (kind ? ' ' + kind : '');
@@ -1138,14 +1412,63 @@ function loginTestErrorText(e) {
   return text.length > 600 ? text.slice(0, 600) + '…' : text;
 }
 
+/* ---------- 6.1.1 校外 IP 的短信二次验证（409 second_auth） ---------- */
+
+function isSecondAuth(e) {
+  const p = e && e.payload;
+  return !!(p && (p.second_auth || str(p.reason) === 'second_auth'));
+}
+
+/* 新一轮「测试登录 / 获取凭证」开始：指引块与短信入口先收起
+   （面板正开着就留着：那是另一条正在走的路，不该被顺手关掉） */
+function resetSecondAuthHints() {
+  setHidden('login-second-auth', true);
+  if (isHidden('sms-auth')) setHidden('btn-sms-start', true);
+}
+
+/* 409 分两种：带 challenge = 后端已经把码发出去了，直接开面板等 6 位数字；
+   不带 challenge = 这次发不出去（只有 Cookie、或学校那边拒了），留指引块 + 手动入口兜底。 */
+function showSecondAuth(e) {
+  const p = (e && e.payload) || {};
+  const sa = p.second_auth || {};
+  /* 弹窗是这条路的唯一容器：从「验证这份凭证」撞上 409 时它可能还收着 */
+  openLoginModal();
+  const head = str(p.message) || str(e && e.message) || '学校要求短信二次验证。';
+  const tip = str(sa.tip);
+  const ticket = str(p.challenge);
+  /* 学校那句原话只在"没有面板"时才贴在状态行里：面板自己会显示 tip，
+     同一句话在上面和框里各出现一次只会让人以为报了两遍错。 */
+  loginTestStatus([head, ticket ? '' : tip].filter(Boolean).join('\n'), ticket ? '' : 'err');
+  if (ticket) {
+    setHidden('login-second-auth', true);
+    smsOpen({
+      challenge: ticket,
+      phone: str(sa.phone),
+      tip: tip,
+      sent: p.sent !== false,
+      expires_in: p.expires_in,
+      resend_after: p.resend_after
+    });
+    return;
+  }
+  setHidden('login-second-auth', false);
+  const why = str(p.sms_error) || '这次没能自动发验证码：先在弹窗里填上「学号」「密码」，再点「发一条短信验证码」。';
+  if (isHidden('sms-auth')) {
+    setHidden('btn-sms-start', false);
+    smsStatus(why, 'err');
+    return;
+  }
+  /* 面板正开着（上一次的码可能还在路上）：别用这句盖掉「已发到某某手机」那行，
+     否则同一个框里会同时出现"码已发出"和"没能发码"两句互相打架的话。 */
+  setHidden('btn-sms-start', false);
+  loginTestStatus(why, 'err');
+}
+
 async function testLogin(btn) {
   const btnEl = btn || $('btn-login-test');
-  /* 框里是旧服务端回传的脱敏哨兵就不发送它（服务端不认识哨兵）：loginTestBody()
-     会换成空串，服务端随即回落到已保存的那份 Cookie——这恰好是最常问的问题
-     「我上次存的 Cookie 还能用吗」，所以这里不能直接拦住不测。 */
-  const usingSavedCookie = maskedLike(getVal('cfg-user-cookie'));
+  resetSecondAuthHints();
   setBusy(btnEl, '测试中…');
-  loginTestStatus(usingSavedCookie ? '正在用已保存的 Cookie 试登录…' : '正在用当前填写的内容试登录…', '');
+  loginTestStatus('正在用这组学号密码走一遍学校登录…', '');
   try {
     /* quiet：结论就在下面这一行显示，别再叠一个 toast；
        keepSession：登录失败可能回 502/401，那是「这条凭据不通」，不是管理端会话失效。 */
@@ -1153,7 +1476,33 @@ async function testLogin(btn) {
     loginTestStatus(loginTestResultText(r), 'ok');
     announce('测试登录成功');
   } catch (e) {
-    loginTestStatus(loginTestErrorText(e), 'err');
+    if (isSecondAuth(e)) showSecondAuth(e);
+    else loginTestStatus(loginTestErrorText(e), 'err');
+  } finally {
+    clearBusy(btnEl);
+  }
+}
+
+/* 配置页的「验证这份凭证」：只测 token（或服务端手上那套），不碰学号密码 */
+async function testToken(btn) {
+  const btnEl = btn || $('btn-token-test');
+  const body = tokenTestBody();
+  const saved = !body.token;
+  tokenStatus(saved ? '正在验证服务端已保存的凭据…' : '正在验证这份免登凭证…', '');
+  setBusy(btnEl, '验证中…');
+  try {
+    const r = await apiFetch('/login/test', { method: 'POST', body: body, keepSession: true, quiet: true });
+    const text = loginTestResultText(r);
+    tokenStatus(saved ? '已保存的凭据可用：' + text : text, 'ok');
+    announce('凭证验证通过');
+  } catch (e) {
+    if (isSecondAuth(e)) {
+      /* 这条路上没有账密可发码，弹窗里会说明原因并给出「发一条短信验证码」 */
+      showSecondAuth(e);
+      tokenStatus('学校要短信验证：在弹窗里用学号密码登录一次', 'err');
+    } else {
+      tokenStatus(loginTestErrorText(e), 'err');
+    }
   } finally {
     clearBusy(btnEl);
   }
@@ -1166,22 +1515,313 @@ async function testLogin(btn) {
    不需要再点「保存」，页面上那个「已配置」徽标也会跟着刷新。 */
 async function refreshToken(btn) {
   const btnEl = btn || $('btn-login-refresh');
+  resetSecondAuthHints();
   setBusy(btnEl, '获取中…');
   loginTestStatus('正在用当前凭据换新免登凭证…', '');
   try {
     const r = await apiFetch('/login/refresh', { method: 'POST', body: loginTestBody(), keepSession: true, quiet: true });
     const parts = ['已获取免登凭证 ' + str(r.token_hint) + '，已写入配置'];
     if (str(r.plan)) parts.push(str(r.plan));
-    if (r.cookie_saved === true) parts.push('浏览器 Cookie 也一并保存了');
     loginTestStatus(parts.join(' · '), 'ok');
     announce('已获取免登凭证');
-    /* 重新拉一次配置：token 框与「已配置」徽标要跟着变，否则界面上还是旧状态 */
-    S.configLoaded = false;
-    await loadConfig(true);
+    /* 重拉配置：token 框与「已配置」徽标要跟着变；弹窗里刚打的账密要留住 */
+    await reloadConfigKeepAccount();
   } catch (e) {
-    loginTestStatus(loginTestErrorText(e), 'err');
+    if (isSecondAuth(e)) showSecondAuth(e);
+    else loginTestStatus(loginTestErrorText(e), 'err');
   } finally {
     clearBusy(btnEl);
+  }
+}
+
+/* ---------- 6.1.2 短信验证码登录（机房 IP 上密码过了还得补一条六位码） ---------- */
+/* 服务端给的那串 32 位只是「这次验证」的门牌号，不是凭证：面板一收就作废。 */
+
+const SMS_CODE_LEN = 6;
+/* 凑满 6 位 → 等这么久再自动提交：留给「还在粘贴 / 连打最后一位」的收手时间 */
+const SMS_DEBOUNCE_MS = 250;
+
+let smsTicket = '';
+let smsTickTimer = 0;
+let smsTickUntil = 0;
+let smsBusy = false;      // 单飞：同一时刻只允许一个 verify 在飞
+let smsTimer = 0;         // 自动提交的防抖计时器
+
+function smsStatus(text, kind) {
+  const el = $('sms-status');
+  if (!el) return;
+  el.textContent = str(text);
+  el.className = 'sms-status' + (kind ? ' ' + kind : '');
+}
+
+/* 忙态不走 setBusy：它会换掉整个子节点，和倒计时抢文案 */
+function smsBtn(id, text, busy) {
+  const btn = $(id);
+  if (!btn) return;
+  if (busy) btn.setAttribute('aria-busy', 'true');
+  else btn.removeAttribute('aria-busy');
+  btn.disabled = !!busy;
+  if (text !== undefined && text !== null) btn.textContent = str(text);
+}
+
+/* 发送键的唯一出口：倒计时没走完就锁住 */
+function smsSendPaint() {
+  const btn = $('btn-sms-send');
+  if (!btn) return;
+  const left = smsTickUntil ? Math.ceil((smsTickUntil - Date.now()) / 1000) : 0;
+  if (left > 0) {
+    btn.disabled = true;
+    btn.textContent = '重发(' + left + 's)';
+    return;
+  }
+  if (smsTickTimer) { clearInterval(smsTickTimer); smsTickTimer = 0; }
+  smsTickUntil = 0;
+  btn.disabled = false;
+  btn.textContent = smsTicket ? '重新发送' : '发送验证码';
+}
+
+/* 后端给多少秒就倒多少秒（429 同理） */
+function smsCountdown(seconds) {
+  if (smsTickTimer) { clearInterval(smsTickTimer); smsTickTimer = 0; }
+  const secs = Math.max(0, Math.round(Number(seconds) || 0));
+  smsTickUntil = secs > 0 ? Date.now() + secs * 1000 : 0;
+  smsSendPaint();
+  if (smsTickUntil) smsTickTimer = setInterval(smsSendPaint, 500);
+}
+
+/* 从后端那句话里取秒数，取不到按 30 秒 */
+function smsSeconds(msg) {
+  const m = /(\d+)/.exec(str(msg));
+  const n = m ? Number(m[1]) : 0;
+  return (n > 0) ? Math.min(3600, n) : 30;
+}
+
+/* 只显示服务端打码过的号，前端不还原 */
+function smsPhoneText(v) { return str(v).trim() || '你的手机'; }
+
+function smsIsOpen() { return !isHidden('sms-auth'); }
+
+/* 框里只认数字：不管手输还是粘贴，取出来一律先洗一遍 */
+function smsCode() { return getVal('sms-code').replace(/[^0-9]/g, ''); }
+
+/* 校验中把输入框置为只读：这时再敲键盘也不该攒出第二个请求 */
+function smsEdit(on) {
+  const el = $('sms-code');
+  if (!el) return;
+  el.readOnly = !!on;
+  if (on) el.setAttribute('aria-busy', 'true');
+  else el.removeAttribute('aria-busy');
+}
+
+/* 凑满 6 位才排自动提交；提交在飞/面板已收/没有门牌号都不排 */
+function smsSchedule() {
+  if (smsTimer) { clearTimeout(smsTimer); smsTimer = 0; }
+  if (!smsIsOpen() || !smsTicket || smsBusy) return;
+  if (smsCode().length !== SMS_CODE_LEN) return;
+  smsTimer = setTimeout(function () { smsTimer = 0; smsVerify(); }, SMS_DEBOUNCE_MS);
+}
+
+function smsFocusCode() {
+  const el = $('sms-code');
+  if (el) setTimeout(function () { el.focus(); }, 30);
+}
+
+function smsOpen(r) {
+  smsTicket = str(r && r.challenge);
+  if (smsTimer) { clearTimeout(smsTimer); smsTimer = 0; }
+  setHidden('btn-sms-start', true);
+  setHidden('sms-auth', false);
+  setText('sms-phone', smsPhoneText(r && r.phone));
+  const tip = str(r && r.tip);
+  const tipEl = $('sms-tip');
+  if (tipEl) { tipEl.textContent = tip; tipEl.hidden = !tip; }
+  setVal('sms-code', '');
+  smsEdit(false);
+  const mins = Math.max(1, Math.round((Number(r && r.expires_in) || 300) / 60));
+  /* reused=true 表示服务端复用了还活着的那条验证码（没有重新发）。这时候说"已发到"
+     就是假话，直接把后端那句原话显示出来。 */
+  const msg = str(r && r.message);
+  if (msg) smsStatus(msg, 'ok');
+  else if (r && r.sent === false) smsStatus('上一条验证码还在有效期内，直接填 6 位数字就行（' + mins + ' 分钟内有效）', 'ok');
+  else smsStatus('验证码已发到 ' + smsPhoneText(r && r.phone) + '，直接填 6 位数字就行（' + mins + ' 分钟内有效）', 'ok');
+  smsCountdown(r && r.resend_after);
+  smsFocusCode();
+}
+
+/* 收起面板：验证、已填的码、倒计时、排队中的自动提交一起清掉 */
+function smsCollapse() {
+  setHidden('sms-auth', true);
+  smsTicket = '';
+  if (smsTickTimer) { clearInterval(smsTickTimer); smsTickTimer = 0; }
+  if (smsTimer) { clearTimeout(smsTimer); smsTimer = 0; }
+  smsTickUntil = 0;
+  setVal('sms-code', '');
+  setHidden('sms-tip', true);
+  setText('sms-phone', '');
+  smsStatus('');
+  smsSendPaint();
+}
+
+/* 过期：清掉门牌号与已填的码，发送键回初始态 */
+function smsExpire(msg) {
+  smsTicket = '';
+  if (smsTickTimer) { clearInterval(smsTickTimer); smsTickTimer = 0; }
+  if (smsTimer) { clearTimeout(smsTimer); smsTimer = 0; }
+  smsTickUntil = 0;
+  setVal('sms-code', '');
+  smsSendPaint();
+  smsStatus((str(msg) || '这次验证过期了') + '。重新点「发送验证码」再来一条。', 'err');
+  smsFocusCode();
+}
+
+async function smsStart(btn) {
+  const fromSend = !!(btn && btn.id === 'btn-sms-send');
+  const target = fromSend ? $('btn-sms-send') : (btn || $('btn-sms-start'));
+  if (target) smsBtn(target.id, '发送中…', true);
+  loginTestStatus('正在请学校发一条短信验证码…', '');
+  try {
+    /* 带上弹窗里这组账密：空串等于"没填"，服务端会回落到已保存的那份 */
+    const r = await apiFetch('/login/sms/start', {
+      method: 'POST', body: loginTestBody(), keepSession: true, quiet: true, localRate: true
+    });
+    if (!str(r && r.challenge)) {
+      /* 校内网络：不用验证码，这一步就登录成功 */
+      smsCollapse();
+      setHidden('btn-sms-start', true);
+      setHidden('login-second-auth', true);
+      const ok = str(r && r.message) || '这台机器的网络不用短信验证，已经登录成功。';
+      loginTestStatus(ok, 'ok');
+      smsStatus(ok, 'ok');
+      announce('登录成功');
+      reloadConfigKeepAccount();
+      loadDashboard(false);
+      return;
+    }
+    smsOpen(r);
+    loginTestStatus('学校要一条短信验证码，填在下面这一行里。', '');
+  } catch (e) {
+    const p = (e && e.payload) || {};
+    const reason = str(p.reason);
+    const msg = str(p.message);
+    if (reason === 'no_credentials') smsStatus(msg || '先填「学号」「密码」：学校才肯把码发到登记的手机。', 'err');
+    else if (reason === 'phone_unbound') smsStatus(msg || '这个学号没绑手机号，短信发不出来；改用免登凭证。', 'err');
+    else if (isSecondAuth(e)) showSecondAuth(e);
+    else smsStatus(msg || loginTestErrorText(e), 'err');
+    if (isHidden('sms-auth')) setHidden('btn-sms-start', false);
+  } finally {
+    if (fromSend) smsSendPaint();
+    else smsBtn('btn-sms-start', '发一条短信验证码', false);
+  }
+}
+
+async function smsResend(btn) {
+  smsBtn('btn-sms-send', '发送中…', true);
+  smsStatus('正在请学校再发一条…', '');
+  try {
+    const r = await apiFetch('/login/sms/resend', {
+      method: 'POST', body: { challenge: smsTicket }, keepSession: true, quiet: true, localRate: true
+    });
+    smsCountdown(r && r.resend_after);
+    setVal('sms-code', '');
+    const mins = Math.max(1, Math.round((Number(r && r.expires_in) || 300) / 60));
+    smsStatus('新的验证码已经发出，旧的那条作废了；' + mins + ' 分钟内有效。', 'ok');
+    smsFocusCode();
+  } catch (e) {
+    const p = (e && e.payload) || {};
+    const msg = str(p.message);
+    if (e.status === 429) {
+      smsCountdown(smsSeconds(msg));
+      smsStatus(msg || '刚发过一条，等倒计时走完再重发。', 'err');
+    } else if (e.status === 410 || str(p.reason) === 'challenge_expired') {
+      smsExpire(msg);
+    } else {
+      smsStatus(msg || loginTestErrorText(e), 'err');
+    }
+  } finally {
+    smsSendPaint();
+  }
+}
+
+/* 自动提交与「提交验证码」按钮/回车共用这一条路：单飞 + 失败不自动重试。
+   用户从 409 进来时手机已经收到码了，凑满 6 位就直接送，不再让人找按钮。 */
+async function smsVerify() {
+  if (smsTimer) { clearTimeout(smsTimer); smsTimer = 0; }
+  const codeInput = $('sms-code');
+  const code = smsCode();
+  if (!smsTicket) {
+    smsStatus('这次验证失效了，点「发送验证码」重来一条。', 'err');
+    return;
+  }
+  if (code.length !== SMS_CODE_LEN) {
+    smsStatus('验证码是短信里那 6 位数字，现在只有 ' + code.length + ' 位。', 'err');
+    if (codeInput) codeInput.focus();
+    return;
+  }
+  /* 单飞：已经有一个在飞了，这串数字的结论马上会回来，不再叠第二个请求 */
+  if (smsBusy) return;
+  smsBusy = true;
+  smsBtn('btn-sms-verify', '提交中…', true);
+  smsEdit(true);
+  smsStatus('校验中…', '');
+  try {
+    const r = await apiFetch('/login/sms/verify', {
+      method: 'POST',
+      body: { challenge: smsTicket, code: code },
+      keepSession: true, quiet: true, localRate: true
+    });
+    const parts = ['短信验证通过，已经登录成功'];
+    if (str(r && r.token_hint)) parts.push('免登凭证 ' + str(r && r.token_hint));
+    if (r && r.school_ok === true) parts.push('签到系统已连通');
+    else if (r && r.school_ok === false) parts.push('签到系统暂时连不上');
+    if (str(r && r.plan)) parts.push('今日计划 ' + str(r && r.plan));
+    if (str(r && r.message)) parts.push(str(r && r.message));
+    const done = parts.join(' · ');
+    smsCollapse();
+    setHidden('btn-sms-start', true);
+    setHidden('login-second-auth', true);
+    /* 弹窗还开着：这句就是「这次登录的结论」，关掉才看不见 */
+    smsStatus(done, 'ok');
+    loginTestStatus('短信验证通过，已经登录成功；免登凭证已写进配置。', 'ok');
+    announce('已用短信验证码登录');
+    /* 服务端只写 token，弹窗里刚打的账密不能被刷回旧值 */
+    reloadConfigKeepAccount();
+    loadDashboard(false);
+  } catch (e) {
+    const p = (e && e.payload) || {};
+    const msg = str(p.message);
+    const reason = str(p.reason);
+    if (e.status === 400 && reason === 'code_rejected') {
+      /* 清空 + 聚焦，让用户直接重打：不自动重试（重试只会把 attempts_left 烧光） */
+      const left = Number(p.attempts_left);
+      const tail = Number.isFinite(left) ? '，还能再试 ' + left + ' 次' : '';
+      smsStatus((msg || '验证码不对或已过期') + tail + '。', 'err');
+      setVal('sms-code', '');
+      if (codeInput && smsIsOpen()) codeInput.focus();
+    } else if (e.status === 410 || reason === 'challenge_expired') {
+      smsExpire(msg);
+    } else if (e.status === 429) {
+      smsCountdown(smsSeconds(msg));
+      smsStatus(msg || '试得太频繁了，等倒计时走完再填。', 'err');
+    } else {
+      smsStatus(msg || loginTestErrorText(e), 'err');
+    }
+  } finally {
+    smsBusy = false;
+    smsEdit(false);
+    smsBtn('btn-sms-verify', '提交验证码', false);
+  }
+}
+
+function smsCancel() {
+  const ticket = smsTicket;
+  smsCollapse();
+  setHidden('btn-sms-start', false);
+  loginTestStatus('已取消这次短信验证', '');
+  if (ticket) {
+    /* 取消不掉也无所谓：那条 5 分钟后自己过期 */
+    apiFetch('/login/sms/cancel', {
+      method: 'POST', body: { challenge: ticket }, keepSession: true, quiet: true, localRate: true
+    }).catch(function () {});
   }
 }
 
@@ -1385,7 +2025,7 @@ async function openMapPicker(row) {
 /* ---------- 7. 导入 / 导出 ---------- */
 
 function openImport() {
-  setHidden('modal-import', false);
+  showOverlay('modal-import');
   clearBox('import-err');
   showWarnings('import-warnings', []);
   const ul = $('import-preview');
@@ -1467,16 +2107,14 @@ async function applyImport() {
   if (!S.importPreview) return;
   const btn = $('btn-import-apply');
   clearBox('import-err');
-  const body = Object.assign({}, S.importPreview, { version: Number(S.configVersion) || 0 });
+  const body = Object.assign({}, S.importPreview);
   setBusy(btn, '保存中…');
   try {
     const r = await apiFetch('/config', { method: 'PUT', body: { config: body } });
-    const saved = (r && r.version !== undefined && r.version !== null) ? r.version : null;
-    toast('ok', '已应用导入的配置（v' + (saved === null ? '?' : str(saved)) + '）');
+    toast('ok', '已应用导入的配置');
     announce('已应用导入的配置');
     closeImport();
     await loadConfig(true);
-    if (saved !== null) pinVersion(saved);
     if (r && Array.isArray(r.warnings) && r.warnings.length) showWarnings('config-warnings', r.warnings);
     loadDashboard(true);
   } catch (e) {
@@ -1742,7 +2380,7 @@ function renderRuns() {
 
 async function openRun(id) {
   if (!id) return;
-  setHidden('drawer', false);
+  showOverlay('drawer');
   const body = $('drawer-body');
   if (body) body.textContent = '读取中…';
   setText('drawer-title', '运行详情 · ' + id);
@@ -1916,6 +2554,8 @@ function bindEvents() {
   /* 仪表盘操作 */
   const force = $('btn-force');
   if (force) force.addEventListener('click', function () { startRun('force', false, force, '提交中…'); });
+  const autoSwitch = $('btn-auto-switch');
+  if (autoSwitch) autoSwitch.addEventListener('click', toggleAutoSwitch);
   const probe = $('btn-probe');
   if (probe) probe.addEventListener('click', function () { startRun('normal', true, probe, '预检中…'); });
   const notifyBtn = $('btn-notify');
@@ -1939,9 +2579,82 @@ function bindEvents() {
     cfgForm.addEventListener('input', function (ev) {
       const t = ev.target;
       if (!t || !t.classList) return;
-      /* 凭据框（密码/token/推送 key 的 input 与 Cookie 的 textarea）都会改动「已配置」徽标 */
+      /* 凭据框（密码/token/推送 key）都会改动「已配置」徽标 */
       if (t.closest && t.closest('.has-secret')) applySecretBadges();
+      syncCredNote();
       if (t.closest && t.closest('#pool-rows')) syncPoolNote();
+    });
+  }
+  each(document.querySelectorAll('.peek'), function (btn) {
+    setPeek(btn, false);
+    /* 点击可能是异步的（要走二次校验），回调里不等待返回值：错误都在弹窗里就地展示 */
+    btn.addEventListener('click', function () { peekSecret(btn); });
+  });
+
+  /* 显示凭据弹窗 */
+  const revealOk = $('btn-reveal-ok');
+  if (revealOk) revealOk.addEventListener('click', function () { submitReveal(revealOk); });
+  const revealCancel = $('btn-reveal-cancel');
+  if (revealCancel) revealCancel.addEventListener('click', closeReveal);
+  const revealClose = $('btn-reveal-close');
+  if (revealClose) revealClose.addEventListener('click', closeReveal);
+  const revealModal = $('modal-reveal');
+  if (revealModal) revealModal.addEventListener('click', function (ev) { if (ev.target === revealModal) closeReveal(); });
+  const revealPass = $('reveal-pass');
+  if (revealPass) {
+    revealPass.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      submitReveal(revealOk);
+    });
+  }
+
+  /* 登录弹窗：学号密码与短信码都在这里，配置页只有一行摘要 + 一个入口 */
+  const loginOpen = $('btn-login-open');
+  if (loginOpen) loginOpen.addEventListener('click', function () { openLoginModal(); });
+  const loginClose = $('btn-login-close');
+  if (loginClose) loginClose.addEventListener('click', closeLoginModal);
+  const loginModal = $('modal-login');
+  if (loginModal) loginModal.addEventListener('click', function (ev) {
+    if (ev.target === loginModal) closeLoginModal();
+  });
+  const loginBody = $('modal-login') ? $('modal-login').querySelector('.lg-body') : null;
+  if (loginBody) {
+    loginBody.addEventListener('input', function (ev) {
+      const id = ev.target && ev.target.id;
+      if (id === 'lg-username' || id === 'lg-password') mirrorAccount();
+    });
+    /* 弹窗不在 form-config 里，回车不会顺带保存整份配置：这里直接当「测试登录」 */
+    loginBody.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Enter') return;
+      const id = ev.target && ev.target.id;
+      if (id !== 'lg-username' && id !== 'lg-password') return;
+      ev.preventDefault();
+      testLogin($('btn-login-test'));
+    });
+  }
+  const tokenTestBtn = $('btn-token-test');
+  if (tokenTestBtn) tokenTestBtn.addEventListener('click', function () { testToken(tokenTestBtn); });
+  const cookieClear = $('btn-cookie-clear');
+  if (cookieClear) cookieClear.addEventListener('click', function () {
+    S.dropCookie = true;
+    syncCookieNote();
+    toast('info', '保存后才会真正清掉那条备用 Cookie（现在还不影响服务）');
+  });
+
+  /* 改管理密码：这两个输入框在 form-config 里，回车默认会提交并保存整份配置，
+     必须截住改成「改密码」——否则用户以为改了密码，实际只是又存了一次配置。 */
+  const pwdBtn = $('btn-pwd-change');
+  if (pwdBtn) {
+    pwdBtn.addEventListener('click', function () { changePassword(pwdBtn); });
+    ['pwd-current', 'pwd-new'].forEach(function (id) {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter') return;
+        ev.preventDefault();
+        changePassword(pwdBtn);
+      });
     });
   }
   /* 「保存」是 form="form-config" 的 submit 按钮：只挂在 submit 上，避免一次点击发两次 PUT */
@@ -1956,6 +2669,33 @@ function bindEvents() {
   if (loginTestBtn) loginTestBtn.addEventListener('click', function () { testLogin(loginTestBtn); });
   const loginRefreshBtn = $('btn-login-refresh');
   if (loginRefreshBtn) loginRefreshBtn.addEventListener('click', function () { refreshToken(loginRefreshBtn); });
+  /* 短信验证码：入口只在学校回「要二次验证」之后出现，点了才真的发短信 */
+  const smsStartBtn = $('btn-sms-start');
+  if (smsStartBtn) smsStartBtn.addEventListener('click', function () { smsStart(smsStartBtn); });
+  const smsSendBtn = $('btn-sms-send');
+  if (smsSendBtn) smsSendBtn.addEventListener('click', function () {
+    if (smsTicket) smsResend(smsSendBtn); else smsStart(smsSendBtn);
+  });
+  const smsVerifyBtn = $('btn-sms-verify');
+  if (smsVerifyBtn) smsVerifyBtn.addEventListener('click', function () { smsVerify(); });
+  const smsCancelBtn = $('btn-sms-cancel');
+  if (smsCancelBtn) smsCancelBtn.addEventListener('click', smsCancel);
+  const smsCodeInput = $('sms-code');
+  if (smsCodeInput) {
+    /* 只留数字、最多 6 位：粘贴一整条短信也能截出前 6 位数字。
+       洗完就交给 smsSchedule()：凑满 6 位 250ms 后自动提交，不用再点按钮。 */
+    smsCodeInput.addEventListener('input', function () {
+      const clean = String(smsCodeInput.value).replace(/[^0-9]/g, '').slice(0, SMS_CODE_LEN);
+      if (clean !== smsCodeInput.value) smsCodeInput.value = clean;
+      smsSchedule();
+    });
+    /* 弹窗里回车不提交任何表单，这里保留「回车即提交」的手感 */
+    smsCodeInput.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      smsVerify();
+    });
+  }
   /* 浏览器定位：按钮在「位置」区域，未登录/视图隐藏时可能压根不存在，必须判空 */
   const geoBtn = $('btn-geo');
   if (geoBtn) geoBtn.addEventListener('click', function () { locateNow(geoBtn); });
@@ -1973,6 +2713,8 @@ function bindEvents() {
       const target = $(btn.dataset.target);
       if (!target) return;
       target.value = '';
+      /* 弹窗里的「清空」清的是镜像框，得同步回隐藏域，否则保存时又把旧值写回去 */
+      if (btn.dataset.target === 'lg-password') mirrorAccount();
       applySecretBadges();
       toast('info', '已清空该字段：保存后才会真正移除（不保存则不影响服务）');
     });
@@ -2042,7 +2784,10 @@ function bindEvents() {
 
   document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') return;
+    /* 显示凭据叠在登录弹窗上（弹窗里点眼睛），先收最上面那张 */
+    if (!isHidden('modal-reveal')) { closeReveal(); return; }
     if (!isHidden('modal-import')) { closeImport(); return; }
+    if (!isHidden('modal-login')) { closeLoginModal(); return; }
     if (!isHidden('drawer')) closeDrawer();
   });
 }
@@ -2110,3 +2855,4 @@ init();
     apply(saved);
   });
 })();
+

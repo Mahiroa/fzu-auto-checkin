@@ -15,6 +15,7 @@ import (
 	"fzucheckin/internal/config"
 	"fzucheckin/internal/model"
 	"fzucheckin/internal/schedule"
+	"fzucheckin/internal/secure"
 )
 
 // ---------- GET /api/v1/health ----------
@@ -44,11 +45,16 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 // ---------- GET /api/v1/config ----------
 
 // configResponse 是 GET /config 的形状（§9 + 前端硬假设 4）。
-// Config 是明文真实值（不再做哨兵替换）；MaskedFields 保留原有语义，
-// 供前端渲染「已配置 / 未填」徽标。
+//
+// Config 里的敏感字段是**哨兵**（config.Mask），不是明文：这个响应会进浏览器历史
+// 缓存、DevTools、扩展的请求日志，也可能被用户在排障时整段贴进聊天窗口。
+// 要显示真实值时走 POST /config/reveal（需要再输一次管理密码），一次只给一项。
+// MaskedFields 仍然回答"服务端到底存过哪些敏感字段"，供前端渲染「已配置」徽标。
+//
+// 这里刻意没有 version 字段：配置不记录版本，界面上也没有「配置版本 vN」可显示。
+// "配置变过"的信号只在服务端内部用（store.ConfigVersion），排障看 /status。
 type configResponse struct {
 	Config       model.Config    `json:"config"`
-	Version      int64           `json:"version"`
 	Warnings     []string        `json:"warnings"`
 	MaskedFields map[string]bool `json:"masked_fields"`
 	Source       string          `json:"source"`
@@ -59,28 +65,97 @@ func (s *Server) handleConfigGet(w http.ResponseWriter, r *http.Request) {
 	// warnings 里带上 schedule 段的降级提示：用户不该等到"保存一次"才知道
 	// times 里某一档写坏了。
 	warnings := schedule.Parse(cfg.Checkin.Schedule).Warnings
+	// 凭据没配时，一打开配置页就该看到这句话：等到 21:35 才发现"今晚没签"已经晚了。
+	// 放到 warnings 而不是另造字段，是因为前端已经在逐条渲染这个列表。
+	if msg := config.CredentialWarning(cfg); msg != "" {
+		warnings = append(warnings, msg)
+	}
 	if warnings == nil {
 		warnings = []string{}
 	}
-	// config 里是真实值（含明文凭据）：配置页的输入框按明文显示，管理员要能
-	// 核对/复制自己填过的东西。敏感字段是否已配置仍由 masked_fields 告诉前端，
-	// 而真正对外流转的出口（导出、日志、SSE、运行记录）继续走脱敏路径。
+	// 敏感字段一律换哨兵：读取路径不再是"明文出口"。（导出、日志、SSE、运行记录
+	// 本来就走脱敏；现在 GET 也回归同一条线，只剩 reveal 这一个按需出口。）
+	// 前端拿到哨兵原样回传 = "保持原值"，因此这里不会把用户填过的密码冲掉。
 	writeJSON(w, http.StatusOK, configResponse{
-		Config:       cfg,
-		Version:      s.store.ConfigVersion(),
+		Config:       config.Mask(cfg),
 		Warnings:     warnings,
 		MaskedFields: config.MaskedFields(cfg),
 		Source:       "json",
 	})
 }
 
+// ---------- POST /api/v1/config/reveal ----------
+
+// revealResponse 只带一项真实值。一次一项是刻意的：把整份明文一次性吐回去，
+// 等于把刚收回来的风险又原样放出来。
+type revealResponse struct {
+	Field string `json:"field"`
+	Value string `json:"value"`
+}
+
+// handleConfigReveal 按需显示一个敏感字段的真实值，要求**再输一次管理密码**。
+//
+// 为什么不是"登录态就能看"：会话是长期（7 天）、无感、可能被复制走的凭证；而
+// 看一眼学校密码这类操作应当要求"人就在键盘前"。二次校验把这个动作降回"当场
+// 有人"级别——共享屏幕、临时借电脑、Cookie 被盗这些场景都拦得住。
+//
+// 失败按 IP 限速（与登录同一个阈值、独立的计数器）：这张接口是密码校验点，
+// 给它开放无限次尝试等于给管理密码开一个离线爆破口。
+func (s *Server) handleConfigReveal(w http.ResponseWriter, r *http.Request) {
+	ip := s.clientIP(r)
+	if wait, blocked := s.revealLimits.blocked(ip); blocked {
+		writeTooManyAttempts(w, wait)
+		return
+	}
+	var body struct {
+		Field    string `json:"field"`
+		Password string `json:"password"`
+	}
+	if e := decodeJSON(w, r, &body); e != nil {
+		writeError(w, e)
+		return
+	}
+	field := strings.TrimSpace(body.Field)
+	cfg := s.store.Config()
+	value, ok := config.LookupSecret(&cfg, field)
+	if !ok {
+		// 不认识就用 400 直接说清楚可选值：这既是校验也是文档。
+		writeError(w, newError(http.StatusBadRequest, codeBadRequest,
+			fmt.Sprintf("没有这个敏感字段：%q", field),
+			"可选："+strings.Join(config.SecretPaths(), "、")))
+		return
+	}
+	hash := s.store.PasswordHash()
+	if hash == "" {
+		writeError(w, newError(http.StatusForbidden, codeNotInitialized, "服务尚未初始化：请先设置管理密码"))
+		return
+	}
+	if !secure.VerifyPassword(hash, body.Password) {
+		count, wait := s.revealLimits.fail(ip)
+		s.logf("warn", "", "显示凭据被拒（管理密码不对）field=%s ip=%s 第 %d 次", field, ip, count)
+		if wait > 0 {
+			writeTooManyAttempts(w, wait)
+			return
+		}
+		writeError(w, newError(http.StatusUnauthorized, codeBadPassword, "管理密码不正确"))
+		return
+	}
+	s.revealLimits.reset(ip)
+	// 只记"谁看了哪一项"，绝不记值本身。
+	s.logf("info", "", "凭据已显示 field=%s ip=%s", field, ip)
+	writeJSON(w, http.StatusOK, revealResponse{Field: field, Value: value})
+}
+
 // ---------- PUT /api/v1/config ----------
 
 // handleConfigPut 合并脱敏哨兵 → 规范化 → 校验 → 落盘 → 让调度器立刻重规划。
 //
-// 不实现乐观锁（前端把 config.version 原样带回，但我们不据此拒绝）：
-// 这是单用户服务，唯一的写者就是他自己；引入 409 版本冲突只会让"两个标签页
-// 都开着"变成一次莫名其妙的保存失败。响应仍返回新 version 供前端显示。
+// 没有乐观锁：配置里不再有版本号，前端也就没有可带回的版本。这是单用户服务，
+// 唯一的写者就是他自己，引入 409 版本冲突只会让"两个标签页都开着"变成一次
+// 莫名其妙的保存失败。响应只回 ok + warnings，不带任何版本号。
+//
+// 请求体里若还带着旧前端回传的 version（或任何别处的未知字段），走的是
+// encoding/json 的默认解析——未知字段忽略、不报错，旧页面不会因此存不下配置。
 func (s *Server) handleConfigPut(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Config model.Config `json:"config"`
@@ -98,8 +173,7 @@ func (s *Server) handleConfigPut(w http.ResponseWriter, r *http.Request) {
 			"配置校验未通过，请按下面每一条修正后重试", detailsOf(err)...))
 		return
 	}
-	version, err := s.store.SaveConfig(normalized, warnings)
-	if err != nil {
+	if _, err := s.store.SaveConfig(normalized, warnings); err != nil {
 		writeError(w, newError(http.StatusInternalServerError, codeSaveFailed, "保存配置失败："+err.Error()))
 		return
 	}
@@ -109,10 +183,9 @@ func (s *Server) handleConfigPut(w http.ResponseWriter, r *http.Request) {
 	// 配置一变就必须立刻重新规划：否则用户把 times 从 21:35 改到 21:00，
 	// 调度器可能还抱着"等到 21:35"的定时器，白等一档。
 	s.wakeScheduler("配置已保存")
-	s.logf("info", "", "配置已保存 config_version=%d 警告=%d 条", version, len(warnings))
+	s.logf("info", "", "配置已保存 警告=%d 条", len(warnings))
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok":       true,
-		"version":  version,
 		"warnings": warnings,
 	})
 }
@@ -274,6 +347,65 @@ func (s *Server) handleRunStart(w http.ResponseWriter, r *http.Request) {
 		"run_id":   req.ID,
 		"accepted": true,
 	})
+}
+
+// ---------- POST /api/v1/control ----------
+
+// controlResponse 是首页「一键暂停/恢复」的响应：开关的新值 + 调度器快照。
+// 只回 paused 不够——前端还要据此刷新"调度器：运行中/等待下一档"那一行，
+// 再发一次 GET /status 只会多一个来回，还可能读到比开关更早的状态。
+type controlResponse struct {
+	Paused    bool            `json:"paused"`
+	Scheduler statusScheduler `json:"scheduler"`
+}
+
+// handleControl 是"暂停/恢复自动签到"的唯一入口。
+//
+// 三条边界：
+//  1. paused 落在 **state** 而不是配置里：配置页是整份回写的，浏览器里一个旧快照
+//     点一次保存就能把暂停覆盖掉（见 model.State.Paused）；
+//  2. 手动运行（POST /runs）与测试登录**不**受它影响——用户按下暂停的意思是"别自动
+//     打上游"，不是"别让我手动排查"；
+//  3. 写完必须 wake：调度器此刻可能正睡在一个按旧状态算出来的截止时刻上，
+//     恢复后要立刻重规划，而不是等下一个 tick 或下一次自然醒来。
+func (s *Server) handleControl(w http.ResponseWriter, r *http.Request) {
+	// 用指针而不是 bool：缺字段（{} 或 {"paused":null}）与 false 必须能区分开，
+	// 否则一次拼错的请求会把暂停状态悄悄改成"恢复"，而那正是最坏的一种误操作。
+	var body struct {
+		Paused *bool `json:"paused"`
+	}
+	if e := decodeJSON(w, r, &body); e != nil {
+		writeError(w, e)
+		return
+	}
+	if body.Paused == nil {
+		writeError(w, newError(http.StatusBadRequest, codeBadRequest,
+			`请求体里少了 paused 字段：需要 {"paused": true} 或 {"paused": false}`,
+			"暂停只会停掉自动签到调度，不影响手动运行与测试登录。"))
+		return
+	}
+
+	want := *body.Paused
+	if s.store.State().Paused != want {
+		s.updateState(func(st *model.State) { st.Paused = want })
+		if want {
+			s.logf("info", "", "面板开关：自动签到已暂停（调度器不再发起自动签到）")
+		} else {
+			s.logf("info", "", "面板开关：自动签到已恢复（调度器立即重新规划）")
+		}
+	}
+
+	// 无论有没有变化都叫醒一次：重复点同一个值不该有任何副作用，但也不能因为
+	// "值没变"就把一条已经排好的旧规划留在调度循环里。
+	s.wakeScheduler("面板开关已切换暂停状态")
+
+	// 回读到的是**落盘后**的真值：updateState 写失败时它会与 want 不一致，
+	// 前端据此显示的就是实际情况，而不是一句安慰。
+	paused := s.store.State().Paused
+	if paused != want {
+		s.logf("warn", "", "暂停开关没有生效：state.json 写入失败，当前仍为 paused=%t", paused)
+	}
+	writeJSON(w, http.StatusOK, controlResponse{Paused: paused, Scheduler: s.schedulerSnapshot()})
 }
 
 // ---------- POST /api/v1/notify/test ----------

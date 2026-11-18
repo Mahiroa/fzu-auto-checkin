@@ -213,11 +213,12 @@ func weightOf(w *float64) float64 {
 	return v
 }
 
-// actualText 地址文案收口成去空白字符串；空/缺失用 fallback。
+// actualText 地址文案收口成「校区 + 详细地址 + 靠近 POI」的格式，空/缺失用 fallback。
 //
-// actualLocation 原样提交给学校接口，带换行的多行值会让接口校验失败。
+// 归一交给 model.NormalizeActualLocation：它负责折叠空白（带换行的多行值会让接口
+// 校验失败）、补全"旗山校区"标记、并把"靠近同一栋楼"这种重复子句合并掉。
 func actualText(value, fallback string) string {
-	text := strings.TrimSpace(value)
+	text := model.NormalizeActualLocation(value)
 	if text == "" {
 		return fallback
 	}

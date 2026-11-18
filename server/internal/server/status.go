@@ -30,7 +30,7 @@ type statusResponse struct {
 	Scheduler     statusScheduler  `json:"scheduler"`
 	LastRun       *model.RunRecord `json:"last_run"`
 	Version       string           `json:"version"`
-	ConfigVersion int64            `json:"config_version"`
+	ConfigVersion int64            `json:"config_version"` // store 内部计数（state.json），仅排障用，不渲染成「配置版本 vN」
 }
 
 type statusWindow struct {
@@ -71,9 +71,13 @@ type statusVacation struct {
 	End   string `json:"end"`
 }
 
+// statusScheduler 是调度器的可观测状态。/status 与 POST /control 回的是同一份形状：
+// 前端按下开关后直接用响应里的这个对象刷新图标与文案，两处字段一旦分叉，
+// 按完开关界面就会跳一下。
 type statusScheduler struct {
 	Enabled      bool   `json:"enabled"`
 	Stopped      bool   `json:"stopped"`
+	Paused       bool   `json:"paused"`
 	RunningNow   bool   `json:"running_now"`
 	LastDecision string `json:"last_decision"`
 }
@@ -100,7 +104,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 			Inside: schedule.InWindow(now, sched.WindowStart, sched.WindowEnd),
 		},
 		Version:       Version,
-		ConfigVersion: s.store.ConfigVersion(),
+		ConfigVersion: s.store.ConfigVersion(), // 内部计数，仅排障用（见字段注释）
 	}
 
 	// §9.1：今日已成功 → 全部 done；否则"目标已过但没成功"= missed，其余 pending。
@@ -156,12 +160,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp.Vacation = s.vacationOf(cfg, now)
-	resp.Scheduler = statusScheduler{
-		Enabled:      s.schedulerEnabled(),
-		Stopped:      s.schedulerStopped(),
-		RunningNow:   s.running.Load(),
-		LastDecision: s.lastDecisionValue(),
-	}
+	resp.Scheduler = s.schedulerSnapshot()
 
 	if runs, err := s.store.Runs(1); err == nil && len(runs) > 0 {
 		rec := runs[0]

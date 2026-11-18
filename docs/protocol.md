@@ -49,7 +49,7 @@ AES-128-CBC，KEY = IV = "apexinfoapexinfo"，PKCS7，输出 Base64
   "lat": 26.04920,             // 纬度
   "startTime": "21:30",        // 来自 init
   "endTime": "23:59",          // 来自 init
-  "actualLocation": "标题 地址", // App 内用高德逆地理拼接，可自填
+  "actualLocation": "标题 地址", // App 内用高德逆地理拼接，可自填；规范写法见 address-format.md
   "caIsNo": "0",               // H5 URL 参数 FCaIsNo，默认 "0"
   "collUnit": "<check 返回的第一个命中对象>",
   "way": 1,                    // clockWay：1=校内 2=校外 3=无需

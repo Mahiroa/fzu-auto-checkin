@@ -13,8 +13,12 @@
  * 网络挡住高德时：连续 4 张瓦片失败就自动换 OpenStreetMap 底图（WGS-84），
  * 选点结果再用 app.js 注入的 toGcj 换算回 GCJ-02 —— 用户拿到的永远是能用的坐标。
  *
- * 「上报地点文字」要跟智汇福大一个格式：
+ * 「上报地点文字」要跟智汇福大一个格式：校区 + 空格 + 详细地址 + 靠近 POI。
  *     旗山校区 福建省福州市闽侯县学府南路辅路28号靠近福州大学旗山校区生活区X号楼
+ * 前半段是门牌级地址、后半段是楼栋/POI，「靠近」是格式的一部分。只有同一处被写了
+ * 两遍（高德已经把楼栋写进 formatted_address，又拼一次同名 POI）才合并成一句；
+ * 多行粘贴带来的空白也在这里收口（normalizePlace，与 server/internal/model/
+ * address.go、src/checkin.py 同一套规则）。
  * 这串里"省市区 + 路名门牌 + 靠近 POI"只有中文逆地理编码能拼出来（OSM 在校园里
  * 只到"闽侯县"这一级，拼不出门牌号），所以地名服务走**可选的**高德 Web 服务 key：
  *   - 填了 key：点一下就让高德 regeo 生成同格式文本，并缓存到这个点位上次的记录里；
@@ -38,9 +42,18 @@ const MAX_LAT = 85.05112878;  // Web 墨卡托的极点
 const HOME = { lng: 119.209433, lat: 26.046112 }; // 福大旗山校区（GCJ-02）
 const TILE_ERROR_LIMIT = 4;   // 连续失败多少张瓦片就判定"高德不通"
 
-/* 上报地点文字的格式前缀：智汇福大里就是"校区 + 空格 + 详细地址靠近POI"。
-   真的不在旗山校区时，用户在这场文本里直接改掉即可（它就是个普通输入框）。 */
+/* 上报地点文字的规范形态（与 server/internal/model/address.go 同一套规则）：
+     旗山校区 福建省福州市闽侯县学府南路辅路28号靠近福州大学旗山校区生活区X号楼
+   第一段固定是校区标记；正文是"省市区县 + 道路门牌"，再接"靠近 + POI 全称"。
+   「靠近」不是冗余：门牌管路、POI 管楼。只有 POI 已经写进正文（高德 regeo 落到
+   楼栋时就是这样）才不会重复一遍——否则就成了"…学生公寓靠近…学生公寓"，同一处
+   说两遍（见 normalizePlace）。真的不在旗山校区时，用户在这场文本里直接改掉即可
+   （它就是个普通输入框）。 */
 const CAMPUS_PREFIX = '旗山校区';
+const NEAR_SEP = '靠近';
+const ADMIN_HEADS = ['福建省', '福州市', '闽侯县'];
+const MERGE_MIN = 4;      // 两段首尾重叠少于 4 字不当作同一段（"学园路" + "路28号" 只重 1 字）
+const DUP_MIN = 3;        // 相邻完全重复少于 3 字不折叠（"上街镇" + "镇上" 是正常连读）
 const REGEO_URL = 'https://restapi.amap.com/v3/geocode/regeo';
 const KEY_STORE = 'fzu.map.regeoKey';       // 只存本机浏览器，不进配置、不随导出走
 const NAME_STORE = 'fzu.map.placeNames';    // 点位 → 上次用的上报地点文字
@@ -229,16 +242,69 @@ function saveStore(key, value) {
   try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* 存不下就算了 */ }
 }
 
-/* 智汇福大的格式：  旗山校区 + 详细地址 + 靠近POI
-   缺哪段就不硬凑——只有 POI 时是"旗山校区 靠近XXX"，只有地址时是"旗山校区 福建省…28号"。 */
+/* 规范形态：旗山校区 + 空格 + 正文；正文里的重复段与多余的"靠近"在这里收口。
+   与 server/internal/model/address.go、src/checkin.py 三处同一套规则——服务端保存
+   时还会再归一一次（幂等），所以这里漏掉的边角不会流到上报报文里。 */
+export function normalizePlace(raw) {
+  const text = String(raw || '')
+    .replace(/[\u200b\ufeff]/g, ' ')
+    .split(/\s+/).filter(Boolean).join(' ');
+  if (!text) return '';
+  const tagged = text.indexOf(CAMPUS_PREFIX) === 0;
+  let body = tagged ? text.slice(CAMPUS_PREFIX.length).trim() : text;
+  if (body.indexOf(CAMPUS_PREFIX) === 0) body = body.slice(CAMPUS_PREFIX.length).trim();
+  body = collapseRepeat(mergeNear(body)).trim();
+  if (!body) return tagged ? CAMPUS_PREFIX : '';
+  if (tagged || ADMIN_HEADS.some(function (h) { return body.indexOf(h) === 0; })) {
+    return CAMPUS_PREFIX + ' ' + body;
+  }
+  return body;
+}
+
+/* 把 "…靠近X" 并进主地址：X 已包含在主地址里就整段丢掉（就是那个重复的楼栋名）。 */
+function mergeNear(text) {
+  const parts = String(text).split(NEAR_SEP);
+  if (parts.length < 2) return text;
+  let merged = parts[0].trim();
+  for (let i = 1; i < parts.length; i++) merged = mergeHeadTail(merged, parts[i].trim());
+  return merged;
+}
+
+function mergeHeadTail(head, tail) {
+  if (!tail) return head;
+  if (!head) return tail;
+  if (head.indexOf(tail) >= 0) return head;   // 主地址已经写到这栋楼
+  if (tail.indexOf(head) >= 0) return tail;   // 反过来被 POI 名包含：用更完整的那段
+  const limit = Math.min(head.length, tail.length);
+  for (let k = limit; k >= MERGE_MIN; k--) {
+    if (head.slice(head.length - k) === tail.slice(0, k)) return head + tail.slice(k);
+  }
+  return head + NEAR_SEP + tail;              // 真的不是同一处：把连接词补回去
+}
+
+/* 相邻两段逐字相同（"XX"）只留一段，循环到稳定为止。 */
+function collapseRepeat(text) {
+  let s = String(text);
+  for (;;) {
+    let cut = -1;
+    let len = 0;
+    for (let i = 0; i < s.length && cut < 0; i++) {
+      for (let k = Math.floor((s.length - i) / 2); k >= DUP_MIN; k--) {
+        if (s.slice(i, i + k) === s.slice(i + k, i + 2 * k)) { cut = i; len = k; break; }
+      }
+    }
+    if (cut < 0) return s;
+    s = s.slice(0, cut + len) + s.slice(cut + 2 * len);
+  }
+}
+
+/* 智汇福大的格式：校区标记 + 空格 + 详细地址（+ 靠近POI，且只在真的说到别处时保留）。
+   缺哪段就不硬凑——只有 POI 时是"旗山校区 福州大学旗山校区生活区X号楼"。 */
 function composePlace(addr, near) {
   const a = String(addr || '').trim();
   const n = String(near || '').trim();
-  let tail = '';
-  if (a) tail += a;
-  if (n) tail += '靠近' + n;
-  if (!tail) return '';
-  return CAMPUS_PREFIX + ' ' + tail;
+  if (!a && !n) return '';
+  return normalizePlace(a + (n ? NEAR_SEP + n : ''));
 }
 
 function memoKey(lng, lat) {
@@ -289,7 +355,7 @@ async function fetchPlace(lng, lat) {
    除非是他自己点了「取地名」这种明确要求覆盖的动作（force）。 */
 function applyName(text, force) {
   if (!ui.name) return false;
-  const v = String(text || '').trim();
+  const v = normalizePlace(text);
   if (!v) return false;
   if (!force && !st.nameAuto) return false;
   ui.name.value = v;
@@ -732,12 +798,14 @@ function confirm() {
     return;
   }
   const cb = st.onConfirm;
-  let name = ui.name ? String(ui.name.value || '').trim() : '';
+  /* 用户自己改过的文字也要过一遍归一：他可能把楼栋又写了两遍，或者手抄进来一段
+     带换行的地址；确认下来的这串会被记住并原样提交给学校。 */
+  let name = normalizePlace(ui.name ? ui.name.value : '');
   /* 防抖还没跑完就点了确认：先把本地记忆同步补上；只有"正在联网取地名"才让他等一下，
      因为这时候放过去就等于静默丢掉了地点文字。 */
   if (!name) {
     const memo = lookupName(g.lng, g.lat);
-    if (memo) { applyName(memo, true); name = memo; }
+    if (memo) { name = normalizePlace(memo); applyName(name, true); }
   }
   if (!name && st.regeoBusy) {
     setStatus('正在取地名…稍等一下再点「用这个点」。', 'warn');

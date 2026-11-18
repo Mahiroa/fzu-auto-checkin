@@ -20,7 +20,7 @@
 | G3 | 零第三方依赖 | `go.mod` 无 `require`；`go mod graph` 只有自身；二进制不链 cgo |
 | G4 | 高性能低内存 | 空闲 RSS ≤ 30 MB；`/api/v1/status` p99 ≤ 5 ms（本地）；100 并发 SSE 连接 RSS ≤ 60 MB |
 | G5 | 免 cron 自调度 | 进程内调度器按北京时间算下一档，单飞不并发，`SIGINT/SIGTERM` 优雅退出（等待进行中的签到最多 60 s） |
-| G6 | 安全默认 | 首次启动强制设置管理密码；密码 PBKDF2-HMAC-SHA256(120k)；Session 用 HMAC 签名 Cookie；配置回显脱敏；日志禁止打印 token/密码/推送 key |
+| G6 | 安全默认 | 首次启动强制设置管理密码；密码 PBKDF2-HMAC-SHA256(600k，登录时自动升级老哈希)；Session 用 HMAC 签名 Cookie + 可撤销的会话代次；**配置读取一律回哨兵**（真实值走 `POST /config/reveal`，要再输一次管理密码）；**凭据落盘 AES-256-GCM 加密**；日志禁止打印 token/密码/Cookie/推送 key |
 | G7 | 可观测 | 结构化日志（stdout + 内存环 + SSE 实时推送）、运行历史 JSONL、`/api/v1/health` 暴露内存/goroutine/uptime |
 
 ### 1.2 非目标（明确不做）
@@ -44,7 +44,8 @@
 | 静态资源打包 | — | `embed.FS` | 单二进制 |
 | 配置落盘/历史 | 文件+secret | 原子写（临时文件+`os.Rename`）+ `bufio` 追加 JSONL | 见 §7 |
 | 密码哈希 | — | 手工 PBKDF2-HMAC-SHA256（RFC 8018，约 30 行） | 有 RFC 测试向量 |
-| Session | — | `crypto/hmac` + `encoding/base64`（`payload.signature`） | 无状态，进程重启 Session 仍有效（key 持久化） |
+| Session | — | `crypto/hmac` + `encoding/base64`（`payload.signature`） | 无状态签名 + 会话代次 `sv`：进程重启仍有效，但改密码/退出即时作废 |
+| 配置加密 | — | `crypto/aes` + `cipher.NewGCM`（标准库，无第三方） | 落盘 AES-256-GCM，密钥由 `secret.key` 派生 |
 | 实时日志 | — | SSE（`text/event-stream`，`http.Flusher`） | 无需 WebSocket 库 |
 | 随机数 | `random` | `math/rand/v2`（可注入 `*rand.Rand` 供测试复现） | 抖动不要求密码学强度 |
 | 时区 | `zoneinfo`/offset | `time.FixedZone("CST", 8*3600)` | 服务器时区不参与任何判断 |
@@ -179,7 +180,8 @@ func EncryptECBBlock(key, plain []byte) ([]byte, error) // PKCS7 + 分块 ECB
 func PKCS7Pad(b []byte, block int) []byte
 func PKCS7Unpad(b []byte, block int) ([]byte, error)
 func PBKDF2SHA256(password, salt []byte, iter, keyLen int) []byte
-func HashPassword(pw string) (string, error)             // "pbkdf2$sha256$120000$<b64salt>$<b64hash>"
+func HashPassword(pw string) (string, error)             // "pbkdf2$sha256$600000$<b64salt>$<b64hash>"
+func NeedsRehash(encoded string) bool                    // 迭代次数低于当前参数 → 登录后顺手升级
 func VerifyPassword(encoded, pw string) bool
 func RandomHex(n int) string
 type Signer struct { Key []byte }
@@ -219,8 +221,10 @@ func DoCheckin(c *Client, cfg model.Config, init map[string]any, rng *rand.Rand,
 // package config
 func Normalize(cfg model.Config) (model.Config, []string)     // 修 YAML 60 进制、坏坐标等，返回警告
 func Validate(cfg model.Config) error                        // 硬失败：无凭据/无坐标
-func Mask(cfg model.Config) model.Config                     // 敏感字段→"••••"，只用于导出（GET /config 回明文）
+func Mask(cfg model.Config) model.Config                     // 敏感字段→"••••"，读取与导出共用（GET /config 也走它）
 func MergeMasked(oldCfg, incoming model.Config) model.Config // 收到 "••••" 视为"保持原值"
+func SecretFields(cfg *model.Config) []SecretField           // 敏感字段路径 + 可写地址（加密/reveal 共用一张表）
+func LookupSecret(cfg *model.Config, path string) (string, bool)
 func ImportYAML(text string) (model.Config, []string, error)
 
 // package store
@@ -276,7 +280,7 @@ data/
 ├── config.json     # 配置（0600）：原子写 = 同目录 tmp + fsync + rename，旧文件保留为 config.json.bak
 ├── state.json      # 状态（0600）：{config_version, last_success_date, last_attempt_at, last_run_id, day_cache}
 ├── runs.jsonl      # 运行历史，一行一条 RunRecord；超过 2000 行启动时轮转为 runs.jsonl.1
-├── secret.key      # 32 字节 Session HMAC 密钥（0600，首次随机生成）
+├── secret.key      # 会话 HMAC 与配置加密的密钥材料（0600，首次随机生成；按用途用带标签的 SHA-256 派生）
 └── auth.json       # {password_hash, initialized_at}（0600）
 ```
 
@@ -293,13 +297,18 @@ data/
 | 项 | 规格 |
 |---|---|
 | 首次启动 | `auth.json` 不存在 → `POST /api/v1/auth/setup {password}`（≥8 字符）唯一一次可用；已初始化则返回 409 |
-| 密码存储 | `pbkdf2$sha256$120000$<b64 salt16>$<b64 32B>`；比较用 `subtle.ConstantTimeCompare` |
+| 密码存储 | `pbkdf2$sha256$600000$<b64 salt16>$<b64 32B>`；比较用 `subtle.ConstantTimeCompare`；登录成功后 `secure.NeedsRehash` 把老参数哈希顺手续到当前迭代（不换会话代次） |
+| 改密码 | `POST /auth/password {current,new}`（≥8 字符，且不能与当前相同）；失败计入登录限速；成功后换会话代次并给自己续一张新 Cookie |
 | 登录限速 | 同 IP 15 分钟内失败 5 次 → 429 + `Retry-After`；成功清零；计数器在内存（进程重启归零，可接受）。**身份默认取 TCP 来源 `RemoteAddr`**；`X-Forwarded-For` 只在 `FZU_TRUST_PROXY=1`（服务确实在可信反代后面）时采信——客户端可写的头不能当身份，否则换一个 XFF 就绕过了限速（验收实测：修复前同一来源第 7 次直接 200） |
-| Session | Cookie `fzu_sess=<base64url(payload)>.<hmac>`；payload `{sub:"admin",iat,exp}`；`HttpOnly; SameSite=Strict; Path=/; Max-Age=604800`；TLS 或 `X-Forwarded-Proto: https` 时追加 `Secure` |
+| Session | Cookie `fzu_sess=<base64url(payload)>.<hmac>`；payload `{sub:"admin",iat,exp,sv}`；`HttpOnly; SameSite=Strict; Path=/; Max-Age=604800`；TLS 或 `X-Forwarded-Proto: https` 时追加 `Secure` |
+| 会话撤销 | `sv` = `auth.json` 里的 `session_epoch`。改密码（`SetPasswordHash`）与退出登录（`RotateSessionEpoch`）都会换一个新代次，所有旧 Cookie 立即失效。重算哈希（`RehashPassword`）**不**换代次。升级前签发的 Cookie 没有 `sv`，会一次性失效、需要重新登录 |
 | CSRF | 所有非 GET 请求必须带 `X-Requested-With: fzu-web`（前端统一 fetch 包装）+ SameSite=Strict 双保险；缺失返回 403 |
 | CORS | 默认同源。`server.allow_origins` 非空时按白名单回显 `Access-Control-Allow-Origin`，`Access-Control-Allow-Credentials: true`，`Vary: Origin` |
-| 脱敏 | `config.Mask`（导出与写入口径）：`user.password`/`user.token`/`notify.*_key|token|url|webhook` → `"••••"`；`GET /config` 与 import 预览按明文回显，另返回 `masked_fields` 布尔供前端显示"已配置" |
-| 日志 | 任何日志/SSE 事件禁止出现 token、密码、推送 key 原文；只允许 `token=st***（len=64）` 形式 |
+| 脱敏 | `config.Mask`（读取与导出口径）：`user.password`/`user.token`/`user.cookie`/`notify.*_key|token|url|webhook` → `"••••"`；`GET /config` 与导出同口径，另返回 `masked_fields` 布尔供前端显示"已配置"。import 预览例外：回显的是用户自己粘进来的文本 |
+| 按需显示 | `POST /config/reveal {field,password}`：要再输一次**管理密码**，一次只回一项真实值；字段名不认识 → 400 + 可选值清单；失败按 IP 限速（与登录独立计数）；日志只记 `field=`，不记值 |
+| 落盘加密 | `store.sealConfig` 在写盘前把敏感字段用 AES-256-GCM 封装成 `enc:v1:<base64(nonce||ct||tag)>`，密钥 = `SHA-256("fzu-config-seal-v1"‖0‖secret.key)`；AAD 固定为 `enc:v1:`。内存里的配置始终是明文，`config.json.bak` 备份的是磁盘原文（密文）。不带前缀的值按历史明文读入（升级兼容），保存一次即自动加密。解不开时清空该字段 + error 日志，服务照常启动 |
+| 数据目录 | `0700`/`0600`（Unix）；Windows 用 `icacls` 去继承 + 只授权本账号/SYSTEM/Administrators，并做建写读删自检（`FZU_SKIP_ACL=1` 跳过）。`secret.key` 与密文同目录，**能读目录的人就能解密**——这是本机边界的诚实表述，也是"别把 data/ 放进共享盘"的原因 |
+| 日志 | 任何日志/SSE 事件禁止出现 token、密码、Cookie、推送 key 原文；只允许 `token=st***（len=64）` 形式。`logf` 自己做第二道 `redactSecrets`（调用方漏了也不会漏出去），且不截断（panic 栈要完整） |
 | HTTP 加固 | `ReadHeaderTimeout=5s`、`ReadTimeout=15s`、`WriteTimeout=30s`（SSE 路由单独用 `0`）、`MaxHeaderBytes=64KB`、请求体 `http.MaxBytesReader 1MB` |
 | 上游加固 | 客户端 `Timeout=15s`，`CheckRedirect` 最多 5 跳（SSO 需要），关闭 `http.DefaultClient` 复用 |
 
@@ -317,11 +326,13 @@ data/
 | GET | `/api/v1/auth/session` | 否 | — | `{"initialized":bool,"authed":bool,"env":"dev"}` |
 | POST | `/api/v1/auth/setup` | 否 | `{"password":"..."}` | `{"ok":true}` + Set-Cookie |
 | POST | `/api/v1/auth/login` | 否 | `{"password":"..."}` | `{"ok":true}` + Set-Cookie |
-| POST | `/api/v1/auth/logout` | 是 | — | `{"ok":true}` |
-| GET | `/api/v1/config` | 是 | — | `{"config":{masked},"version":7,"warnings":[],"source":"json"}` |
-| PUT | `/api/v1/config` | 是 | `{"config":{...}}` | `{"ok":true,"version":8,"warnings":[]}` |
-| POST | `/api/v1/config/import-yaml` | 是 | `{"yaml":"..."}` | `{"config":{...},"warnings":[...]}`（不落盘，供前端预览） |
-| GET | `/api/v1/config/export?format=yaml\|json` | 是 | — | 附件下载（yaml 导出为**脱敏**版，避免泄露到剪贴板/日志） |
+| POST | `/api/v1/auth/logout` | 是 | — | `{"ok":true}`；同时轮换会话代次（所有设备失效） |
+| POST | `/api/v1/auth/password` | 是 | `{"current":"...","new":"..."}` | `{"ok":true}` + 新 Set-Cookie；旧 Cookie 全部失效 |
+| GET | `/api/v1/config` | 是 | — | `{"config":{masked},"warnings":[],"masked_fields":{...},"source":"json"}`（敏感字段是 `••••`） |
+| PUT | `/api/v1/config` | 是 | `{"config":{...}}` | `{"ok":true,"warnings":[]}`；回传哨兵 = 保持原值，空串 = 清空 |
+| POST | `/api/v1/config/reveal` | 是 | `{"field":"user.password","password":"<管理密码>"}` | `{"field":"user.password","value":"..."}`；一次一项，失败限速 429 |
+| POST | `/api/v1/config/import-yaml` | 是 | `{"yaml":"..."}` | `{"config":{...},"warnings":[...]}`（不落盘，供前端预览；回显的是用户粘进来的原文） |
+| GET | `/api/v1/config/export?format=yaml\|json` | 是 | — | 附件下载（导出为**脱敏**版，避免泄露到剪贴板/日志） |
 | GET | `/api/v1/status` | 是 | — | 见 §9.1 |
 | GET | `/api/v1/runs?limit=50` | 是 | — | `{"runs":[RunRecord...]}` |
 | GET | `/api/v1/runs/{id}` | 是 | — | `{"run":RunRecord}` |
@@ -496,7 +507,7 @@ Go 侧注意：`json.Marshal` 对 `float64` 用最短往返表示（与 Python `
   - **自绘地图引擎**（无第三方库）：Web 墨卡托投影、瓦片增量复用（拖动只改 `transform`，不重建 DOM，否则每帧闪）、指针拖动、滚轮锚点缩放、方向键 ±60 px 平移、`+/-` 缩放、点击落点、「用中心」精确微调；缩放 5–18 级（高德瓦片到 18 级为止）。
   - **坐标系**：高德图层原生 GCJ-02；连续 4 张瓦片失败自动切 OpenStreetMap（WGS-84），切图层时中心与已选点一起换算（`gcjToWgs` 用「减偏移量迭代两次」求逆），状态行标注「已从 WGS-84 换算」，回填前再用 app.js 注入的 `wgs84ToGcj02` 换回 GCJ-02。
   - **粘贴解析**：`经度,纬度`、`position=lng,lat`、`lng=/lat=`、高德 App「分享 → 复制链接」整段地址；写反成「纬度,经度」也能识别。
-  - **上报地点文字（格式同智汇福大）**：`旗山校区 福建省福州市闽侯县学府南路辅路28号靠近福州大学旗山校区生活区X号楼`，即「校区 + 详细地址 + 靠近 + 最近 POI」。三条来源按优先级：① 用户自己填的**高德 Web 服务 key** → 落点即 `restapi.amap.com/v3/geocode/regeo`（`extensions=all`，取 `formatted_address` + `pois[0]/aois[0]` 拼「靠近…」）；② 粘贴链接里的 `name=`；③ **点位记忆**（localStorage，按 4 位小数≈11 米取键，封顶 200 条）——没 key 的用户手写一次即可自动带出。key 只在 `localStorage`，不进配置、不随导出；只有落点变化且配了 key 才发请求（450 ms 防抖 + 请求序号防迟到覆盖），失败只影响文字、不影响坐标回填。
+  - **上报地点文字（校区 + 详细地址 + 靠近 POI）**：`旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼`，即「旗山校区 + 空格 + 省市区县路号 + 靠近 + POI 全称」（规则、反例与三端实现见 [address-format.md](address-format.md)，归一函数是 `model.NormalizeActualLocation`）。三条来源按优先级：① 用户自己填的**高德 Web 服务 key** → 落点即 `restapi.amap.com/v3/geocode/regeo`（`extensions=all`，取 `formatted_address` 与 `pois[0]/aois[0]` 拼「靠近…」；若 POI 已经写在前半段里，则合并成一句而不是重复一遍）；② 粘贴链接里的 `name=`；③ **点位记忆**（localStorage，按 4 位小数≈11 米取键，封顶 200 条）——没 key 的用户手写一次即可自动带出。key 只在 `localStorage`，不进配置、不随导出；只有落点变化且配了 key 才发请求（450 ms 防抖 + 请求序号防迟到覆盖），失败只影响文字、不影响坐标回填。
   - **回填语义**：6 位小数、补发冒泡 `input`（行内校验 / 位置池提示 / 徽标同步）、不自动保存；位置池的按钮只改它那一行。空输入打开时**不许**落到 `(0,0)`（`Number('') === 0` 是最容易踩的坑），此时不预置图钉、确认时明确报「还没选点」。
 - **体验**：暗色为默认（跟随 `prefers-color-scheme`），键盘可达（所有交互 `button`/`label`），`aria-live="polite"` 播报运行结果与定位结果，无外部字体/CDN（离线可用）。
 - **错误呈现**：`error.details[]` 逐条列出，附「怎么改」文本（与后端 §6.2 同源）。
@@ -596,7 +607,9 @@ go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
 - [x] 假上游下六种 `status` 全部可达（success/already_checked/no_plan/out_of_range/vacation/error）
 - [x] SSE 实时日志在浏览器可见，断线自动重连（`logs-conn` 显示「已连接」，快照+增量）
 - [x] 未登录 401、无 CSRF 头 403、5 次错密 429（`Retry-After`）
-- [x] 配置 GET 按明文回显凭据（浏览器断言配置页密码框为 `type=text` 且值等于真实密码），导出仍是脱敏版
+- [x] 配置 GET 只回哨兵（断言响应里没有任何明文凭据、`masked_fields` 标出已配置项）；真实值走 `POST /config/reveal` 二次校验管理密码，一次一项、失败 429；导出仍是脱敏版
+- [x] `config.json` 与 `.bak` 落盘无明文（`enc:v1:` 密文），换钥后服务仍能启动、凭据清空并留 error 日志
+- [x] 改密码 / 退出登录后其它设备的旧 Cookie 立刻 401，本机由响应里的新 Cookie 续上
 - [x] 进程空闲 RSS 10.6 MB（≤30 MB），二进制 6.28 MB（≤12 MB）
 - [x] `SIGINT` 优雅退出，退出期间进行中的运行可完成（`TestRunGracefulShutdown` + 60s 兜底）
 - [x] 浏览器（Chrome 157.0.8103.78 · CDP:9225）四视图走查 + 8 张截图存档（28 项断言全过）
@@ -633,3 +646,115 @@ go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
 | verify-agent | `zz_review_test.go` ×2 | 26 个对抗性测试函数、41 叶子用例、8 条缺陷（含 1 条 P0） |
 
 
+
+---
+
+## 21. v1.4.0 增补（2026-11-18）：一键启停、凭据可空、二次认证不再谎报
+
+### 21.1 `POST /api/v1/control` 与 `state.paused`
+
+| 项 | 约定 |
+|---|---|
+| 请求 | `{"paused": true|false}`；缺字段 / 类型错 / 非法 JSON → `400 bad_request` |
+| 响应 | `{"paused":bool,"scheduler":{"enabled","stopped","paused","running_now","last_decision"}}` |
+| 存储 | `state.json` 的 `paused`（**不放 config**：配置页整份回写会拿旧快照盖掉它） |
+| 调度 | paused 分支排在状态机最前：不做启动补跑、不做窗口内复查、不做失败重试；阻塞在唯一阻塞点 `pauseUntil` 等 `s.wake`，进入/恢复各只打一条 INFO |
+| 不受影响 | `POST /runs`（手动补签）、`POST /login/test`、`POST /login/refresh` |
+| 前端 | 仪表盘 `#btn-auto-switch`（`role="switch"`），读 `/status.scheduler.paused`；请求期间禁用按钮、失败回滚并提示 |
+
+### 21.2 凭据允许全空
+
+`config.Validate` 不再把「token / cookie / 学号+密码 三选一」当硬错误——那等于"没填密码就存不下配置"，连坐标都改不了。
+现在改为：`Normalize` 产出一条警告（`config.CredentialWarning`，`GET /config` 的 `warnings` 也会带上），运行期 `flowRun` 把它定性成 `skipped`（不换 token、不打上游、不写 `last_success_date`、不推送），调度器记 `last_decision=no_credentials` 并睡到下一个窗口起点。坐标缺失仍是硬错误。
+
+### 21.3 校外 IP 的短信二次认证 = 独立语义，不是"结构变化"
+
+2026-11-18 线上事故复盘（证据来自 `journalctl -u fzucheckin` 与两次手工复现）：
+
+- 用真实学号密码在**阿里云 IP** 上 POST `https://sso.fzu.edu.cn/login?service=…` → `200`，返回的是一张二次认证页：
+  `#sso-second=true`、`#second-auth-tip=您正在使用非校内ip登录，请进行手机验证…`、`#phone-number`、`#second-auth-user-id=<学号>`。
+  学号出现在页面上恰好证明**账号密码是对的**，缺的只有手机验证码。
+- 同一份凭据在**家庭宽带 IP** 上一次成功；同一份已认证的会话 Cookie 从机房 IP 请求登录页，返回的仍是这张二次认证页 → 密码通道与 Cookie 通道**都会被拦**。
+- 同一份有效 token 从机房 IP 打 `init.action` 是 `200 success` → 晚点名 H5 接口不限校外 IP，只有 SSO 发票这一步被卡。
+
+因此：
+
+| 层 | 行为 |
+|---|---|
+| `fzu.ErrSecondAuth` / `SecondAuthError{Tip, Phone, UserID}` | 判据只看 `#sso-second=="true"` 或 `#second-auth-tip` 非空，200/401 都判；手机号打码（保 3+4，短号整体 `****`）；`Unwrap()` 让 `errors.Is/As` 穿包装 |
+| `fzu.LoginAt` / `attemptCookieLogin` | 拿到页面**先判**二次认证（早于 `#login-croypto` 缺失与 `loginErrorHint`），返回同一哨兵 |
+| `loginErrorHint` | 兜底不再写「登录页结构可能已变化」：按事实给状态码 + 字节数 + 标题 + 正文开头（凭据字样脱敏），401 单独说"密码被拒或被风控拦截" |
+| `internal/server` | `POST /login/test`、`/login/refresh` 命中哨兵 → **409** + `reason=second_auth` + `second_auth{phone,tip}` + 三条人工路径；`mintToken` 合并 cookie 与密码两条通道的失败原因 |
+| `flowRun` | `rec.Error` 同时带上「token 不被接受」与「换新为什么失败」；二次认证那条压短，保证 `maxErrorTextLen` 截断后仍留得住"要短信验证"这句 |
+
+**设计取舍**：不实现自动短信验证。取证的 `type=smsLogin&_eventId=submit&execution=<flowkey>&smsCode=…` 只回 `401` + 同一张页，字段形状无法确证；继续试是拿学校风控记账，且"服务替人收验证码"等于把用户手机号绑到进程上。对外只提供三条人工路径（浏览器取 token / 校内网跑 / Cookie——后者仅校内网成立）。
+
+> 2026-11-18 深夜补充：上面这条"不实现自动短信验证"已被推翻——把学校前端拆完之后，三个接口的形状都拿到了（见 §21.4）。**"替人收验证码"仍然不做**：服务只替人"提交"那 6 位数字，码永远只到用户手机上。
+
+### 21.4 v1.4.1：把「短信二次验证」搬进面板
+
+学校那套二次认证是标准 CAS + 金智 SSO 的实现，三个接口全部照着实测响应复刻（`internal/fzu/sms.go`）：
+
+| 步骤 | 请求 | 关键点 |
+|---|---|---|
+| 发起 | `POST /login`（`type=UsernamePassword`，`password=AES-ECB(croypto)`） | 校外 IP 返回二次认证页：`#sso-second=true`、`#phone-number`、`#login-page-flowkey`（换了一把新的） |
+| 发码 | `POST /api/protected/sms/publicNoToken/sendSmsCode` `{phone, businessNo:"0008"}` | 必须先过 CSRF 双提交头，否则回 `401 Unauthorized / Invalid request`；成功回 `{result:true, sendInterval:120, expireTime:300}` |
+| 校验 | `POST /api/protected/sms/checkTokenResult` `{phone, token, delete:false}` | 错/过期 = `412 + errorCode 1320009`；没绑手机 = `1320010`；太频繁 = `412 + 8000068`（`errorMessage` 里带 `remaining` 秒） |
+| 换票 | `GET /login?service=…` 或 `POST /login`（`type=smsLogin&username=<手机号>&password=<验证码>&execution=<flowkey>`） | **验证码的字段名是 `password`**，`smsCode` 只是前端模板引用名；`execution` 必须是二次认证页那一把 |
+
+服务端 API（都要登录态 + `X-Requested-With: fzu-web`）：
+
+```
+POST /api/v1/login/sms/start   {}                → {challenge, phone, tip, expires_in, resend_after, sent}
+POST /api/v1/login/sms/resend  {challenge}       → {resend_after, expires_in}｜429｜410
+POST /api/v1/login/sms/verify  {challenge, code} → {token_hint, school_ok, plan}｜400 code_rejected(attempts_left)｜410
+POST /api/v1/login/sms/cancel  {challenge}       → {ok:true}
+```
+
+工程约定：
+
+- challenge 是**进程内**句柄（10 分钟 TTL、最多 5 条、成功即删、错 5 次即删）。它握着一条活的 CAS 会话（cookie jar + flowkey），落盘或跨实例迁移都会让学校侧认不出这条会话。
+- 日志/响应/推送里只出现打码手机号（`152****1543`）、challenge 前 8 位与 `maskSecret(token)`；验证码与 flowkey 一律不进任何输出。
+- **init 没过也照样落盘**（与本轮之前的 `/login/refresh` 不同）：这条 token 是用户等了一条短信换来的，上游一时 500 不代表 token 无效；面板显式回 `school_ok:false` 并附 init 原话。
+- 409 的文案同步改成「点面板上的发送验证码」——不能再让用户去开 DevTools。
+- 换票的收尾写了两种（会话已认证则直接 GET 发票；否则提交 smsLogin 表单，username 先手机号再学号），因为没拿到过真实验证码，无法把收尾收敛到一条。失败时错误里带每次尝试的 HTTP 码与"页面是否还是二次认证页"，便于下一轮定位。
+- **2026-11-18 22:28 真机跑通整条链路**（阿里云 IP、真实账号）：`start`（发码）→ `verify`（用户把手机上的 6 位数字交给面板）→ 换到 token → `init` 通过 → 落盘 → 面板回 `school_ok:true`。这一步证明了"二次认证页 → 发码 → 校验 → 换票"在机房 IP 上确实走得通，不需要人工去浏览器。
+
+### 21.5 v1.4.2 / v1.4.3：学校限流这件事，最后是"别去撞"而不是"重试"
+
+真机连测把学校的发码节流摸清了（同一台手机）：
+
+```
+22:23:10  发送成功（第 1 条）
+22:23:25  ✗ 13001016
+22:24:05  ✗ 13001016
+22:25:35  ✗ 13001016
+22:27:06  ✗ 13001016
+22:28:36  ✓ 发送成功（第 2 条）
+```
+
+两个结论，都写进了代码：
+
+1. **学校回的 `sendInterval`（120 秒）不是真实冷却**：真实放行间隔在 4~5 分钟。v1.4.3 起按 `smsSendCooldown = 5 分钟`（按手机号、跨 challenge 记账）自己拦一道，`resend_after` 与提示文案都以它为准——否则用户会在第 2 分钟点一次、被学校拒一次，然后认定功能坏了。
+2. **失败的两种形状都要认**：`{"code":412,"message":"13001016"}`（码在 `message`）与 `{"code":412,"data":{"errorCode":60008}}`（码在 `data`）。v1.4.2 之前只认后者，于是 13001016 退化成了"发验证码失败（code=412）：13001016"——就是用户报的那个 bug。
+
+配套的省额度措施（v1.4.2 起）：
+
+- 同一台手机已有**活着的一条 challenge** 时，`start` 直接复用（`reused:true, sent:false` + "上一条还能用"），不再打学校；
+- 冷却期内即使没有可复用的 challenge，也直接回 429 并说清还要等多久，**一次都不请求学校**（打了也只会被拒，还多记一次风控）；
+- 发码失败不记账（不占冷却），避免用户被自己的失败次数锁死。
+
+### 21.6 v1.5.0/1.5.1：不再让用户点「发送验证码」，配置也不再有版本号
+
+| 变更 | 做法 |
+|---|---|
+| 409 当场发码 | `writeSecondAuth` 变成 `*Server` 的方法：命中二次认证后直接调 `beginSecondAuth(本次尝试的学号密码)`，把 `challenge / sent / resend_after / expires_in` 塞进 409 的 body；发不出去就只填 `sms_error`，**409 的状态码与 `reason` 不变** |
+| 凭据取哪一份 | 用「这次真正尝试的那组」而不是配置里那份（表单里临时测另一个账号时，发码不会跑到别人的手机上）；只有 Cookie 的路径回落到配置，并在缺学号密码时不发码、`sms_error` 讲清原因 |
+| 前端只填数字 | 409 且 `challenge` 非空 → 面板自动展开、焦点进验证码框；输入满 6 位 **250ms 防抖 + 单飞**自动调 `/sms/verify`；400 清空重填并显示剩余次数；200 收起并刷新配置/仪表盘 |
+| 只有 Cookie / 发码失败 | `challenge` 为空 → 不弹框，只显示 `sms_error` 与两条备用路（认证页 Cookie / 免登 token） |
+| 配置不记版本 | `model.Config` 去掉 `Version` 字段，`config.json` 永远没有 `version`；内部计数只留在 `state.json.config_version`（`GET /status` 仍回，供排障，面板不再显示"配置版本 vN"）；`PUT /config` 响应不再带 `version`。读到旧文件里的 `version` 会当成未知键忽略，并把它的值当作内部计数的起点（不会丢历史连续性） |
+
+顺带修掉的两处：
+
+- `login_refresh` 的响应与日志里残留的 `version` 字段/文案删净；
+- 学校拒发短信时（`13001016` / `60008` / `10000001`，以及任何 412）统一给"学校拒绝了发码 + 还能做什么"，不再把 `code=412：10000001` 这种半截原文丢给用户。

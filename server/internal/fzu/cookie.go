@@ -349,6 +349,14 @@ func attemptCookieLogin(loginURL, service, cookieHeader string, res *CookieLogin
 		return "", err
 	}
 
+	// 校外/机房 IP 上，CAS 对"密码登录"和"已登录会话"一视同仁地先要短信验证：
+	// 现场取证到的 200 页面里 sso-second=true + second-auth-tip，且没有 isRedirect。
+	// 必须先判掉，否则下面会落到「Cookie 是登录态（用户 X），但服务端没有自动跳转」
+	// ——那句会让人以为 Cookie 没问题、是流程问题，正好把真实原因藏起来。
+	if sa, ok := secondAuthFrom(page); ok {
+		return "", fmt.Errorf("%w（会话 Cookie 通道同样被要求短信验证）", sa)
+	}
+
 	if status == http.StatusOK {
 		// 页面里若有 isRedirect=true 的登录方式，说明服务端认得这个会话，
 		// 只是等前端跳一次 /clientredirect。
@@ -366,8 +374,13 @@ func attemptCookieLogin(loginURL, service, cookieHeader string, res *CookieLogin
 			if err2 != nil && !errors.Is(err2, errTooManyRedirects) {
 				return "", err2
 			}
-			if status2 == http.StatusOK && loginPageRe.Match(page2) {
-				return "", fmt.Errorf("%w（clientredirect 仍返回登录页）", errCookieNotLoggedIn)
+			if status2 == http.StatusOK {
+				if sa, ok := secondAuthFrom(page2); ok {
+					return "", fmt.Errorf("%w（clientredirect 也停在二次认证页）", sa)
+				}
+				if loginPageRe.Match(page2) {
+					return "", fmt.Errorf("%w（clientredirect 仍返回登录页）", errCookieNotLoggedIn)
+				}
 			}
 			return "", fmt.Errorf("clientredirect(%s) 没有换到 token（HTTP %d），统一身份认证的跳转流程可能已变化", code, status2)
 		}

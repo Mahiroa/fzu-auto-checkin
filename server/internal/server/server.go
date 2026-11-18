@@ -36,6 +36,21 @@ import (
 
 // Version 是服务版本号，/health 与 /status 都会带出去。
 //
+// 1.6.2：安全加固一轮（口径见 docs/go-service-design.md §8）。
+//
+//	① GET /config 重新只回哨兵（1.3.3 那次改明文是为了"能核对"，代价是凭据进了浏览器
+//	   的每次请求）；真实值走 POST /config/reveal —— 要再输一次管理密码，一次一项，
+//	   失败按独立计数器限速；
+//	② PBKDF2 迭代 12 万 → 60 万，登录成功时把老哈希顺手续上（不踢下线）；
+//	③ 新增 POST /auth/password（要当前密码，成功后所有会话作废）；
+//	④ 会话载荷加代次 sv：改密码/退出登录即让所有旧 Cookie 失效，泄漏的 Cookie 不再
+//	   有 7 天有效期；
+//	⑤ config.json 与 config.json.bak 里的敏感字段改为 AES-256-GCM 密文（enc:v1:，
+//	   密钥由 secret.key 带标签派生），内存里仍是明文，上层无感；
+//	⑥ 数据目录权限真收紧（Windows 走 icacls 两步 + 自检），nginx 模板补 HSTS 与
+//	   登录类接口的 limit_req；
+//	⑦ logf 自己做第二道脱敏（补上此前漏掉的 Cookie），不再只依赖每个调用点自律。
+//
 // 1.3.4：管理界面整版重做（新配色/排版/响应式，外观切换、手机顶部条与表格重排），
 // 文案按"说事实和代价"重写；两张独立静态页（configurator / promo）同批重做。
 // 后端行为与 1.3.3 一致，没有接口与调度变更。
@@ -43,7 +58,39 @@ import (
 // 1.3.3：check.action 的 range 改为转发 FPosition 对象串（学校端 2026-11-17 起
 // 拒收摊平后的多边形数组，回「打卡地点校验发生异常」）；配置页凭据框改明文，
 // GET /config 回真实值，导出仍脱敏。
-const Version = "1.3.4"
+//
+// 1.4.0：① 面板一键启停自动签到（POST /control + state.paused）；② 学号/密码/token
+// 允许全空保存（缺凭据从"存不下"变成"不会签到"）；③ 校外 IP 的短信二次认证被单独
+// 识别成 ErrSecondAuth 并回 409，不再谎称"登录页结构可能已变化"。
+//
+// 1.5.0：① 用学号密码登录被判"要短信验证"时**当场自动发码**，用户只填 6 位数字（前端
+// 填满自动提交、验证通过自动落盘）；② 配置不再记录版本号（config.json 里没有 version，
+// 面板也不再显示"配置版本 vN"），内部计数只留在 state.json。
+//
+// 1.4.3：发码冷却按**实测**的 5 分钟算（学校的 sendInterval 只写 120s，实测要到 4~5 分钟
+// 才放行），并按手机号跨 challenge 记账——连点发送不会再撞学校的 13001016。
+//
+// 1.4.2：学校拒发短信时不再报"未知失败"（13001016 与 60008 都按限额处理），
+// 并且同号重复点「发送验证码」会复用还活着的那条，不再白烧一天的短信额度。
+//
+// 1.4.1：把「校外 IP 短信二次验证」搬进面板（/login/sms/{start,resend,verify,cancel}）。
+// 学校那套发码/校验接口的 CSRF 头、验证码字段名（是 password 不是 smsCode）
+// 都是照着实测响应复刻的，见 internal/fzu/sms.go 顶部注释。
+// 1.6.3：修覆盖层叠放次序。四层面层共用 z-index 40，次序由 DOM 顺序决定，而
+// 「显示凭据」写在「登录弹窗」前面 —— 在弹窗里点眼睛打开它，会被弹窗压住。
+// 现在由 showOverlay() 在每次真正打开时把节点挪到 body 末尾，"后打开的永远在上面"；
+// 已经是打开状态就不再挪，避免把正在操作的层又压到下面。
+//
+// 1.6.4：上报地点文案（actualLocation）按学校 H5 的形态收口——「旗山校区 + 空格 +
+// 省市区县路号 + 靠近 + POI 全称」，示例 `旗山校区 福建省福州市闽侯县学府南路辅路
+// 28号靠近福州大学旗山校区生活区X号楼`。新增 model.NormalizeActualLocation，配置
+// 保存/导入、签到解析、地图选点三处共用同一套规则（空白折叠、补校标、同一处被写了
+// 两遍才合并「靠近」、相邻重复段折叠；幂等）；示例与文档同步，见 docs/address-format.md。
+//
+// 1.6.5：文档与界面里的示例统一改成 `生活区X号楼` 占位（宿舍楼属于个人信息，只该待在
+// 本机 config.yaml 里）；密钥扫描补 prefilter（dist/、*.exe、.shots/）与两条同形表达式
+// 的 filter，并把树里的探针文件换成 scripts/secret-scan-selftest.ps1。
+const Version = "1.6.5"
 
 // dateLayout 是 state.json / DayPlan 里日期的唯一写法。
 const dateLayout = "2006-01-02"
@@ -88,8 +135,11 @@ type Server struct {
 	now    func() time.Time
 	signer secure.Signer
 	hub    *sseHub
-	limits *loginLimiter
-	static fs.FS
+	// limits 管登录/改密码的失败计数；revealLimits 管「显示凭据」的失败计数。
+	// 两者独立：在配置页手滑输错管理密码，不该顺手把登录也锁 15 分钟。
+	limits       *loginLimiter
+	revealLimits *loginLimiter
+	static       fs.FS
 
 	clientFactory  func(token string) *fzu.Client
 	ssoLogin       func(user, pass string) (string, error)
@@ -193,6 +243,7 @@ func New(deps Deps) (*Server, error) {
 		signer:            secure.Signer{Key: key},
 		hub:               newSSEHub(maxSSEClients),
 		limits:            newLoginLimiter(loginWindow, loginMaxFailures, now),
+		revealLimits:      newLoginLimiter(loginWindow, loginMaxFailures, now),
 		static:            staticFS,
 		clientFactory:     factory,
 		ssoLogin:          sso,
@@ -380,14 +431,16 @@ func levelOf(name string) logLevel {
 
 // logf 写一条日志：内存环（/logs 与 SSE 的数据源）+ stdout。
 //
-// 调用方负责保证 message 里没有 token/密码/推送 key（见 sanitizeError）；
-// 这个函数不做二次脱敏——它拿不到配置，也就不该假装自己能判断什么算敏感。
+// 这里做**第二道**脱敏：调用方本来就应该在把上游原文塞进日志前走 sanitizeError，
+// 但把"每个调用点都记得"当成唯一防线太脆——漏一处，密码就跟着 SSE 推到浏览器、
+// 跟着 runs.jsonl 落盘、跟着推送发到手机上。日志是最后一道能集中设防的关口，
+// 所以它自己再抹一遍已知凭据，代价只是每条日志克隆一次小配置。
 func (s *Server) logf(level, runID, format string, args ...any) {
 	level = strings.ToLower(strings.TrimSpace(level))
 	if level == "" {
 		level = "info"
 	}
-	msg := fmt.Sprintf(format, args...)
+	msg := redactSecrets(fmt.Sprintf(format, args...), s.store.Config())
 	ev := model.LogEvent{TS: s.now(), Level: level, RunID: runID, Msg: msg}
 	s.store.AppendLog(ev)
 	s.hub.broadcast(eventLog, ev)
@@ -430,6 +483,20 @@ func (s *Server) schedulerStopped() bool {
 }
 
 func (s *Server) schedulerEnabled() bool { return !s.schedulerDisabled }
+
+// schedulerSnapshot 汇总 /status 与 /control 都要的调度器状态。
+//
+// paused 每次都重读 state 而不是从内存标志位取：暂停是**落盘**的事实，重启后
+// 调度器一启动就该是暂停态（见 runScheduler 的启动补跑守卫），内存标志位做不到这一点。
+func (s *Server) schedulerSnapshot() statusScheduler {
+	return statusScheduler{
+		Enabled:      s.schedulerEnabled(),
+		Stopped:      s.schedulerStopped(),
+		Paused:       s.store.State().Paused,
+		RunningNow:   s.running.Load(),
+		LastDecision: s.lastDecisionValue(),
+	}
+}
 
 // tryBeginRun 抢占单飞开关。手动触发与调度器共用：两个入口都"看见空闲才进"，
 // 所以同一时刻最多只有一次打卡——重复打卡在上游看来就是脚本行为。

@@ -196,7 +196,8 @@ button {
   -webkit-appearance: none;
   outline: 2px solid transparent;
   outline-offset: 2px;
-  transition: background-color .14s, border-color .14s, color .14s, box-shadow .14s;
+  /* transform 也进过渡：按下时那 1px 的下沉要走完，不能"啪"地跳 */
+  transition: background-color .14s, border-color .14s, color .14s, box-shadow .16s, transform .12s var(--ease-out);
 }
 button:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--fg) 7%, var(--surface-2));
@@ -709,6 +710,15 @@ tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover td { background: color-mix(in srgb, var(--fg) 3%, transparent); }
 td .chip { font-size: 11.5px; padding: 2px 8px; }
 
+/* 自动签到总开关：button 就是滑轨，圆点用 ::after，状态只看 aria-checked */
+.power { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 12px; margin-bottom: 10px; border: 1px solid var(--line-2); border-radius: var(--r-ctrl); }
+.power-state { margin: 0; font-size: 13px; color: var(--warn); }
+.power:has([aria-checked="true"]) .power-state { color: var(--ok); }
+button.switch { flex: 0 0 auto; justify-content: flex-start; width: 54px; height: 30px; min-height: 30px; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--fg-3) 38%, var(--surface-2)); }
+button.switch::after { content: ""; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); transition: transform .22s var(--ease-spring); }
+button.switch[aria-checked="true"] { background: var(--ok); border-color: var(--ok); }
+button.switch[aria-checked="true"]::after { transform: translateX(22px); }
+
 /* 8 徽标 */
 .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 
@@ -845,6 +855,10 @@ td .chip { font-size: 11.5px; padding: 2px 8px; }
 .ri-err { color: var(--err); }
 
 /* ---------- 11. 覆盖层（抽屉 / 弹窗 / toast） ---------- */
+/* 四层覆盖层共用同一个 z-index：叠放次序由 DOM 顺序决定，"后打开的压在上面"。
+   app.js 的 showOverlay() 在每次真正打开时把节点挪到 body 末尾，所以这里不能给
+   某层单独抬高 z-index —— 那会让"后开的"反而被压住（弹窗里的眼睛打开显示凭据时
+   就是这条踩过的坑）。toast 例外：它要在所有面层之上。 */
 .drawer {
   position: fixed;
   inset: 0;
@@ -1012,6 +1026,65 @@ svg.ico { width: 16px; height: 16px; flex: 0 0 auto; fill: currentColor; }
 .login-test-line { flex: 1 1 100%; margin: 0; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .login-test-line.ok { color: var(--ok); }
 .login-test-line.err { color: var(--err); }
+
+/* 短信验证（机房/校外 IP 的二次验证）：状态行放在容器外层，
+   这样「收起面板」之后那句「验证通过 · 免登凭证 xxx」还看得见。 */
+.sms-box {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-radius: var(--r-ctrl);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+.sms-head { margin: 0 0 8px; font-size: 12.5px; color: var(--fg-2); }
+.sms-head strong { color: var(--fg); letter-spacing: .08em; font-weight: 600; }
+.sms-box .hint { margin: 0 0 8px; }
+.sms-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sms-row input { flex: 0 1 190px; text-align: center; letter-spacing: .3em; font-size: 15px; }
+.sms-row input::placeholder { letter-spacing: normal; }
+.sms-status {
+  margin: 0;
+  min-width: 0;
+  color: var(--fg-2);
+  font-size: 12.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sms-status:empty { display: none; }
+.sms-status.ok { color: var(--ok); }
+.sms-status.err { color: var(--err); }
+#btn-sms-start { flex: 0 0 auto; }
+
+/* 凭据显隐：眼睛按钮跟「清空」并排；明文时眼上多一道斜杠 */
+button.peek { color: var(--fg-2); text-decoration: none; }
+button.peek svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+button.peek .eye-slash { opacity: 0; }
+button.peek[aria-pressed="true"] { color: var(--accent); }
+button.peek[aria-pressed="true"] .eye-slash { opacity: 1; }
+
+/* 登录弹窗：学号密码与短信码都在弹窗里，配置页只留一行摘要。
+   弹窗里用 grid + gap 排布，因此把字段自带的 margin 清掉，避免间距翻倍。 */
+.lg-panel { width: min(480px, 100%); }
+.lg-body { display: grid; gap: 12px; }
+.lg-body .field, .lg-body .test-row, .lg-body .sms-box, .lg-body .hint { margin: 0; }
+.lg-body .sms-row input { flex: 1 1 120px; }
+
+.account-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-ctrl);
+  background: var(--surface-2);
+}
+.account-label { font-size: 12.5px; color: var(--fg-2); }
+.account-summary { flex: 1 1 auto; min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.account-summary.miss { color: var(--fg-3); }
+.account-line button { flex: 0 0 auto; }
 
 /* ---------- 14. 地图选点弹窗（逻辑在 map-picker.js，按需加载） ---------- */
 .mp-panel { width: min(900px, 100%); }
@@ -1245,6 +1318,73 @@ svg.ico { width: 16px; height: 16px; flex: 0 0 auto; fill: currentColor; }
   /* 最小屏把「跟随系统」让出来：外观本来就默认跟随系统，手机上手动切的收益最低，
      而这 66px 正好是第 4 个导航入口（历史）能不能一屏看见的距离 */
   .sidebar-foot .theme-btn { display: none; }
+}
+
+/* ---------- 12. 动效层（v1.6.2） ---------- */
+/* 三条纪律：只在"状态真的变了"的地方动（换视图、开面层、出结果、按下按钮）；
+   位移 ≤ 10px、时长 ≤ 420ms、绝不触发重排；全部靠 class/属性切换触发，
+   不写内联样式（CSP 与「文档里不出现 [style]」的门禁都不允许）。
+   文件末尾的 prefers-reduced-motion 一开，这一层整块失效。 */
+
+@keyframes fx-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fx-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fx-reveal { from { opacity: .001; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fx-pop { from { opacity: 0; transform: scale(.78); } to { opacity: 1; transform: none; } }
+@keyframes fx-sheet { from { opacity: 0; transform: translateY(12px) scale(.975); } to { opacity: 1; transform: none; } }
+@keyframes fx-toast { from { opacity: 0; transform: translateX(16px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes fx-urgent { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+
+:root {
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+}
+
+html { scroll-behavior: smooth; }
+::selection { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+
+/* 换视图：整段淡入，视图头先落位。卡片不再逐个排队——那是幻灯片，不是界面 */
+.view:not([hidden]) { animation: fx-fade .26s var(--ease-out) both; }
+.view:not([hidden]) > .view-head { animation: fx-rise .34s var(--ease-out) both; }
+
+/* 面层：遮罩淡入 + 面板弹起。hidden 一去掉动画自己就重跑，不需要 JS 配合 */
+.drawer:not([hidden]) { animation: fx-fade .18s ease-out both; }
+.drawer:not([hidden]) > .drawer-panel { animation: fx-sheet .3s var(--ease-spring) both; }
+@supports (backdrop-filter: blur(2px)) {
+  .drawer { -webkit-backdrop-filter: blur(2px) saturate(1.05); backdrop-filter: blur(2px) saturate(1.05); }
+}
+
+/* 徽标 / toast / 列表项：出现时给一个很短促的"弹"，只为确认"它来了" */
+.badge:not([hidden]) { animation: fx-pop .24s var(--ease-spring) both; }
+.toast { animation: fx-toast .26s var(--ease-out) both; }
+.timeline > li, .run-item, .logs > .log { animation: fx-rise .24s var(--ease-out) both; }
+
+/* 长页面的卡片：随滚动进视口时往上冒一点（滚动时间轴，纯 CSS）。
+   不支持的浏览器整块跳过，卡片照旧可见——这里只做加法，不做前置条件。 */
+@supports (animation-timeline: view()) {
+  .view > .card, .view > .cols, #form-config > .card {
+    animation: fx-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 4% entry 68%;
+  }
+}
+
+/* 悬停：卡片只亮描边、不抬阴影（动阴影会抖）；chip 换状态时颜色渐变 */
+@media (hover: hover) {
+  .card { transition: border-color .18s, background-color .18s; }
+  .card:hover { border-color: color-mix(in srgb, var(--fg) 18%, var(--line)); }
+}
+.chip, .kv > div { transition: background-color .18s, border-color .18s, color .18s; }
+td { transition: background-color .14s; }
+
+/* 按下：1px 下沉。手感来自这个位移，不来自阴影 */
+button:active:not(:disabled) { transform: translateY(1px); }
+
+/* 倒计时进最后一分钟：呼吸式明暗，不跳色、不缩放 */
+.big.is-urgent { color: var(--warn); animation: fx-urgent 2.4s ease-in-out infinite; }
+
+/* 焦点环淡入 */
+input:focus-visible, select:focus-visible, textarea:focus-visible, .nav-btn:focus-visible {
+  transition: box-shadow .16s, border-color .16s;
 }
 
 /* 用户要求减少动效时全关：过渡、转圈、平滑滚动都不留 */

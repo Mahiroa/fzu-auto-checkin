@@ -36,17 +36,29 @@ func (s *Server) routes(mux *http.ServeMux) {
 
 	// 需要登录
 	mux.HandleFunc("POST "+apiPrefix+"/auth/logout", s.handleAuthLogout)
+	// 改管理密码：要再输一次当前密码，成功后所有会话作废（见 auth.go）。
+	mux.HandleFunc("POST "+apiPrefix+"/auth/password", s.handleAuthChangePassword)
 	mux.HandleFunc("GET "+apiPrefix+"/config", s.handleConfigGet)
 	mux.HandleFunc("PUT "+apiPrefix+"/config", s.handleConfigPut)
 	mux.HandleFunc("POST "+apiPrefix+"/config/import-yaml", s.handleConfigImportYAML)
 	mux.HandleFunc("GET "+apiPrefix+"/config/export", s.handleConfigExport)
+	// 按需显示一项真实凭据：要再输一次管理密码，一次只回一项（见 handlers.go）。
+	mux.HandleFunc("POST "+apiPrefix+"/config/reveal", s.handleConfigReveal)
 	mux.HandleFunc("GET "+apiPrefix+"/status", s.handleStatus)
+	// 首页「自动签到」开关：只改调度器的暂停状态，不动配置（见 model.State.Paused）。
+	mux.HandleFunc("POST "+apiPrefix+"/control", s.handleControl)
 	mux.HandleFunc("GET "+apiPrefix+"/runs", s.handleRuns)
 	mux.HandleFunc("POST "+apiPrefix+"/runs", s.handleRunStart)
 	mux.HandleFunc("GET "+apiPrefix+"/runs/{id}", s.handleRunByID)
 	mux.HandleFunc("POST "+apiPrefix+"/notify/test", s.handleNotifyTest)
 	mux.HandleFunc("POST "+apiPrefix+"/login/test", s.handleLoginTest)
 	mux.HandleFunc("POST "+apiPrefix+"/login/refresh", s.handleLoginRefresh)
+	// 面板内的短信二次认证（校外 IP 上唯一能自动走完的那条登录路）。
+	// 四条都过 guardMW：登录态 + X-Requested-With 双提交头，与其它写接口一致。
+	mux.HandleFunc("POST "+apiPrefix+"/login/sms/start", s.handleSMSStart)
+	mux.HandleFunc("POST "+apiPrefix+"/login/sms/resend", s.handleSMSResend)
+	mux.HandleFunc("POST "+apiPrefix+"/login/sms/verify", s.handleSMSVerify)
+	mux.HandleFunc("POST "+apiPrefix+"/login/sms/cancel", s.handleSMSCancel)
 	mux.HandleFunc("GET "+apiPrefix+"/logs", s.handleLogs)
 	mux.HandleFunc("GET "+apiPrefix+"/logs/stream", s.handleLogStream)
 

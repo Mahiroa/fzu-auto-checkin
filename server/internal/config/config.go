@@ -2,9 +2,12 @@
 //
 // 贯穿全包的一条原则是「能修的就地修，修不了才报错」，这是从 Python 版继承下来的
 // 风格：签到是每晚一次的窗口任务，配置里一个手滑（时刻没加引号、坐标写成
-// "119.2046O"）如果在 21:35 那一刻才炸，代价就是一整晚漏签。所以除"没有凭据 /
-// 没有坐标"这种必然失败的情形外，其余一律降级成默认值 + 警告，旧配置照样能跑。
-// 而必失败的那两种，报错文本必须能直接照抄改好 —— 用户不该为了改一个坐标去读源码。
+// "119.2046O"）如果在 21:35 那一刻才炸，代价就是一整晚漏签。所以除"没有坐标"这种
+// 必然失败的情形外，其余一律降级成默认值 + 警告，旧配置照样能跑。
+// 而必失败的那一种，报错文本必须能直接照抄改好 —— 用户不该为了改一个坐标去读源码。
+//
+// 凭据缺失是唯一的例外：它曾经和缺坐标一样硬失败，但那等于"没填密码就存不下配置"，
+// 连坐标都改不了。现在它是一条警告（Normalize）+ 运行期的「未配置凭据，跳过」。
 package config
 
 import (
@@ -27,6 +30,13 @@ const (
 
 	// AMAPPicker 是坐标的唯一正确来源：高德坐标拾取器，GCJ-02，与打卡上报坐标系一致。
 	AMAPPicker = "https://lbs.amap.com/tools/picker"
+
+	// ExampleActualLocation 是报错文案与文档里统一使用的「上报地点文案」样例。
+	//
+	// 它同时也是格式说明：规范形态是「旗山校区 + 空格 + 省市区县 + 道路门牌 +
+	// 靠近 + POI 全称」，由 model.NormalizeActualLocation 保证（见
+	// docs/address-format.md）。各处只引用这一个常量，避免示例自己先长歪。
+	ExampleActualLocation = "旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼"
 
 	DefaultWindowStart = "21:00"
 	DefaultWindowEnd   = "23:59"
@@ -57,8 +67,8 @@ var sensitivePaths = []string{
 // 凭据与坐标留空（首次启动进初始化向导），假期按《福州大学 2026—2027 学年校历》
 // 预填寒暑假 —— 预填的是"确定的校历事实"，不是猜的假期。
 func DefaultConfig() model.Config {
+	// 配置里不再记录版本号：默认模板就是"默认值"，没有"第 1 版"这个概念。
 	return model.Config{
-		Version: 1,
 		Checkin: model.CheckinConfig{
 			JitterRadiusM: floatPtr(200),
 			Schedule: model.ScheduleConfig{
@@ -169,7 +179,38 @@ func normalizeUser(cfg *model.Config, w *warnings) {
 		}
 	}
 	// 密码不动：首尾空格可能就是密码的一部分，替用户"修好"等于让登录必然失败。
-	_ = w
+	//
+	// 凭据缺一项、或三项全空，都不再是错误（配置页允许先填坐标/推送，凭据明天再补），
+	// 但必须让人知道"现在不会自动签到"——这是它唯一会被看见的地方。
+	if msg := credentialWarning(cfg.User); msg != "" {
+		w.add("%s", msg)
+	}
+}
+
+// CredentialWarning 回答一个问题：这份配置现在能不能自动签到？不能时返回一条
+// 中文提示，能时返回空串。
+//
+// 单独导出是因为它有两个出口：Normalize 的 warnings（保存/预览时逐条展示），
+// 以及 GET /config（一打开配置页就该看到"还不会签到"，而不是等到 21:35 才发现）。
+func CredentialWarning(cfg model.Config) string { return credentialWarning(cfg.User) }
+
+// credentialWarning 的判定口径与运行期完全一致：token、cookie、学号+密码 三选一，
+// 半截的学号/密码等于没有（服务没法只凭一项去登录）。
+func credentialWarning(u model.UserConfig) string {
+	user := strings.TrimSpace(u.Username)
+	pass := strings.TrimSpace(u.Password)
+	if strings.TrimSpace(u.Token) != "" || strings.TrimSpace(u.Cookie) != "" || (user != "" && pass != "") {
+		return ""
+	}
+	switch {
+	case user != "" && pass == "":
+		return "用户凭据只填了一半（有学号、没密码）：学号密码登录走不通，不会自动签到；" +
+			"补上密码（或改用 token / 浏览器 Cookie）后自动恢复。"
+	case user == "" && pass != "":
+		return "用户凭据只填了一半（有密码、没学号）：学号密码登录走不通，不会自动签到；" +
+			"补上学号（或改用 token / 浏览器 Cookie）后自动恢复。"
+	}
+	return "用户凭据未配置：不会自动签到；补上 token 或 学号+密码（或浏览器 Cookie）后自动恢复。"
 }
 
 // isAttnTokenShape 判断 token 是不是晚点名那种"纯字母数字"的形状。
@@ -226,7 +267,7 @@ func normalizeCheckin(cfg *model.Config, w *warnings) {
 	c := &cfg.Checkin
 	c.Longitude = strings.TrimSpace(c.Longitude)
 	c.Latitude = strings.TrimSpace(c.Latitude)
-	c.ActualLocation = strings.TrimSpace(c.ActualLocation)
+	c.ActualLocation = model.NormalizeActualLocation(c.ActualLocation)
 
 	// 半径两个键分别收敛：负数当笔误（→200），显式 0 是"关闭抖动"，必须保留。
 	c.LocationJitterM = fixRadius(c.LocationJitterM, "checkin.location_jitter_m", w)
@@ -286,7 +327,7 @@ func normalizeLocations(c *model.CheckinConfig, w *warnings) {
 		idx := i + 1
 		loc.Longitude = strings.TrimSpace(loc.Longitude)
 		loc.Latitude = strings.TrimSpace(loc.Latitude)
-		loc.ActualLocation = strings.TrimSpace(loc.ActualLocation)
+		loc.ActualLocation = model.NormalizeActualLocation(loc.ActualLocation)
 		_, okLon := parseCoordinate(loc.Longitude)
 		_, okLat := parseCoordinate(loc.Latitude)
 		if !okLon || !okLat {
@@ -447,31 +488,16 @@ func normalizeServer(cfg *model.Config, w *warnings) {
 
 // ---------- 校验 ----------
 
-// Validate 只对"必然打不了卡"的情形硬失败：没有凭据、没有可用坐标。
+// Validate 只对"必然打不了卡"的情形硬失败：没有可用坐标。
+//
+// 凭据缺失**不**在这里报错：配置页允许先把坐标、时刻、推送配好，凭据明天再补，
+// 把"还没填凭据"当成保存失败等于让人连界面都存不下来。缺凭据这件事由两个地方
+// 说清楚——Normalize 的 warnings（每次保存都提醒）、运行期的「未配置凭据，跳过」。
 // 其余问题（时刻写坏、权重非法、窗口早晚颠倒）已在 Normalize 里降级成默认值 +
 // 警告，这里再拦一次只会把用户挡在门外而不会让签到变得可能。
 // 失败的报错带两种正确写法，用户照抄即可。
 func Validate(cfg model.Config) error {
 	var problems []string
-
-	hasToken := strings.TrimSpace(cfg.User.Token) != ""
-	hasAccount := strings.TrimSpace(cfg.User.Username) != "" && strings.TrimSpace(cfg.User.Password) != ""
-	hasCookie := strings.TrimSpace(cfg.User.Cookie) != ""
-	if !hasToken && !hasAccount && !hasCookie {
-		problems = append(problems, strings.Join([]string{
-			"认证信息没配好：user.token、user.cookie、「user.username + user.password」三种凭据至少要有一项。",
-			"  · 已经有晚点名 token（H5 免登 token，会过期）：",
-			"      user:",
-			"        token: \"粘贴 token\"",
-			"  · 只有浏览器 Cookie（免密码，最省事；登录统一身份认证后复制 SESSION）：",
-			"      user:",
-			"        cookie: \"SESSION=粘贴这一整段\"",
-			"  · 只有学号密码（token 过期时自动重新登录，但学校可能要求验证码）：",
-			"      user:",
-			"        username: \"学号\"",
-			"        password: \"当前能登录智汇福大 App 的密码\"",
-		}, "\n"))
-	}
 
 	if !hasUsableLocation(cfg.Checkin) {
 		lines := []string{
@@ -482,17 +508,17 @@ func Validate(cfg model.Config) error {
 			"    checkin:",
 			"      longitude: \"119.20463\"",
 			"      latitude: \"26.04920\"",
-			"      actual_location: \"福州大学旗山校区生活区X号楼\"",
+			"      actual_location: \"" + ExampleActualLocation + "\"",
 			"  写法二 · 位置池（多个位置随机挑一个，每项都要有坐标）：",
 			"    checkin:",
 			"      locations:",
 			"        - longitude: \"119.20463\"",
 			"          latitude: \"26.04920\"",
-			"          actual_location: \"福州大学旗山校区生活区X号楼\"",
+			"          actual_location: \"" + ExampleActualLocation + "\"",
 			"          weight: 1",
 			"        - longitude: \"119.20510\"",
 			"          latitude: \"26.04880\"",
-			"          actual_location: \"福州大学旗山校区教学楼\"",
+			"          actual_location: \"旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区教学楼\"",
 		}
 		for _, f := range []struct{ key, val string }{
 			{"longitude", cfg.Checkin.Longitude},
@@ -545,6 +571,41 @@ func validNotifyType(t string) bool {
 }
 
 // ---------- 脱敏 ----------
+
+// SecretField 是一个敏感字段的稳定路径 + 可写地址。
+//
+// 路径在这里是**对外契约**：API 的 masked_fields 用它当 key，配置落盘加密用它决定
+// 哪些字段要封装，/config/reveal 用它定位要显示哪一项。三处共用同一份路径表，
+// 少一处手工枚举就少一次"新加的密钥忘了加密"的机会。
+type SecretField struct {
+	Path  string
+	Value *string
+}
+
+// SecretFields 按 sensitivePaths 的顺序返回全部敏感字段的可写地址。
+//
+// 返回的是指向 cfg 内部的指针：调用方要改值必须传自己想改的那份配置（通常先
+// Clone）。只读遍历不会产生任何副作用。
+func SecretFields(cfg *model.Config) []SecretField {
+	out := make([]SecretField, 0, len(sensitivePaths))
+	for _, path := range sensitivePaths {
+		if f := secretField(cfg, path); f != nil {
+			out = append(out, SecretField{Path: path, Value: f})
+		}
+	}
+	return out
+}
+
+// SecretPaths 返回全部敏感字段路径（顺序稳定，用于报错提示与文档）。
+func SecretPaths() []string { return append([]string(nil), sensitivePaths...) }
+
+// LookupSecret 按路径取一项敏感字段；路径不认识时返回 ok=false。
+func LookupSecret(cfg *model.Config, path string) (value string, ok bool) {
+	if f := secretField(cfg, path); f != nil {
+		return *f, true
+	}
+	return "", false
+}
 
 // secretField 返回可写的字段地址；路径是稳定字符串，便于前端按 key 判断"已配置"。
 func secretField(cfg *model.Config, path string) *string {
@@ -777,6 +838,12 @@ var knownSections = map[string]bool{
 	"user": true, "checkin": true, "vacation": true, "notify": true, "server": true,
 }
 
+// legacyVersionKey 是已经废弃的顶层键：配置不记录版本。
+//
+// 旧导出文件里可能还留着它。它既不是配置段、也不是"段名写错了"——静默忽略才是对的，
+// 否则用户导入一份自己的旧配置，第一眼看到的就是一条关于 version 的警告。
+const legacyVersionKey = "version"
+
 // ImportYAML 把旧 config.yaml 解析成完整配置（内存对象，不落盘）。
 //
 // 三条口径，都是为了让"旧配置继续可用"：
@@ -807,6 +874,9 @@ func ImportYAML(text string) (model.Config, []string, error) {
 
 func applyYAML(cfg *model.Config, root *yamlNode, w *warnings) {
 	for _, key := range root.keys {
+		if key == legacyVersionKey {
+			continue // 已废弃的"配置版本"，静默忽略（见 legacyVersionKey 注释）
+		}
 		if !knownSections[key] {
 			w.add("YAML 里的 %q 不是本服务认识的配置段，已忽略（认得的是 user / checkin / vacation / notify / server）。", key)
 		}
@@ -895,7 +965,7 @@ func applyYAMLLocations(cfg *model.Config, n *yamlNode, w *warnings) {
 			"        locations:\n"+
 			"          - longitude: \"119.20463\"\n"+
 			"            latitude: \"26.04920\"\n"+
-			"            actual_location: \"福州大学旗山校区生活区X号楼\"", kindName(n))
+			"            actual_location: \""+ExampleActualLocation+"\"", kindName(n))
 		return
 	}
 	locs := make([]model.Location, 0, len(n.items))

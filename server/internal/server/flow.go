@@ -60,6 +60,19 @@ func (s *Server) startRun(req runRequest) {
 	}()
 }
 
+// anyCredentialConfigured 判断配置里是否存在任何可用于签到的凭据：token、浏览器
+// Cookie、学号+密码 三选一（半截的学号/密码不算）。
+//
+// 判定口径与 config.Validate / config.CredentialWarning 保持一致，这里是运行期那份。
+// flow 与调度器共用它：flow 用它把"没配凭据"定性成 skipped 而不是 SSO 报错，
+// 调度器用它避免每 30 秒发起一次注定跳过的运行。
+func anyCredentialConfigured(cfg model.Config) bool {
+	if strings.TrimSpace(cfg.User.Token) != "" || strings.TrimSpace(cfg.User.Cookie) != "" {
+		return true
+	}
+	return strings.TrimSpace(cfg.User.Username) != "" && strings.TrimSpace(cfg.User.Password) != ""
+}
+
 // flowRun 是一次签到的完整编排：假期 → token → init → 位置 → check → clockIn → 推送。
 //
 // 所有分支都靠 defer 收尾，保证"任何路径都会写好 RunRecord 并广播 event: run"
@@ -118,8 +131,22 @@ func (s *Server) flowRun(req runRequest) {
 
 	// 2. token：没有就换一个并回写配置（§11.2）。token 会过期，而 Cookie 与账密
 	// 不会，所以这是让服务能连续跑几个月不断签的关键一步。
+	//
+	// 三种凭据一项都没有时，这一步必然失败；但那不是"登录出错"，而是"还没配"。
+	// 所以先判一次，定性成 skipped 而不是 error：error 会在每晚推一条「签到失败」，
+	// 而用户真正需要的是"去配置页把凭据填上"（这条运行的 logs 就在历史里）。
+	if !anyCredentialConfigured(cfg) {
+		rec.Status = model.StatusSkipped
+		addLog("warn", "未配置登录凭据（token / 浏览器 Cookie / 学号+密码 三选一）：本次不打卡，跳过")
+		return
+	}
 	token := strings.TrimSpace(cfg.User.Token)
 	mintedNow := false
+	// mintFail 记住"重取 token 为什么失败"。它的用处不是日志（日志里已经有一条），
+	// 而是让 rec.Error 这段**会进面板、也会进手机推送正文**的文案同时说清两件事：
+	// 这个 token 上游不认，以及换新 token 卡在哪一步（校外 IP 要短信验证是常态，
+	// 只写前一半，用户只会看到"token 被拒绝"然后去反复重贴 token）。
+	var mintFail error
 	if token == "" {
 		fresh, source, err := s.mintToken(cfg, addLog)
 		if err != nil {
@@ -131,7 +158,7 @@ func (s *Server) flowRun(req runRequest) {
 		token = fresh
 		mintedNow = true
 		cfg.User.Token = token
-		// 回写配置会让 config.version +1：token 是配置的一部分（§7 不单独存 token）。
+		// 回写配置会让内部计数（state.json 的 config_version）+1：token 是配置的一部分（§7 不单独存 token）。
 		// 必须走 UpdateConfig（写锁内重读最新配置再改），否则会覆盖掉这十几秒里
 		// 用户刚通过 PUT /config 改的密码/坐标/推送凭据（lost update）。
 		if _, err := s.store.UpdateConfig(func(latest *model.Config) []string {
@@ -166,18 +193,34 @@ func (s *Server) flowRun(req runRequest) {
 				addLog("info", "换 token 后 init 成功（来源 %s）", source)
 			}
 		} else if mintErr != nil {
+			mintFail = mintErr
 			addLog("warn", "重新换取 token 也失败：%s", s.sanitizeError(mintErr.Error(), cfg))
 		}
 	}
 	if err != nil {
+		// 两条原因拼成一句：前半是"上游不认这个 token"，后半是"换新为什么也没成"。
+		// 二次认证那条要压短：rec.Error 会被 maxErrorTextLen 截断，而
+		// 「学校要求短信验证」这几个字恰恰是用户唯一能行动的信息，不能被挤掉。
+		full := err.Error()
+		if mintFail != nil {
+			if errors.Is(mintFail, fzu.ErrSecondAuth) {
+				full += "；换新 token 也失败：学校要求短信二次验证（校外 IP 的常态，需人工在浏览器登录后把新 token 贴回来）"
+			} else {
+				full += "；换新 token 也失败：" + mintFail.Error()
+			}
+		}
 		if errors.Is(err, fzu.ErrTokenRejected) {
 			// 上游回了 HTML 错误页 = 它不认这个 token。这跟"今天没有晚点名"
 			// 是两件完全不同的事，必须报成失败：用户看到「今日无计划」会以为
 			// 今晚不用签，然后漏签。
 			rec.Status = model.StatusError
-			rec.Error = s.sanitizeError(err.Error(), cfg)
+			rec.Error = s.sanitizeError(full, cfg)
 			addLog("error", "晚点名接口拒绝了当前 token：%s", rec.Error)
-			addLog("warn", "token 会过期，也可能填的是别的系统的凭据；在「浏览器 Cookie」里填 sso.fzu.edu.cn 的 SESSION 后服务会自动换新，也可以点「测试登录」当场验证。")
+			if errors.Is(mintFail, fzu.ErrSecondAuth) {
+				addLog("warn", "自动换 token 被学校的短信二次验证挡住（校外 IP 的常态）：在浏览器里登录后把地址栏 token= 那串粘进「晚点名 token」即可，服务端换不到。")
+			} else {
+				addLog("warn", "token 会过期，也可能填的是别的系统的凭据；在「浏览器 Cookie」里填 sso.fzu.edu.cn 的 SESSION 后服务会自动换新，也可以点「测试登录」当场验证。")
+			}
 			return
 		}
 		// §11.3：init 失败按 no_plan 处理。这类失败（网关 500、维护页）通常是
@@ -185,7 +228,7 @@ func (s *Server) flowRun(req runRequest) {
 		// 但必须留下上游原文：把"上游挂了"和"今天真的没有晚点名"混成同一句话，
 		// 会让用户在看到「今日无计划」时误判"今晚不用签"。
 		rec.Status = model.StatusNoPlan
-		rec.Error = s.sanitizeError(err.Error(), cfg)
+		rec.Error = s.sanitizeError(full, cfg)
 		addLog("warn", "init 未成功，按「今日无计划」处理：%s", rec.Error)
 		return
 	}
@@ -593,10 +636,23 @@ func statusLogLevel(status string) string {
 // 而这些字符串会被写进 runs.jsonl、推到手机、显示在浏览器里——任何一处泄漏都
 // 等于把账号交出去。
 func (s *Server) sanitizeError(msg string, cfg model.Config) string {
-	msg = strings.TrimSpace(msg)
+	msg = redactSecrets(strings.TrimSpace(msg), cfg)
+	if len(msg) > maxErrorTextLen {
+		msg = truncateText(msg, maxErrorTextLen)
+	}
+	return msg
+}
+
+// redactSecrets 只做"抹掉已知凭据"这一件事，不截断。
+//
+// 拆出来的原因是两个调用方要的东西不同：落进 RunRecord.error / 推送正文的文案
+// 必须压到 600 字符（否则上游一整个 HTML 错误页会糊满手机通知），而日志（尤其
+// panic 的调用栈）需要完整保留。截断逻辑留在 sanitizeError 里，日志走这一条。
+func redactSecrets(msg string, cfg model.Config) string {
 	for _, secret := range []string{
 		cfg.User.Token,
 		cfg.User.Password,
+		cfg.User.Cookie,
 		cfg.Notify.ServerChanKey,
 		cfg.Notify.PushPlusToken,
 		cfg.Notify.BarkURL,
@@ -610,9 +666,6 @@ func (s *Server) sanitizeError(msg string, cfg model.Config) string {
 			continue
 		}
 		msg = strings.ReplaceAll(msg, secret, maskSecret(secret))
-	}
-	if len(msg) > maxErrorTextLen {
-		msg = truncateText(msg, maxErrorTextLen)
 	}
 	return msg
 }

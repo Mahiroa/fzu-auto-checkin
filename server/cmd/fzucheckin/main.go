@@ -102,7 +102,34 @@ func printBanner(srv *server.Server, st *store.Store) {
 	fmt.Printf("  管理界面  %s\n", urlOf(addr))
 	fmt.Printf("  监听地址  %s\n", addr)
 	fmt.Printf("  数据目录  %s\n", st.Dir)
+	// 未初始化 + 对外监听 = 谁先连上谁就是管理员（setup 在没密码时对任何来源开放）。
+	// 这里没法替他做决定（有人就是要先远程打开面板），但必须把顺序讲清楚。
+	if st.PasswordHash() == "" && !isLoopbackListen(addr) {
+		fmt.Printf("\n  ⚠ 还没有管理密码，而监听地址 %s 不是回环地址：\n", addr)
+		fmt.Printf("     任何能连到这个端口的人都可以先把管理密码设成他自己的。\n")
+		fmt.Printf("     正确顺序：先用 127.0.0.1 打开面板设好密码，再对外监听；\n")
+		fmt.Printf("     对外暴露时请走 HTTPS 反向代理（见 deploy/nginx/），并加 -trust-proxy。\n\n")
+		st.AppendLog(model.LogEvent{
+			Level: "warn",
+			Msg:   "尚未设置管理密码，但服务已监听非回环地址 " + addr + "：请先完成初始化再对外暴露",
+		})
+	}
 	fmt.Printf("  首次启动请打开上面的地址设置管理密码；Ctrl+C 退出\n")
+}
+
+// isLoopbackListen 判断监听地址是否只对本机开放。
+// 空 host / 0.0.0.0 / :: 都算"所有网卡"，与 127.0.0.1 不是一回事。
+func isLoopbackListen(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	host = strings.Trim(host, "[]")
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		return false
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // urlOf 把监听地址变成可点开的 URL（":8787" / "0.0.0.0:8787" → 127.0.0.1）。

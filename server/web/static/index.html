@@ -113,6 +113,10 @@
           <h3 class="card-title">今日状态</h3>
           <span class="card-note">15 秒自己刷一次</span>
         </div>
+        <div class="power">
+          <p id="auto-power-state" class="power-state">自动签到 · 正在读状态…</p>
+          <button id="btn-auto-switch" class="switch" type="button" role="switch" aria-checked="false" aria-label="自动签到开关" disabled></button>
+        </div>
         <div class="chips">
           <span id="dash-check" class="chip">正在读状态…</span>
           <span id="dash-window" class="chip">窗口 —</span>
@@ -212,45 +216,33 @@
       <form id="form-config" class="stack" autocomplete="off">
 
         <fieldset class="card">
-          <legend><span class="legend-text">账号</span><span class="legend-note">登录方式三选一</span></legend>
-          <p class="hint">三种登录方式，填一种就够：Cookie、学号密码、免登凭证。都填了按服务端优先级走，点「测试登录」看实际用了哪条。</p>
-          <div class="field">
-            <div class="field-head">
-              <label for="cfg-username">学号</label>
-            </div>
-            <input id="cfg-username" type="text" spellcheck="false" placeholder="登录智汇福大 App 的学号">
+          <legend><span class="legend-text">账号</span><span class="legend-note">账密在弹窗 · 凭证在这页</span></legend>
+          <p class="hint">两种登录方式：学号 + 密码（点下面的按钮，在弹窗里填；学校要的短信验证码也在那个弹窗里），或者直接贴一个「免登凭证」。两个都配了就优先用免登凭证。</p>
+
+          <div class="account-line">
+            <span class="account-label">学号密码</span>
+            <span id="account-summary" class="account-summary miss">未配置</span>
+            <button id="btn-login-open" class="ghost" type="button">打开登录弹窗</button>
           </div>
-          <div class="field has-secret" data-secret="user.password">
-            <div class="field-head">
-              <label for="cfg-password">密码</label>
-              <span class="badge mask-badge" hidden>已配置</span>
-              <button class="link clear-secret" type="button" data-target="cfg-password">清空</button>
-            </div>
-            <input id="cfg-password" type="text" autocomplete="off" spellcheck="false" placeholder="登录智汇福大 App 的密码">
-          </div>
+          <input id="cfg-username" type="hidden">
+          <input id="cfg-password" type="hidden">
           <div class="field has-secret" data-secret="user.token">
             <div class="field-head">
               <label for="cfg-token">免登凭证</label>
               <span class="badge mask-badge" hidden>已配置</span>
+              <button id="btn-peek-token" class="link peek" type="button" aria-controls="cfg-token" aria-pressed="false" aria-label="显示免登凭证" data-name="免登凭证"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.7 12C4.1 8.5 7.7 6.2 12 6.2s7.9 2.3 9.3 5.8c-1.4 3.5-5 5.8-9.3 5.8S4.1 15.5 2.7 12Z"/><circle cx="12" cy="12" r="2.9"/><path class="eye-slash" d="M5 4.6 19 19.4"/></svg></button>
               <button class="link clear-secret" type="button" data-target="cfg-token">清空</button>
             </div>
-            <input id="cfg-token" type="text" autocomplete="off" spellcheck="false" placeholder="App 里叫 token">
-            <p class="hint">填了就优先用它；过期后服务会拿学号密码续一份新的。留空只走学号密码。</p>
-          </div>
-          <div class="field has-secret" data-secret="user.cookie">
-            <div class="field-head">
-              <label for="cfg-user-cookie">浏览器 Cookie</label>
-              <span class="badge mask-badge" hidden>已配置</span>
-              <button class="link clear-secret" type="button" data-target="cfg-user-cookie">清空</button>
-            </div>
-            <textarea id="cfg-user-cookie" rows="4" spellcheck="false" placeholder="SESSION=……，也可以整段粘 cookies.json"></textarea>
-            <p class="hint">登录过学校认证页的话，F12 里找 sso.fzu.edu.cn 的 SESSION，把值粘过来。留空就不用这条。</p>
+            <input id="cfg-token" type="password" autocomplete="off" spellcheck="false" placeholder="App 里叫 token">
+            <p class="hint">填了就优先用它。它过期后服务会拿学号密码去续；机房/校外 IP 上学校会先要短信验证（续不上），这时重贴一份新 token 最省事。</p>
           </div>
           <div class="test-row">
-            <button id="btn-login-test" class="ghost" type="button">测试登录</button>
-            <button id="btn-login-refresh" class="ghost" type="button">获取并保存凭证</button>
-            <p id="login-test-status" class="hint login-test-line" role="status" aria-live="polite"></p>
+            <button id="btn-token-test" class="ghost" type="button">验证这份凭证</button>
+            <p id="token-status" class="hint login-test-line" role="status" aria-live="polite"></p>
           </div>
+          <p id="cookie-note" class="hint" hidden>服务端还留着一份早期填过的浏览器 Cookie 当备用。<button id="btn-cookie-clear" class="link" type="button">清掉它</button></p>
+          <p id="cfg-cred-note" class="hint" hidden></p>
+          <p class="hint">已保存的凭据在这里显示成 <code>••••</code>：不动它就原样保存；点眼睛按钮要再输一次管理密码，才会从服务端取回真实值。</p>
         </fieldset>
 
         <fieldset class="card" id="fs-location">
@@ -268,7 +260,7 @@
             </div>
             <div class="field grow">
               <label for="cfg-actual">上报地点文字</label>
-              <input id="cfg-actual" type="text" placeholder="福州大学旗山校区生活区X号楼">
+              <input id="cfg-actual" type="text" placeholder="旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼">
             </div>
           </div>
 
@@ -417,8 +409,28 @@
           <p class="hint">改地址和数据目录要重启才生效。允许外部调用那项平时留空，只有把管理页挂到别的站上才填。</p>
         </fieldset>
 
-        <p class="hint">保存前会把旧配置备份成 <code>config.json.bak</code>。密码、免登凭证、Cookie、推送密钥都按<b>明文</b>回填，方便核对。</p>
-        <p class="hint">只有「导出」下载的文件会脱敏成 <code>••••</code>。</p>
+        <fieldset class="card">
+          <legend><span class="legend-text">管理密码</span><span class="legend-note">改完所有设备重新登录</span></legend>
+          <div class="row">
+            <div class="field">
+              <label for="pwd-current">当前管理密码</label>
+              <input id="pwd-current" type="password" autocomplete="current-password" spellcheck="false">
+            </div>
+            <div class="field">
+              <label for="pwd-new">新管理密码</label>
+              <input id="pwd-new" type="password" autocomplete="new-password" spellcheck="false" placeholder="至少 8 个字符">
+            </div>
+          </div>
+          <div class="actions">
+            <button id="btn-pwd-change" class="ghost" type="button">修改管理密码</button>
+            <span class="muted small">这是登录本面板的密码，不是学号密码</span>
+          </div>
+          <div id="pwd-msg" class="err-box" hidden></div>
+          <p class="hint">改密码会让所有已登录的设备（包括这台）立刻换一张新会话凭证，旧 Cookie 随即作废。</p>
+        </fieldset>
+
+        <p class="hint">保存前会把旧配置备份成 <code>config.json.bak</code>。落盘的 <code>config.json</code> 与它的备份里，密码、免登凭证、Cookie、推送密钥都是<b>加密</b>的，备份不会多留一份明文。</p>
+        <p class="hint">页面上这些字段回填的是 <code>••••</code>：不动它就原样保存，点眼睛按钮要再输一次管理密码才会显示真实值。</p>
       </form>
     </section>
 
@@ -518,6 +530,76 @@
   </div>
 </div>
 
+<!-- 显示凭据弹窗：要再输一次管理密码，一次只回一项真实值 -->
+<div id="modal-reveal" class="drawer" hidden>
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="modal-reveal-h">
+    <div class="drawer-head">
+      <h3 id="modal-reveal-h">显示凭据</h3>
+      <button id="btn-reveal-close" class="ghost" type="button">关闭</button>
+    </div>
+    <div class="drawer-body">
+      <p class="hint">要显示的是 <strong id="reveal-field">凭据</strong>。请再输一次<b>管理密码</b>（登录本面板用的那个，不是要显示的学号密码）——这一步把「看一眼凭据」限制在本人当面操作，光有登录态不够。每次显示都会记进服务端日志（只记字段名，不记值）。</p>
+      <div class="field">
+        <label for="reveal-pass">管理密码</label>
+        <input id="reveal-pass" type="password" autocomplete="current-password" spellcheck="false" placeholder="登录本面板的密码">
+      </div>
+      <div id="reveal-err" class="err-box" hidden></div>
+      <div class="actions">
+        <button id="btn-reveal-cancel" type="button">取消</button>
+        <button id="btn-reveal-ok" class="primary" type="button">显示</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 登录弹窗：学号密码和短信验证码都在这一个框里完成，不用回配置页找按钮 -->
+<div id="modal-login" class="drawer" hidden>
+  <div class="drawer-panel lg-panel" role="dialog" aria-modal="true" aria-labelledby="modal-login-h">
+    <div class="drawer-head">
+      <h3 id="modal-login-h">学号密码登录</h3>
+      <button id="btn-login-close" class="ghost" type="button">关闭</button>
+    </div>
+    <div class="drawer-body lg-body">
+      <p class="hint">用登录「智汇福大」App 的学号和密码。学校要是要一条短信验证码，这里会自动发到你手机，收到后填那 6 位数字，填满就自动提交。</p>
+      <div class="field">
+        <label for="lg-username">学号</label>
+        <input id="lg-username" type="text" spellcheck="false" autocomplete="off" placeholder="登录智汇福大 App 的学号">
+      </div>
+      <div class="field has-secret" data-secret="user.password">
+        <div class="field-head">
+          <label for="lg-password">密码</label>
+          <span class="badge mask-badge" hidden>已配置</span>
+          <button id="btn-peek-password" class="link peek" type="button" aria-controls="lg-password" aria-pressed="false" aria-label="显示密码" data-name="密码"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.7 12C4.1 8.5 7.7 6.2 12 6.2s7.9 2.3 9.3 5.8c-1.4 3.5-5 5.8-9.3 5.8S4.1 15.5 2.7 12Z"/><circle cx="12" cy="12" r="2.9"/><path class="eye-slash" d="M5 4.6 19 19.4"/></svg></button>
+          <button class="link clear-secret" type="button" data-target="lg-password">清空</button>
+        </div>
+        <input id="lg-password" type="password" autocomplete="off" spellcheck="false" placeholder="登录智汇福大 App 的密码">
+      </div>
+      <div class="test-row">
+        <button id="btn-login-test" class="primary" type="button">测试登录</button>
+        <button id="btn-login-refresh" class="ghost" type="button">获取并保存凭证</button>
+        <button id="btn-sms-start" class="ghost" type="button" hidden>发一条短信验证码</button>
+        <p id="login-test-status" class="hint login-test-line" role="status" aria-live="polite"></p>
+      </div>
+      <div id="login-second-auth" class="warn-box" hidden>
+        <p>学校要一条短信验证码，但这次没能自动发出去（原因见下面的状态行）。可以点上面的「发一条短信验证码」再试一次。</p>
+        <p>另一条路：在浏览器里打开晚点名页面，把地址栏 <code>token=</code> 后面那串粘进配置页的「免登凭证」。</p>
+      </div>
+      <div id="sms-auth" class="sms-box" hidden>
+        <p class="sms-head">短信验证 · 发到 <strong id="sms-phone"></strong></p>
+        <p id="sms-tip" class="hint" hidden></p>
+        <div class="sms-row">
+          <input id="sms-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" spellcheck="false" aria-label="短信验证码" placeholder="6 位数字">
+          <button id="btn-sms-verify" class="primary" type="button">提交验证码</button>
+          <button id="btn-sms-send" class="ghost" type="button">重新发送</button>
+          <button id="btn-sms-cancel" class="ghost" type="button">取消</button>
+        </div>
+      </div>
+      <p id="sms-status" class="sms-status" role="status" aria-live="polite"></p>
+      <p class="hint">「获取并保存凭证」只把换到的免登凭证写进配置；要把学号密码一起存下来，回配置页点「保存」。</p>
+    </div>
+  </div>
+</div>
+
 <!-- 地图选点弹窗（高德公开瓦片：免 key、不花钱；逻辑在 map-picker.js，点到才加载） -->
 <div id="map-picker" class="drawer" hidden>
   <div class="drawer-panel mp-panel" role="dialog" aria-modal="true" aria-labelledby="mp-title">
@@ -547,11 +629,11 @@
       <div class="row mp-name-row">
         <div class="field grow">
           <label for="mp-name">上报地点文字</label>
-          <input id="mp-name" type="text" autocomplete="off" spellcheck="false" placeholder="旗山校区 福建省福州市闽侯县学府南路辅路28号靠近福州大学旗山校区生活区X号楼">
+          <input id="mp-name" type="text" autocomplete="off" spellcheck="false" placeholder="旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼">
         </div>
         <button id="mp-regeo" class="ghost" type="button" title="用高德地名服务重新取一次">取地名</button>
       </div>
-      <p class="hint">智汇福大要的格式是「校区 + 详细地址靠近某点」，选完能改。</p>
+      <p class="hint">格式是「旗山校区 + 空格 + 省市区镇路号 + 校区楼栋」。同一栋楼被「靠近…」重复一遍会自动并掉，选完还能改。</p>
       <details id="mp-key-box" class="mp-key">
         <summary>地名服务：填个 key 就能自动取地名，可选</summary>
         <p class="hint">高德免费额度每天几千次，够个人用；key 只存这台电脑的浏览器，不进配置也不随导出走。</p>
@@ -593,7 +675,7 @@
       <label><span>纬度</span><input class="r-lat" type="text" inputmode="decimal" placeholder="26.04920"></label>
     </div>
     <div class="field grow">
-      <label><span>地点文字</span><input class="r-actual" type="text" placeholder="福州大学旗山校区生活区X号楼"></label>
+      <label><span>地点文字</span><input class="r-actual" type="text" placeholder="旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼"></label>
     </div>
     <div class="field narrow">
       <label><span>权重</span><input class="r-weight" type="number" step="any" min="0" placeholder="1"></label>

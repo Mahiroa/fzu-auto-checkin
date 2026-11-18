@@ -50,10 +50,14 @@ go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
 ## 2. 三步用起来
 
 1. 浏览器打开 <http://127.0.0.1:14514> → 设置管理密码（≥8 位，只此一次）。
-2. 「配置」页填登录凭据（**三选一**，优先级 token > Cookie > 学号密码）、宿舍楼经纬度（点「在地图上选点」直接选，或用[高德坐标拾取器](https://lbs.amap.com/tools/picker)）、推送渠道（可选）→ 保存。
-   - 不知道填哪个就先点「测试登录」：它会现场跑一遍并告诉你断在哪一步（只验证、不写配置）。
-   - 想让服务自己把凭证换好并写进配置，点「获取并保存凭证」：换到的凭证会先做一次学校端 init 校验，通过了才落盘。
-   - 学校侧要求验证码时账密登录会失败，改填浏览器 Cookie（sso.fzu.edu.cn 的 SESSION）即可绕过。
+2. 「配置」页配登录凭据：**学号密码在弹窗里**（「账号」卡片 →「打开登录弹窗」，短信验证码也在那个弹窗里填），**免登凭证（token）在「账号」卡片上直接填**；两者都配时优先级 token > 学号密码。再填宿舍楼经纬度（点「在地图上选点」直接选，或用[高德坐标拾取器](https://lbs.amap.com/tools/picker)）、推送渠道（可选）→ 保存。
+   - 不知道填哪个就先在弹窗里点「测试登录」：它会现场跑一遍并告诉你断在哪一步（只验证、不写配置）。
+   - 想让服务自己把凭证换好并写进配置，点「获取并保存凭证」：换到的凭证会先做一次学校端 init 校验，通过了才落盘；弹窗里填的账密要一起存下来，回配置页点「保存」。
+   - 学校侧要求验证码时账密登录会失败；**校外/机房 IP 上更常见的是短信二次验证**——这时弹窗会直接说"学校要求短信二次验证（手机 138****1234）"并在里面自动发码、等你填那 6 位数字，别再对着"结构变化"查代码：
+     - 最省事：在弹窗里收验证码（填满 6 位自动提交，通过后自动保存凭证）；
+     - 或者在浏览器里打开晚点名页面，把地址栏 `token=` 后面那串粘进「免登凭证」；
+     - 在校内网/VPN 里再点一次「测试登录」——校内 IP 不触发二次验证，会直接换到 token。
+   - 浏览器 Cookie 的填写栏已撤掉（v1.6.1）：老配置里存过的那份仍然被服务端当作备用凭据，需要清掉时在「账号」卡片点「清掉它」再保存。
    - 不想手抄 token：在晚点名页面粘一行脚本（或存成书签），把地址栏里的 `token=` 直接交给面板——面板会接手 `#token=`、先校验再落盘，详见 [get-token.md](get-token.md)。
    - 已有旧版 `config.yaml`：点「导入 YAML」粘贴全文 → 预览 → 应用。
 3. 「仪表盘」看今日状态与下一档倒计时；到点自动签到，结果进「历史」与推送。
@@ -62,8 +66,8 @@ go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
 
 | 视图 | 作用 |
 |---|---|
-| 仪表盘 `#/dashboard` | 今日是否已签、窗口内/外、今日计划与迟到线、下一档倒计时、时间轴三态（待触发/已完成/已错过）、`立即签到` / `定位预检` / `推送测试`、最近 5 次运行 |
-| 配置 `#/config` | 账号 / 位置（单点或位置池，含「获取当前位置」与「在地图上选点」）/ 时间调度 / 假期 / 推送 / 服务参数；带行内校验与警告；导入 YAML、导出 |
+| 仪表盘 `#/dashboard` | 今日是否已签、窗口内/外、今日计划与迟到线、下一档倒计时、时间轴三态（待触发/已完成/已错过）、**自动签到总开关**（`role="switch"`，暂停=只停自动调度）、`立即签到` / `定位预检` / `推送测试`、最近 5 次运行 |
+| 配置 `#/config` | 账号（密码/免登 token 默认显示 `••••`，眼睛按钮要再输一次管理密码才逐项取回真实值；**三项凭据可全留空保存**）/ 位置（单点或位置池，含「获取当前位置」与「在地图上选点」）/ 时间调度 / 假期 / 推送 / 服务参数；带行内校验与警告；导入 YAML、导出 |
 | 日志 `#/logs` | 历史日志快照 + SSE 实时流（等价 `tail -f`），级别过滤、自动滚动 |
 | 历史 `#/runs` | 运行记录分页与详情抽屉（含坐标、校区、迟到标记、错误原文） |
 
@@ -90,15 +94,15 @@ go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
 - 网络挡住高德时（连续 4 张瓦片失败）自动切 OpenStreetMap 底图，并把中心和选点换算回 GCJ-02，状态行标注「已从 WGS-84 换算」。
 - 弹窗打开时浏览器会向 `*.autonavi.com`（或兜底的 `tile.openstreetmap.org`）请求图片；除此之外页面不碰任何外部资源，CSP 只为 `img-src` 放行这两个域。
 
-#### 上报地点文字（和智汇福大同一格式）
+#### 上报地点文字（校区 + 详细地址 + 靠近 POI）
 
-智汇福大里的上报地点长这样：
+上报的地点长这样（照这个格式写）：
 
 ```
 旗山校区 福建省福州市闽侯县学府南路辅路28号靠近福州大学旗山校区生活区X号楼
 ```
 
-也就是 **校区 + 详细地址 + 「靠近」+ 最近的 POI**。这串里的门牌号只有中文逆地理编码能拼出来（OSM 在校园里只到「闽侯县」这一级），所以选点弹窗里有一栏「上报地点文字」，填完跟着坐标一起写回配置。三条来源，按优先级：
+也就是 **旗山校区 + 空格 + 省市区县 + 道路门牌 + 「靠近」+ POI 全称**（规则与反例见 [address-format.md](address-format.md)）。例如 `旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼`（楼栋名换成你自己的）。前半段的门牌号只有中文逆地理编码能拼出来（OSM 在校园里只到「闽侯县」这一级），所以选点弹窗里有一栏「上报地点文字」，填完跟着坐标一起写回配置。三条来源，按优先级：
 
 1. **高德逆地理编码（可选）**：在弹窗的「地名服务（可选）」里填一个**高德 Web 服务 key**（控制台按「Web 服务」类型申请，个人免费额度每天几千次，不用充值）。填一次就记在这台电脑的浏览器里——不进 `config.yaml`、不随导出走、换台机器要重填。之后每次落点都会自动生成上面那种格式的整串。
 2. **粘高德分享链接**：链接里的 `name=` 直接当 POI 名用（有 key 时它还负责「靠近…」那一段）。
@@ -131,7 +135,34 @@ curl -s -b jar -H 'X-Requested-With: fzu-web' -H 'Content-Type: application/json
 
 # 实时日志
 curl -N -b jar http://127.0.0.1:14514/api/v1/logs/stream
+
+# 面板内短信验证登录（校外 IP 被学校要求短信二次验证时用）
+curl -s -b jar -H 'X-Requested-With: fzu-web' -H 'Content-Type: application/json' \
+     -d '{}' http://127.0.0.1:14514/api/v1/login/sms/start
+# → {"ok":true,"challenge":"…","phone":"152****1543","sent":true,"resend_after":120}
+curl -s -b jar -H 'X-Requested-With: fzu-web' -H 'Content-Type: application/json' \
+     -d '{"challenge":"…","code":"123456"}' http://127.0.0.1:14514/api/v1/login/sms/verify
+# → {"ok":true,"token_hint":"…","school_ok":true}
+# 另外两条：/login/sms/resend（重发，冷却 120 秒）、/login/sms/cancel（取消）
+
+# 一键启停自动签到（暂停只看自动调度：手动 /runs 与测试登录不受影响）
+curl -s -b jar -H 'X-Requested-With: fzu-web' -H 'Content-Type: application/json' \
+     -d '{"paused":true}' http://127.0.0.1:14514/api/v1/control
+# → {"paused":true,"scheduler":{"enabled":true,"stopped":false,"paused":true,...}}
+# 只认字段名 paused（缺字段/写错类型回 400），状态落 state.json，重启后保持
 ```
+
+### 一个特别的错误码：`409 reason=second_auth`
+
+`POST /login/test`、`POST /login/refresh` 在「学校要求短信二次验证」时回 **409**，body：
+
+```json
+{"ok":false,"reason":"second_auth",
+ "message":"学校要求短信二次验证：账号密码已经通过，只差手机上那几位验证码…",
+ "second_auth":{"phone":"138****1234","tip":"您正在使用非校内ip登录，请进行手机验证以保障您的账号安全"}}
+```
+
+它不是"登录坏了"，而是"缺一步只有真人能做的动作"（校外/机房 IP 的常态）。手机号一律打码；服务端不会、也不该替你去调学校的短信接口。
 
 完整契约（含错误码与 JSON 结构）见设计文档 §9。
 
@@ -160,7 +191,7 @@ python ../scripts/gen_parity.py   # 重新生成 Python↔Go 一致性语料（3
 - **跨语言一致性**：`internal/schedule/parity_test.go` 重放 Python 版生成的 323 例决策语料（含六条分支、抖动钳制、边界秒）。
 - **加密字节级对齐**：`internal/secure/secure_test.go` 用 Python 生成的密文/明文向量断言 AES-CBC 与 AES-ECB 输出逐字节相同（含中文 `\uXXXX` 转义）。
 - **竞态检测**：本机默认没有 gcc，`go test -race` 需要 MinGW；也可用 Clang/MSVC 包装器（见下）。
-- **端到端冒烟**：`pwsh -File scripts/smoke.ps1`（构建 → 启动 → 初始化 → 配置校验 → 明文回显与导出脱敏 → SSE → 资源占用 → 优雅退出）。
+- **端到端冒烟**：`pwsh -File scripts/smoke.ps1`（构建 → 启动 → 初始化 → 配置校验 → 读取脱敏 + 二次校验取值 → 落盘密文校验 → 导出脱敏 → SSE → 资源占用 → 优雅退出）。
 - **浏览器验收**：`pwsh -File scripts/ui-verify.ps1`（Chrome + CDP 跑四视图并截图到 `docs/verify-shots/`）。
 
 ```powershell
@@ -210,12 +241,15 @@ schtasks /create /tn fzucheckin /tr "C:\path\fzucheckin.exe -listen 127.0.0.1:87
 
 ## 9. 安全须知
 
-- 首次启动必须设置管理密码；密码以 PBKDF2-HMAC-SHA256（12 万轮）存储，Session 为 HMAC 签名 Cookie（7 天）。
-- 登录失败同 IP 15 分钟 5 次触发限速（429）；**限速身份默认取 TCP 来源地址**，只有 `-trust-proxy` 时才采信 `X-Forwarded-For`（否则换一个头就能绕过）。
+- 首次启动必须设置管理密码；密码以 **PBKDF2-HMAC-SHA256（60 万轮）** 存储，登录成功后会把 12 万轮的老哈希顺手续到当前参数（不踢下线）。Session 为 HMAC 签名 Cookie（7 天），载荷里带**会话代次** `sv`。
+- **会话可撤销**：`POST /auth/password` 改密、`POST /auth/logout` 退出，都会换一个会话代次——所有旧 Cookie 当场作废（包括复制走的那张）。升级到本版后旧 Cookie 会失效一次，重新登录即可。
+- 登录 / 改密失败同 IP 15 分钟 5 次触发限速（429）；**限速身份默认取 TCP 来源地址**，只有 `-trust-proxy` 时才采信 `X-Forwarded-For`（否则换一个头就能绕过）。
 - 所有非 GET 请求需带 `X-Requested-With: fzu-web`（CSRF）；API 响应统一 `Cache-Control: no-store`，CSP 只加在自有页面上。
-- 配置页的凭据输入框与 `GET /config` 按**明文**回显（本机单人使用，方便核对/复制）；导出仍是脱敏版本；日志与 SSE 不打印 token/密码/推送 key。
+- **凭据不按明文回显**：`GET /config` 与配置页里的密码 / 免登 token / Cookie / 推送密钥都是 `••••`（原样回传 = 保持原值，空串 = 清空）。要显示真实值，走 `POST /config/reveal`（`{"field":"user.password","password":"<管理密码>"}`），**一次一项**，且失败计数独立限速。日志里只记"谁看了哪一项"，不记值。
+- **凭据落盘加密**：`config.json` 与 `config.json.bak` 里的敏感字段是 `enc:v1:` 前缀的 AES-256-GCM 密文，密钥由 `data/secret.key` 派生。从明文老配置升级过来的**第一次保存不写 `.bak`**（否则备份里会多留一份明文），日志里会说明；第二次保存起恢复正常备份。`secret.key` 丢了/换了，配置里的凭据解不开——服务仍然能启动，但会把这几项清空并在日志里报"解密失败"，需要去面板重填。
+- **数据目录权限**：Linux/macOS 上目录 `0700`、文件 `0600`；Windows 上 chmod 只影响只读位，启动时会用 `icacls` 去掉继承、只授权本账号 + SYSTEM + Administrators（`FZU_SKIP_ACL=1` 可跳过），并做一次建/写/读/删自检。目录里同时躺着密文和密钥，**能读目录的人就能解密**，所以不要把 `data/` 放进共享盘或同步盘。
 - **「定位预检」不会产生签到记录、不会推送、不会把当天标成已签**——它是只读探测，可以放心在白天用。
-- `data/` 含凭据与密钥，已在 `.gitignore` 中排除，切勿提交或共享。
+- `data/` 含凭据与密钥，已在 `.gitignore` 中排除，切勿提交或共享；对外暴露时走 nginx + TLS（模板已含 HSTS 与登录接口限速），并且**先用 127.0.0.1 设好管理密码再开端口**。
 
 ## 10. 常见问题
 

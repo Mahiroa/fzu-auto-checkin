@@ -18,17 +18,17 @@ checkin:
   # —— 单点位置（旧配置继续可用）——
   longitude: "119.20463"
   latitude: "26.04920"
-  actual_location: "福州大学旗山校区生活区X号楼"
+  actual_location: "旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼"
 
   # —— 可选：多位置池，非空时优先于上面的单点 ——
   locations:
     - longitude: "119.20463"
       latitude: "26.04920"
-      actual_location: "福州大学旗山校区生活区X号楼"
+      actual_location: "旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼"
       weight: 1            # 可选，默认 1，非正数按 1 处理
     - longitude: "119.20510"
       latitude: "26.04880"
-      actual_location: "福州大学旗山校区教学楼"
+      actual_location: "旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区教学楼"
 
   # —— 抖动 ——
   jitter_radius_m: 200      # 旧键：位置抖动半径（米），0 关闭；保留兼容

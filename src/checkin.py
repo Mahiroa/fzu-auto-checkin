@@ -128,15 +128,102 @@ def _parse_coordinate(value, where: str) -> float:
         raise _coordinate_error(where, value) from None
 
 
+CAMPUS_TAG = "旗山校区"
+NEAR_SEP = "靠近"
+_ADMIN_HEADS = ("福建省", "福州市", "闽侯县")
+_MERGE_MIN = 4          # 两段首尾重叠少于 4 字不当作同一段（"学园路" + "路28号" 只重 1 字）
+_DUP_MIN = 3            # 相邻完全重复少于 3 字不折叠（"上街镇" + "镇上" 是正常连读）
+_INVISIBLE = str.maketrans({
+    "\u200b": " ", "\ufeff": " ",   # 零宽字符：从网页粘贴过来时最常见
+    "\u00a0": " ", "\u3000": " ",   # 不换行空格 / 全角空格
+})
+
+
+def _normalize_actual_location(raw) -> str:
+    """把上报地点文案收口成「校区 + 详细地址 + 靠近 POI」的格式。
+
+    格式（半角空格分隔，与 server/internal/model/address.go 同一套规则）::
+
+        旗山校区 福建省福州市闽侯县学府南路辅路28号靠近福州大学旗山校区生活区X号楼
+        └校区标记┘ └─ 省/市/县 + 道路门牌 ─┘└── 靠近 + POI 全称 ──┘
+
+    为什么需要它：actualLocation 由三处产出——地图选点自动生成、手抄、位置池逐项
+    写。高德逆地理编码已经在 formatted_address 里带出楼栋名时，前端再按"靠近POI"
+    追加一遍同一栋楼，就成"…生活区X号楼靠近…生活区X号楼"：同一处说了
+    两遍。只有这种重复才合并；正常的"门牌 → 楼栋"两段原样保留。
+
+    规则：空白折叠 → 摘/补"旗山校区"标记 → "靠近X"按包含/重叠关系合并（不重复时
+    保留）→ 相邻重复段折叠。幂等：已经规范的文案再归一一次逐字不变。
+    """
+    text = " ".join(str(raw).translate(_INVISIBLE).split())
+    if not text:
+        return ""
+    tagged = text.startswith(CAMPUS_TAG)
+    body = text[len(CAMPUS_TAG):].strip() if tagged else text
+    if body.startswith(CAMPUS_TAG):     # "旗山校区 旗山校区生活区X号楼…"：标记重复
+        body = body[len(CAMPUS_TAG):].strip()
+    body = _collapse_adjacent_repeat(_merge_near(body)).strip()
+    if not body:
+        return CAMPUS_TAG if tagged else ""
+    if tagged or body.startswith(_ADMIN_HEADS):
+        return CAMPUS_TAG + " " + body
+    return body
+
+
+def _merge_near(text: str) -> str:
+    """把 "…靠近X" 并进主地址；X 已包含在主地址里时整段丢掉。"""
+    parts = text.split(NEAR_SEP)
+    if len(parts) < 2:
+        return text
+    merged = parts[0].strip()
+    for part in parts[1:]:
+        merged = _merge_head_tail(merged, part.strip())
+    return merged
+
+
+def _merge_head_tail(head: str, tail: str) -> str:
+    """合并两段地址；能合并时结果里不留连接词，合并不了才把"靠近"补回去。"""
+    if not tail:
+        return head
+    if not head:
+        return tail
+    if tail in head:            # 主地址已经写到这栋楼：靠近子句是纯重复
+        return head
+    if head in tail:            # 反过来被 POI 名包含：用更完整的那段
+        return tail
+    for k in range(min(len(head), len(tail)), _MERGE_MIN - 1, -1):
+        if head[-k:] == tail[:k]:   # 首尾重叠：在重叠处拼接
+            return head + tail[k:]
+    return head + NEAR_SEP + tail
+
+
+def _collapse_adjacent_repeat(text: str) -> str:
+    """相邻两段逐字相同（"XX"）只留一段，循环到稳定为止。"""
+    while True:
+        cut = None
+        for i in range(len(text)):
+            for k in range((len(text) - i) // 2, _DUP_MIN - 1, -1):
+                if text[i:i + k] == text[i + k:i + 2 * k]:
+                    cut = (i, k)
+                    break
+            if cut:
+                break
+        if cut is None:
+            return text
+        i, k = cut
+        text = text[:i + k] + text[i + 2 * k:]
+
+
 def _actual_location_text(value, fallback: str = "") -> str:
-    """地址文案收口成去空白字符串；空/缺失用 fallback。
+    """地址文案收口成「校区 + 详细地址 + 靠近 POI」；空/缺失用 fallback。
 
     actualLocation 原样提交给学校接口，None 或带换行的多行 YAML 值都会让
-    接口校验失败，所以统一在这里归一。
+    接口校验失败，所以统一在这里归一（空白折叠 + 去重，见
+    _normalize_actual_location）。
     """
     if value is None:
         return fallback
-    text = str(value).strip()
+    text = _normalize_actual_location(value)
     return text or fallback
 
 

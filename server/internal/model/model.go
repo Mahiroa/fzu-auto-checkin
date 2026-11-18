@@ -10,8 +10,15 @@ import "time"
 // ---------- 配置 ----------
 
 // Config 是运行期配置全文，落盘为 data/config.json。
+//
+// 这里刻意**没有**「配置版本号」字段：配置只描述"要做什么"，不记录"改过几次"。
+// 需要"配置变过"这个信号的地方（调度器唤醒、SSE 与前端缓存失效、/status 排障）
+// 读的是 store 的内部计数，它落在 state.json 的 config_version 里，既不写进配置
+// 文件，也不会被渲染成「配置版本 vN」出现在界面上。
+//
+// 旧版 config.json 里那个 "version" 字段现在只是一个被忽略的未知键（encoding/json
+// 默认忽略未知字段），读到它不会报错，也不会再被写回去。
 type Config struct {
-	Version  int            `json:"version"`
 	User     UserConfig     `json:"user"`
 	Checkin  CheckinConfig  `json:"checkin"`
 	Vacation VacationConfig `json:"vacation"`
@@ -106,6 +113,13 @@ type State struct {
 	LastRunID       string              `json:"last_run_id"`
 	LastSlotKey     string              `json:"last_slot_key"` // date|HH:MM|target，防同一档重复触发
 	Notified        map[string][]string `json:"notified"`      // date -> 已推送过的 status 列表
+
+	// Paused 是面板上的「自动签到」开关（暂停/恢复）。
+	//
+	// 为什么放状态而不是配置：配置页是 GET → 改 → PUT 整份回写的，浏览器里一个
+	// 开着旧快照的标签页点一次保存就会把暂停状态覆盖掉——那是"以为暂停了，其实
+	// 还在签"，属于最不该发生的错位。状态只由服务端自己版本化，前端改不到。
+	Paused bool `json:"paused"`
 
 	// DayCache 是最近一次 init 响应的摘要，只为让仪表盘在重启后也能立即显示
 	// "今日计划/迟到线"，不必为了一次刷新就去打学校接口——15 秒一次的轮询若直连

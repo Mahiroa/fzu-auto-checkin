@@ -30,6 +30,15 @@ const (
 // "窗口外到底还在不在轮询"必须有一个可观测的差异才能守住。生产值恒为 30s。
 var schedulerTick = 30 * time.Second
 
+// pausedSettle 是"面板已暂停"状态下唯一的定时器间隔。
+//
+// 暂停期间没有任何事要做，所以调度器只做一件事：挂在 pauseUntil 上等 s.wake
+// （面板恢复、配置保存、手动触发都会发一个）——既不空转，也不会等满一个 tick 才发现
+// 开关被拨回来了。给一个有限的间隔而不是无限等待，是为了让"面板之外写进 state.json
+// 的改动"（手工改文件、恢复备份）最迟半小时也能被自然醒来发现；醒来第一件事仍是
+// 重读 paused，所以它绝不会凭空引发一次打卡。生产值恒为 30min。
+var pausedSettle = 30 * time.Minute
+
 // sleepOutcome 说明一次休眠是被什么结束的。
 type sleepOutcome int
 
@@ -108,6 +117,10 @@ func nextWindowStart(sched schedule.Settings, now time.Time) time.Time {
 //	每一轮开头
 //	  └─ 时钟回拨检测：now+5min < 上一轮？→ 清 last_slot_key、作废已规划档位、重打阶段日志
 //	       ↓
+//	⓪ state.Paused（面板开关）
+//	     日志：INFO「自动签到已暂停（面板开关），恢复后按原计划继续」（每次进入只一条）
+//	     睡眠：now + pausedSettle    ← 只等 s.wake：暂停期间绝不做任何"自动"的事
+//	       ↓ 否则
 //	① state.LastSuccessDate == 今天（幂等第二道闸）
 //	     日志：INFO「今日已签到，休眠至次日窗口 <mm-dd hh:mm>」（每次进入只一条）
 //	     睡眠：windowStartOn(明天)          ← 严格跳过今天剩下的时间，不再空转
@@ -118,7 +131,9 @@ func nextWindowStart(sched schedule.Settings, now time.Time) time.Time {
 //	           不再是每 30s 一条「调度决策：跳过（不在签到窗口内）」）
 //	     睡眠：nextWindowStart(now)         ← 今天未到起点→今天，已过终点→明天
 //	       ↓ 否则（窗口内）
-//	③ 进入签到窗口：阶段切换时 INFO 一条
+//	③ 没有可用的登录凭据 → 决策 no_credentials，睡到下一个窗口起点（配置页补上凭据会 wake）
+//	       ↓ 否则
+//	③′ 进入签到窗口：阶段切换时 INFO 一条
 //	     s.running（单飞中）  → 睡 schedulerTick，醒来再看；不忙等
 //	     now < cooldown（5min）→ 睡 schedulerTick，醒来再看
 //	     否则 → PlanSlots（到点唤醒时复用上一轮的档位）→ ResolveRun：
@@ -127,7 +142,8 @@ func nextWindowStart(sched schedule.Settings, now time.Time) time.Time {
 //	        skip → 睡 schedulerTick（失败重试/冷却靠它复查）
 //
 // 唯一的日志"刷屏"风险被两处去重挡住：阶段（stage）与决策文案（decText）都只在
-// **变化时**打一条。窗口外与已签状态下循环整天静止，日志环里不会再有周期性噪音。
+// **变化时**打一条。窗口外、已签、暂停三个状态下循环整天静止，日志环里不会再有
+// 周期性噪音。
 func (s *Server) runScheduler(ctx context.Context) {
 	if s.schedulerDisabled {
 		s.setSchedulerStopped(true)
@@ -183,7 +199,12 @@ func (s *Server) runScheduler(ctx context.Context) {
 	// 启动补跑：进程可能在签到窗口内被重启（升级、OOM、蓝屏）。
 	// 若"今天在窗口内 + 未签到 + 已过最后一档"，等 30 秒后的第一次复查也行，
 	// 但那 30 秒里如果又崩一次就彻底漏签，所以启动即判。
-	s.catchUp()
+	//
+	// 两种状态例外——面板暂停、凭据没配：它们的含义都是"今晚不签"，补跑一次只会
+	// 在历史里留一条注定失败的记录（暂停时甚至是一次真实的上游请求）。
+	if !s.store.State().Paused && anyCredentialConfigured(s.store.Config()) {
+		s.catchUp()
+	}
 
 	for {
 		now := s.now()
@@ -204,6 +225,31 @@ func (s *Server) runScheduler(ctx context.Context) {
 		st := s.store.State()
 		today := now.Format(dateLayout)
 		sched := schedule.Parse(cfg.Checkin.Schedule)
+
+		// ---- 状态 ⓪：面板暂停 → 只挂在 pauseUntil 上等 s.wake ----
+		//
+		// 暂停的含义是"不做任何自动的事"：catch-up、late_fallback、窗口内复查、
+		// 失败重试全部不走。所以它排在所有状态之前——连"今日已签到"都不必看。
+		//
+		// 睡眠走 waitUntil（唯一的阻塞点），不空转也不退化成 30s tick：暂停解除时
+		// 面板会 wake，这一轮立刻重读状态、按当前配置重新规划。
+		if st.Paused {
+			s.setLastDecision("paused")
+			cached, cacheDay, slotFire = nil, "", false
+			logStage("paused", "info", "自动签到已暂停（面板开关），恢复后按原计划继续")
+			if !waitUntil(now.Add(pausedSettle)) {
+				return
+			}
+			continue
+		}
+
+		// 上一轮还在暂停态、这一轮不是：面板把开关拨回来了。先记一条，再照常
+		// 从窗口/档位开始规划——这一轮不睡 tick，等于"恢复即生效"。
+		if stage == "paused" {
+			// 先清阶段键，免得下面没换阶段时同一条"已恢复"被反复打出来。
+			stage = ""
+			s.logf("info", "", "自动签到已恢复（面板开关），立即按当前配置重新规划")
+		}
 
 		// ---- 状态 ①：今日已签到 → 睡到次日窗口开始 ----
 		//
@@ -241,6 +287,22 @@ func (s *Server) runScheduler(ctx context.Context) {
 		}
 
 		// ---- 状态 ③：窗口内 ----
+		//
+		// 凭据一项都没配时，窗口内同样没有可做的事：每 30 秒发起一次"必然跳过"的运行
+		// 只会在历史里堆一串 skipped、并让 /status 的决策看起来像在正常轮转。这里把它
+		// 定性成一个明确的等待态：决策记 no_credentials，睡到下一个窗口起点；用户在面板
+		// 补上凭据时 PUT /config 会 wake，这一轮立刻重新规划（不必等到明天）。
+		if !anyCredentialConfigured(cfg) {
+			s.setLastDecision("no_credentials")
+			cached, cacheDay, slotFire = nil, "", false
+			logStage("no_credentials", "warn",
+				"未配置登录凭据：不发起自动签到（补上 token 或 学号+密码 后自动恢复）")
+			if !waitUntil(nextWindowStart(sched, now)) {
+				return
+			}
+			continue
+		}
+
 		logStage("active", "info", "进入签到窗口 %s-%s，按档位规划开始复查",
 			sched.WindowStart.Format("15:04"), sched.WindowEnd.Format("15:04"))
 
@@ -339,6 +401,11 @@ func (s *Server) catchUp() {
 	st := s.store.State()
 	today := now.Format(dateLayout)
 	if st.LastSuccessDate == today {
+		return
+	}
+	// 凭据没配就没有"补"可言：flow 只会记一条 skipped，用户看不到任何"签到"结果，
+	// 却会以为补跑救过场。真正的补跑时机是他在面板里补上凭据之后（wake → 重规划）。
+	if !anyCredentialConfigured(cfg) {
 		return
 	}
 

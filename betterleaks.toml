@@ -28,20 +28,32 @@ title = "fzu-auto-checkin secret scan"
 #   docs/verify-shots/       —— 验收截图
 #   scripts/ui-verify.*      —— 本机浏览器验收编排（含本机测试密码），已从树里删除
 #   scripts/smoke.ps1        —— 同上，历史里的本机冒烟脚本
+#   dist/ 、*.exe            —— 构建产物与遗留的可执行文件（.gitignore 第 18/26 行）：
+#                               二进制里嵌着一份压缩过的前端资源，扫它只会命中构建噪声
+#                               （`password' : 'lg-username'` 这类三元表达式的残片）
+#   .shots/                  —— 本机截图/探针的暂存目录（.gitignore 第 45 行）；
+#                               filter 自检改由 scripts/secret-scan-selftest.ps1 在临时
+#                               目录里现造现扫，不再往树里留一个必然命中的探针文件
 prefilter = '''matchesAny(attributes["path"], [
   `(?i)_test\.go$`,
   `(?i)(?:^|/)testdata/`,
   `(?i)(?:^|/)\.recon/`,
   `(?i)(?:^|/)docs/verify-shots/`,
   `(?i)(?:^|/)scripts/ui-verify\.(?:ps1|mjs)$`,
-  `(?i)(?:^|/)scripts/smoke\.ps1$`
+  `(?i)(?:^|/)scripts/smoke\.ps1$`,
+  `(?i)(?:^|/)dist/`,
+  `(?i)\.exe$`,
+  `(?i)(?:^|/)\.shots/`
 ])'''
 
 # ---------------------------------------------------------------- 全局过滤
-# 返回 true = 丢弃这条命中。只放行两类必然不是凭据的东西：
+# 返回 true = 丢弃这条命中。放行的都是必然不是凭据的东西：
 #   1) 含汉字的值 —— 真实凭据是 ASCII，中文只会出现在说明文字里
 #      （如 README 的 password: "登录智汇福大 App 的密码"、app.js 的 password: '学号 + 密码'）
 #   2) 合成标记 —— 与旧 .gitleaks.toml 的 allowlist 一一对应，一条都没少
+#   3) 源码里的同形表达式 —— 通用规则 `password\b…["'](值)["']` 会把
+#      `getVal('lg-username') ? 'lg-password' : …`（元素 id）和文档里的
+#      `password=AES-ECB(croypto)`（加密算法说明）当成"键值对"，两者都不是凭据
 filter = '''matchesAny(finding.secret, [`\p{Han}`])
   || matchesAny(finding.secret, [
     `SYNTHETIC[_-][A-Za-z0-9_-]*`,
@@ -55,7 +67,9 @@ filter = '''matchesAny(finding.secret, [`\p{Han}`])
     `(?i)sctsecretkey`,
     `(?i)(aaaa-bbbb|1111-2222|good-session|typed-just-now|static-session|google-session)`,
     `(?i)xxxx`,
-    `(?i)your[-_]?(token|key|domain)`
+    `(?i)your[-_]?(token|key|domain)`,
+    `(?i)^aes-(?:ecb|cbc)\(`,
+    `(?i)^lg-(?:username|password)$`
   ])'''
 
 [extend]

@@ -9,6 +9,7 @@
 #   ./scripts/secret-scan.ps1 -Staged    # 只扫已 git add 的内容（等同于 pre-commit 钩子）
 #   ./scripts/secret-scan.ps1 -Files     # 扫工作区文件（等价于 betterleaks fs .）
 #   ./scripts/secret-scan.ps1 -ReportPath .shots/leaks.json
+#   ./scripts/secret-scan-selftest.ps1   # 反向自检：确认 filter 还放行合成值、仍抓得住高熵串
 #
 # 退出码：0 = 没有命中；1 = 命中（提交前应停下来看清楚）。
 #

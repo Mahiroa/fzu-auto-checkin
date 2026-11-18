@@ -6,6 +6,7 @@
 坐标是签到的硬前提，其余写法问题一律降级为警告 + 忽略，保证旧配置照常工作。
 """
 import os
+import stat
 import sys
 
 import yaml
@@ -78,7 +79,7 @@ def _normalize_locations(checkin: dict) -> list:
             "        locations:\n"
             '          - longitude: "119.20463"\n'
             '            latitude: "26.04920"\n'
-            '            actual_location: "福州大学旗山校区生活区X号楼"'
+            '            actual_location: "旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼"'
         )
         return []
 
@@ -238,17 +239,17 @@ def _normalize_checkin(cfg: dict) -> None:
         "  checkin:\n"
         '    longitude: "119.20463"\n'
         '    latitude: "26.04920"\n'
-        '    actual_location: "福州大学旗山校区生活区X号楼"\n'
+        '    actual_location: "旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼"\n'
         "写法二 · 位置池（多个位置随机挑一个，需要每项都有坐标）：\n"
         "  checkin:\n"
         "    locations:\n"
         '      - longitude: "119.20463"\n'
         '        latitude: "26.04920"\n'
-        '        actual_location: "福州大学旗山校区生活区X号楼"\n'
+        '        actual_location: "旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼"\n'
         "        weight: 1\n"
         '      - longitude: "119.20510"\n'
         '        latitude: "26.04880"\n'
-        '        actual_location: "福州大学旗山校区教学楼"'
+        '        actual_location: "旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区教学楼"'
     )
     for key in ("longitude", "latitude"):
         value = checkin.get(key)
@@ -257,9 +258,37 @@ def _normalize_checkin(cfg: dict) -> None:
     sys.exit(1)
 
 
+def harden_config_file(path: str) -> None:
+    """把 config.yaml 的权限收紧到 0600；收不紧就明确警告。
+
+    这份文件里是**明文**学号密码（SSO 登录必须拿到原文，哈希在这里用不上），
+    所以文件权限就是唯一的边界：0644 意味着同一台机器上的其他账号能直接读走，
+    而"把整个目录打包发给别人看问题"也是同一条路。
+
+    只在 POSIX 上检查：Windows 的 mode 位只反映只读属性，真正起作用的是目录 ACL
+    （Go 服务那侧已经在启动时用 icacls 收紧数据目录，Python 这条路依赖
+    用户自己放在只属于他的目录里）。
+    """
+    if os.name != "posix":
+        return
+    try:
+        mode = stat.S_IMODE(os.stat(path).st_mode)
+    except OSError:
+        return
+    if not mode & (stat.S_IRWXG | stat.S_IRWXO):
+        return
+    try:
+        os.chmod(path, 0o600)
+        print(f"[config] 已把 {os.path.basename(path)} 的权限从 {mode:o} 收紧到 600")
+    except OSError as e:
+        print(f"[config] 警告：{path} 当前权限 {mode:o}，同机其他账号可以读到里面的明文密码；"
+              f"自动收紧失败（{e}），请手动执行 chmod 600 {path}")
+
+
 def load_config(path: str = CONFIG_PATH) -> dict:
     if not os.path.exists(path):
         sys.exit("缺少 config.yaml：请先 `cp config.example.yaml config.yaml` 并填写真实值。")
+    harden_config_file(path)
     with open(path, "r", encoding="utf-8") as f:
         try:
             cfg = yaml.safe_load(f)

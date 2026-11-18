@@ -50,13 +50,24 @@ const (
 
 // authDoc 是 auth.json 的形状。initialized_at 一经写入不再变化，
 // 用来回答"这套部署是什么时候建的"。
+//
+// SessionEpoch 是**会话代次**：会话 Cookie 的载荷里带着签发时的代次，authed 校验
+// 时必须与这里相等。改管理密码、点「退出登录」都会换一个新代次 —— 这样"改了密码
+// 但旧 Cookie 还能用 7 天"、"点了退出但复制走的 Cookie 依然有效"这两件事同时消失。
+// 它是随机值而不是时间戳：时间戳会让"同一秒签发的两个代次"相等。
 type authDoc struct {
 	PasswordHash  string `json:"password_hash"`
 	InitializedAt string `json:"initialized_at"`
+	SessionEpoch  string `json:"session_epoch,omitempty"`
 }
 
 // Store 是 data/ 目录的唯一入口。Dir 是绝对路径（Open 时解析），
 // 便于日志与错误信息里直接给出可点的位置。
+//
+// 关于「配置版本」：Store 内部维护一个 version 计数（配置改过几次），它是给上层判断
+// "配置变过"用的信号（调度器重新规划、SSE/前端缓存失效、/status 排障），不属于配置
+// 内容本身——config.json 里没有版本字段，这个计数只落在 state.json 的 config_version，
+// 也不会被渲染成「配置版本 vN」出现在界面上。
 type Store struct {
 	Dir string
 
@@ -70,6 +81,9 @@ type Store struct {
 	logs    []model.LogEvent // 旧 → 新（对外快照时反序）
 	auth    authDoc
 	secret  []byte
+	// sealer 用 secret.key 派生出的密钥封装 config.json 里的敏感字段。
+	// 它只负责"落盘形态"，内存里的 s.cfg 永远是明文——上层不需要知道这件事。
+	sealer *secure.Sealer
 }
 
 // Open 打开（必要时创建）数据目录。
@@ -89,18 +103,37 @@ func Open(dir string) (*Store, error) {
 	}
 
 	s := &Store{Dir: abs, index: make(map[string]model.RunRecord)}
+	// 数据目录里放的是加密后的凭据与那把钥匙：先把目录权限收紧到"只有本用户"，
+	// 再往里写任何东西。Windows 上 0600 不生效（Go 只能改只读位），所以这一步
+	// 在 Windows 上走 icacls，失败只告警不阻断——起不来的代价比权限不完美更大。
+	if err := hardenDataDir(abs); err != nil {
+		s.appendLogLocked(model.LogEvent{Level: "warn", Msg: fmt.Sprintf("收紧数据目录权限失败（%v）；请确认 %s 只有本账号可访问", err, abs)})
+	}
 	// Open 期间没有并发读者，下列 load* 都假定"已持有写锁"（此处即无锁）。
 	if err := s.loadSecret(); err != nil {
 		return nil, err
 	}
+	sealer, err := secure.NewSealer(secure.DeriveKey("fzu-config-seal-v1", s.secret))
+	if err != nil {
+		return nil, fmt.Errorf("初始化配置加密失败: %w", err)
+	}
+	s.sealer = sealer
 	s.loadAuth()
 	s.loadConfig()
+	// loadState 会从 state.json 的 config_version 接管内部计数；配置先读是为了
+	// 拿到旧版 config.json 里那个已废弃的 version 作为计数的起点（见 loadConfig）。
 	s.loadState()
+	if s.version <= 0 {
+		s.version = 1
+	}
+	// 让 State() 与 ConfigVersion() 从启动第一刻就是同一个数：state.json 里那一格
+	// 只是内部计数的投影，内存里也不该出现两个不同的值。
+	s.state.ConfigVersion = s.version
 	s.loadRuns()
 
 	s.appendLogLocked(model.LogEvent{
 		Level: "info",
-		Msg:   fmt.Sprintf("数据目录就绪 dir=%s config_version=%d", abs, s.version),
+		Msg:   fmt.Sprintf("数据目录就绪 dir=%s", abs),
 	})
 	return s, nil
 }
@@ -115,14 +148,17 @@ func (s *Store) Config() model.Config {
 	return config.Clone(s.cfg)
 }
 
-// ConfigVersion 返回当前落盘的配置版本号。
+// ConfigVersion 返回"配置改过几次"的内部计数。
+//
+// 只给三处用：调度器唤醒/重新规划的判断、SSE 与前端缓存失效、/status 的排障字段。
+// 它不来自 config.json，也不代表任何对外展示的「配置版本」——配置文件里没有版本。
 func (s *Store) ConfigVersion() int64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.version
 }
 
-// SaveConfig 原子落盘并把版本号 +1。
+// SaveConfig 原子落盘并把内部计数 +1。
 //
 // 旧文件先复制成 config.json.bak：改错了一档时刻想回退，是这套服务最常见的操作，
 // 没有备份就只能凭记忆改回去。备份失败直接返回错误——宁可保存失败，也不能在
@@ -151,20 +187,30 @@ func (s *Store) UpdateConfig(fn func(cfg *model.Config) []string) (int64, error)
 }
 
 // saveConfigLocked 是配置落盘的唯一实现（调用方必须已持有写锁）。
+//
+// 顺序是"先配置，再计数"：配置文件里没有版本字段，计数只落在 state.json 的
+// config_version。写配置成功、写计数失败时不把错误抛给调用方——配置确实已经生效，
+// 报"保存失败"只会骗用户再覆盖一次；计数下一次 SaveState 或下一次保存会自愈。
 func (s *Store) saveConfigLocked(cfg model.Config, warnings []string) (int64, error) {
 	next := s.version + 1
-	cfg.Version = int(next)
 	if err := s.writeConfig(cfg); err != nil {
 		return s.version, err
 	}
 	s.cfg = cfg
 	s.version = next
+	s.state.ConfigVersion = next
+	if err := s.writeState(s.state); err != nil {
+		s.appendLogLocked(model.LogEvent{
+			Level: "warn",
+			Msg:   fmt.Sprintf("配置已生效，但内部计数写入 %s 失败（重启后可能回退）：%v", stateFileName, err),
+		})
+	}
 	for _, w := range warnings {
 		s.appendLogLocked(model.LogEvent{Level: "warn", Msg: "配置警告：" + w})
 	}
 	s.appendLogLocked(model.LogEvent{
 		Level: "info",
-		Msg:   fmt.Sprintf("配置已保存 config_version=%d 警告=%d 条", next, len(warnings)),
+		Msg:   fmt.Sprintf("配置已保存 警告=%d 条", len(warnings)),
 	})
 	return next, nil
 }
@@ -201,28 +247,114 @@ func (s *Store) loadConfig() {
 		})
 		return
 	}
-	if cfg.Version <= 0 {
-		cfg.Version = 1
-	}
+	s.unsealConfig(&cfg)
 	s.cfg = cfg
-	s.version = int64(cfg.Version)
+	// 旧版 config.json 里带一个 "version" 字段。配置现在不再记录版本，但那份文件里
+	// 的数字是"改过几次"的唯一历史证据：读出来当内部计数的起点，升级后 /status 的
+	// config_version 才不会突然归零。它只用于这里，之后由 state.json 接管。
+	// 注意：解析走的是 encoding/json 默认行为（未知字段忽略），所以带 version 的
+	// 旧文件、不带它的新文件都能读；这里刻意不开 DisallowUnknownFields。
+	s.version = legacyConfigVersion(raw)
+}
+
+// legacyConfigVersion 从旧配置文件里抠出已废弃的 version 字段。
+//
+// 解析失败（例如 version 被手写成了字符串）、负数或缺失一律按 0（无可继承的历史）
+// 处理：它的用途只是让计数连续，绝不因为读不懂这一格就去干扰配置加载本身。
+func legacyConfigVersion(raw []byte) int64 {
+	var probe struct {
+		Version int64 `json:"version"`
+	}
+	if err := json.Unmarshal(raw, &probe); err != nil {
+		return 0
+	}
+	if probe.Version < 0 {
+		return 0
+	}
+	return probe.Version
 }
 
 func (s *Store) resetConfig() {
+	// 计数不在这里重置：它属于 state.json，由 loadState 接管。
 	s.cfg = config.DefaultConfig()
-	s.version = int64(s.cfg.Version)
+}
+
+// sealConfig 返回一份"敏感字段已加密"的配置副本；入参不会被改动。
+//
+// 加密发生在**落盘这一层**，内存里的 s.cfg 始终是明文：上层（flow / 前端 API /
+// 调度器）不需要知道磁盘上长什么样，也就不会有人绕开这里自己拼 JSON 写文件。
+func (s *Store) sealConfig(cfg model.Config) (model.Config, error) {
+	if s.sealer == nil {
+		// 只有"没走 Open"的零值 Store 才会这样。宁可报错，也不能悄悄把明文写回磁盘
+		// ——那正是这次改动要消灭的东西。
+		return cfg, errors.New("配置加密器未初始化（Store 必须经 Open 构造）")
+	}
+	out := config.Clone(cfg)
+	for _, f := range config.SecretFields(&out) {
+		v := *f.Value
+		if v == "" {
+			continue // 空字段不留密文，配置文件仍然可读可 diff
+		}
+		sealed, err := s.sealer.Seal(v)
+		if err != nil {
+			return cfg, fmt.Errorf("加密 %s 失败: %w", f.Path, err)
+		}
+		*f.Value = sealed
+	}
+	return out, nil
+}
+
+// unsealConfig 就地解密敏感字段。
+//
+// 解不开时**清空该字段并留一条 error 日志**，而不是让整个服务起不来：
+// secret.key 被换过 / 从别的机器拷来 config.json 都会走到这一步，此时用户需要的是
+// "去面板重填凭据"，不是一台永远起不来的机器。清空后 config.CredentialWarning
+// 会在配置页顶部直接说明"凭据没配、不会自动签到"。
+func (s *Store) unsealConfig(cfg *model.Config) {
+	for _, f := range config.SecretFields(cfg) {
+		if !secure.IsSealed(*f.Value) {
+			continue // 升级前的明文配置：读得动，下次保存自动变成密文
+		}
+		plain, err := s.sealer.Open(*f.Value)
+		if err != nil {
+			s.appendLogLocked(model.LogEvent{
+				Level: "error",
+				Msg: fmt.Sprintf("%s 解密失败（%v）：已清空该项，请在面板重新填写；原文件另存为 config.json.bak",
+					f.Path, err),
+			})
+			*f.Value = ""
+			continue
+		}
+		*f.Value = plain
+	}
 }
 
 // writeConfig 落盘配置：先备份旧文件，再原子写新文件。
+//
+// 备份的是**磁盘上的原文**（已加密），所以 .bak 也不会多出一份明文凭据——
+// 这是"改过密码以后旧密码还留在 .bak 里"那类问题的根治点。
 func (s *Store) writeConfig(cfg model.Config) error {
 	path := filepath.Join(s.Dir, configFileName)
-	raw, err := json.MarshalIndent(cfg, "", "  ")
+	sealed, err := s.sealConfig(cfg)
+	if err != nil {
+		return err
+	}
+	raw, err := json.MarshalIndent(sealed, "", "  ")
 	if err != nil {
 		return fmt.Errorf("配置序列化失败: %w", err)
 	}
 	raw = append(raw, '\n')
 	if old, rerr := os.ReadFile(path); rerr == nil {
-		if berr := s.writeFile(filepath.Join(s.Dir, configBakName), old); berr != nil {
+		// 升级路径的关键一步：从明文老配置迁过来的**第一次**保存，磁盘上那份 old
+		// 里还是明文凭据。照抄成 .bak 等于"顺手多留一份明文，而且用户以为已经加密了"。
+		// 这一份不备份，并在日志里说清楚（备份的目的是回滚，而回滚到明文正是要消灭的东西）。
+		if hasPlaintextSecrets(old) {
+			s.appendLogLocked(model.LogEvent{
+				Level: "warn",
+				Msg: "检测到磁盘上是旧版明文配置：本次保存不写 config.json.bak（避免多留一份明文凭据）。" +
+					"如需备份，请在这一步之前手动拷走并妥善保管。",
+			})
+		} else if berr := s.writeFile(filepath.Join(s.Dir, configBakName), old); berr != nil {
 			return fmt.Errorf("备份旧配置失败（%s）: %w", configBakName, berr)
 		}
 	}
@@ -230,6 +362,24 @@ func (s *Store) writeConfig(cfg model.Config) error {
 		return fmt.Errorf("写入 %s 失败: %w", configFileName, werr)
 	}
 	return nil
+}
+
+// hasPlaintextSecrets 判断一段 config.json 原文里是否还有未加密的敏感字段。
+//
+// 解析失败一律按"有明文"处理：宁可少留一份备份，也不要把一段看不懂的内容
+// 当成"应该没问题"抄进 .bak。
+func hasPlaintextSecrets(raw []byte) bool {
+	var cfg model.Config
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return true
+	}
+	for _, f := range config.SecretFields(&cfg) {
+		v := strings.TrimSpace(*f.Value)
+		if v != "" && !secure.IsSealed(v) {
+			return true
+		}
+	}
+	return false
 }
 
 // ---------- 状态 ----------
@@ -240,9 +390,16 @@ func (s *Store) State() model.State {
 	return cloneState(s.state)
 }
 
+// SaveState 整份落盘 state.json。
+//
+// config_version 由 store 自己维护：调用方通常是"读一份 State() → 改几个字段 → 整份
+// 写回"，读与写之间可能刚好保存过一次配置，那份旧副本里的计数会把它写回去。
+// 所以这里一律用内部计数覆盖它——state.json 里那一格永远只是内部计数的投影，
+// 不由调用方决定（也顺手让计数在写失败后自我修复）。
 func (s *Store) SaveState(st model.State) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	st.ConfigVersion = s.version
 	if err := s.writeState(st); err != nil {
 		return err
 	}
@@ -275,6 +432,11 @@ func (s *Store) loadState() {
 		return
 	}
 	s.state = st
+	// 内部计数以 state.json 为准；没有（或 <=0）就继续用旧配置里继承来的那个，
+	// 最后由 Open 兜到 1。顺序不能反：state.json 是这份计数唯一的落盘位置。
+	if st.ConfigVersion > 0 {
+		s.version = st.ConfigVersion
+	}
 	if len(st.Notified) > 0 {
 		s.appendLogLocked(model.LogEvent{
 			Level: "info",
@@ -304,21 +466,79 @@ func (s *Store) PasswordHash() string {
 	return s.auth.PasswordHash
 }
 
+// SessionEpoch 返回当前会话代次。未初始化时为空串（此时也没有任何会话）。
+func (s *Store) SessionEpoch() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.auth.SessionEpoch
+}
+
 // SetPasswordHash 写入管理密码哈希。initialized_at 只在第一次写入时落定：
 // 它是"这套部署的出生时间"，重置密码不该把它改掉。
+//
+// 换密码必然换会话代次：所有已签发的 Cookie 立刻失效。没有这一步，一次"改密码"
+// 只是把新口令记下来，被偷走的旧 Cookie 还能继续用满 7 天。
 func (s *Store) SetPasswordHash(h string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.writePasswordHashLocked(h, true); err != nil {
+		return err
+	}
+	s.appendLogLocked(model.LogEvent{Level: "info", Msg: "管理密码已更新，所有已登录会话已失效"})
+	return nil
+}
+
+// RehashPassword 只把哈希换成更强的参数，**不**换会话代次。
+//
+// 用途是登录成功后的参数升级（12 万轮 → 60 万轮）：密码本身没变，把用户踢下线
+// 属于副作用。它与 SetPasswordHash 的唯一区别就在这里，所以两条路都指向同一个
+// 写入实现，只由一个 rotate 参数分叉。
+func (s *Store) RehashPassword(h string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.writePasswordHashLocked(h, false); err != nil {
+		return err
+	}
+	s.appendLogLocked(model.LogEvent{Level: "info", Msg: fmt.Sprintf("管理密码哈希已按当前参数重算（迭代 %d）", secure.PBKDF2Iterations)})
+	return nil
+}
+
+// RotateSessionEpoch 让所有已签发的会话立即失效（"退出登录"用）。
+//
+// 单管理员面板上这是最省心的语义：点一次退出 = 所有浏览器/手机都要重新登录。
+// 代价是"手机点退出会把电脑也踢下线"，换来的是"复制走的 Cookie 不能再用"——
+// 对一个存着学校密码的面板，这个交换是划算的。
+func (s *Store) RotateSessionEpoch() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.auth.PasswordHash == "" {
+		return nil // 未初始化：没有会话可失效，也不用造一个代次出来
+	}
+	doc := s.auth
+	doc.SessionEpoch = secure.RandomHex(16)
+	if err := s.writeAuth(doc); err != nil {
+		return err
+	}
+	s.auth = doc
+	return nil
+}
+
+// writePasswordHashLocked 是两条写哈希路径的唯一实现（调用方必须已持写锁）。
+func (s *Store) writePasswordHashLocked(h string, rotate bool) error {
 	doc := s.auth
 	doc.PasswordHash = h
 	if doc.InitializedAt == "" {
 		doc.InitializedAt = time.Now().UTC().Format(time.RFC3339)
 	}
+	// 代次为空（首次设置密码、或从没有该字段的旧 auth.json 升级上来）时无条件生成：
+	// 没有代次的会话载荷会被 authed 判为无效，等于谁都进不来。
+	if rotate || doc.SessionEpoch == "" {
+		doc.SessionEpoch = secure.RandomHex(16)
+	}
 	if err := s.writeAuth(doc); err != nil {
 		return err
 	}
 	s.auth = doc
-	s.appendLogLocked(model.LogEvent{Level: "info", Msg: "管理密码已更新"})
 	return nil
 }
 
@@ -344,6 +564,21 @@ func (s *Store) loadAuth() {
 		return
 	}
 	s.auth = doc
+	// 旧 auth.json 里没有 session_epoch：补一个并落盘，否则"换密码/退出即失效"这套
+	// 机制在升级后的第一次启动里没有可比对的基准值。
+	//
+	// 升级前签发的 Cookie 载荷里没有 sv 字段，一律会被 authed 拒掉——这是一次性
+	// 的重新登录代价，换的是"代次之后签发的每个 Cookie 都可撤销"。日志里说清楚，
+	// 免得用户以为是登录坏了。
+	if doc.PasswordHash != "" && doc.SessionEpoch == "" {
+		doc.SessionEpoch = secure.RandomHex(16)
+		if err := s.writeAuth(doc); err != nil {
+			s.appendLogLocked(model.LogEvent{Level: "warn", Msg: fmt.Sprintf("写入会话代次失败（%v）：本次进程内所有旧 Cookie 都会被判无效", err)})
+		} else {
+			s.auth = doc
+			s.appendLogLocked(model.LogEvent{Level: "info", Msg: "已为既有部署生成会话代次：升级前签发的登录 Cookie 需重新登录一次"})
+		}
+	}
 }
 
 func (s *Store) writeAuth(doc authDoc) error {

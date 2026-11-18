@@ -59,11 +59,16 @@ func (s *Server) handleLoginRefresh(w http.ResponseWriter, r *http.Request) {
 			token, mode, note = strings.TrimSpace(res.Token), "cookie", "已用浏览器 Cookie 换到新的免登凭证"
 		} else {
 			if err == nil {
-				err = errors.New("Cookie 登录没有返回 token（页面结构可能已变化）")
+				err = errors.New("Cookie 登录没有返回 token（登录页结构可能已变化）")
 			}
 			if !account {
 				msg := s.sanitizeError(err.Error(), probe)
 				s.logf("warn", "", "换免登凭证失败 mode=cookie：%s", msg)
+				// 校外 IP 上 Cookie 通道也会停在二次认证页：这是"要人在校内网/
+				// 浏览器里做一步"，不是凭据填错了，所以回 409 而不是 502。
+				if s.writeSecondAuth(w, err, "", "") {
+					return
+				}
 				writeError(w, newError(http.StatusBadGateway, codeLoginFailed, msg, hops...))
 				return
 			}
@@ -76,6 +81,9 @@ func (s *Server) handleLoginRefresh(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			msg := s.sanitizeError(err.Error(), probe)
 			s.logf("warn", "", "换免登凭证失败 mode=password：%s", msg)
+			if s.writeSecondAuth(w, err, username, password) {
+				return
+			}
 			writeError(w, newError(http.StatusBadGateway, codeLoginFailed, "学号密码登录失败："+msg, hops...))
 			return
 		}
@@ -101,7 +109,9 @@ func (s *Server) handleLoginRefresh(w http.ResponseWriter, r *http.Request) {
 
 	// 用户这次亲手粘的 Cookie 一并落盘：否则明天 token 过期时又得重新粘一次。
 	saveCookie := hasCookie
-	version, saveErr := s.store.UpdateConfig(func(latest *model.Config) []string {
+	// 配置不再记录版本号：这里的计数只用来唤醒调度器/让上层知道"改过了"，
+	// 既不落进 config.json，也不再回给前端（面板上早已不显示"配置版本 vN"）。
+	_, saveErr := s.store.UpdateConfig(func(latest *model.Config) []string {
 		latest.User.Token = token
 		if saveCookie {
 			latest.User.Cookie = formCookie
@@ -115,8 +125,9 @@ func (s *Server) handleLoginRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.wakeScheduler("免登凭证已更新")
-	s.logf("info", "", "已换新免登凭证 mode=%s 写入 config v%d cookie_saved=%t ip=%s",
-		mode, version, saveCookie, s.clientIP(r))
+	// 文案里不再报版本号：配置版本对用户没有意义，读起来还像在说"第几次改档"。
+	s.logf("info", "", "已换新免登凭证 mode=%s cookie_saved=%t ip=%s",
+		mode, saveCookie, s.clientIP(r))
 	if hops == nil {
 		hops = []string{}
 	}
@@ -128,7 +139,6 @@ func (s *Server) handleLoginRefresh(w http.ResponseWriter, r *http.Request) {
 		"plan":         plan,
 		"saved":        true,
 		"cookie_saved": saveCookie,
-		"version":      version,
 		"hops":         hops,
 	})
 }
