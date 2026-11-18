@@ -139,7 +139,7 @@ curl -N -b jar http://127.0.0.1:14514/api/v1/logs/stream
 # 面板内短信验证登录（校外 IP 被学校要求短信二次验证时用）
 curl -s -b jar -H 'X-Requested-With: fzu-web' -H 'Content-Type: application/json' \
      -d '{}' http://127.0.0.1:14514/api/v1/login/sms/start
-# → {"ok":true,"challenge":"…","phone":"152****1543","sent":true,"resend_after":120}
+# → {"ok":true,"challenge":"…","phone":"138****1234","sent":true,"resend_after":120}
 curl -s -b jar -H 'X-Requested-With: fzu-web' -H 'Content-Type: application/json' \
      -d '{"challenge":"…","code":"123456"}' http://127.0.0.1:14514/api/v1/login/sms/verify
 # → {"ok":true,"token_hint":"…","school_ok":true}

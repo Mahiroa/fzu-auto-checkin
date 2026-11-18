@@ -28,6 +28,10 @@ cd "$root" || exit 2
 # 先命中哪条就报哪条，报错文案直接告诉人该怎么处理。
 check() {
   # $1 = 路径；命中则打印原因并返回 0
+  # 白名单只有一条：配置页那张二维码素材，它是页面的一部分而不是验收截图。
+  case "$1" in
+    web/qr.png) return 1 ;;
+  esac
   case "$1" in
     # ---- 构建产物 ----
     dist/*|*/dist/*)                     echo "构建产物目录（dist/）"; return 0 ;;
@@ -46,8 +50,12 @@ check() {
     tests/*|*/tests/*)                   echo "测试目录（tests/）"; return 0 ;;
     *_test.go|*_test.py)                 echo "单元测试文件"; return 0 ;;
     testdata/*|*/testdata/*)             echo "测试数据 / 向量"; return 0 ;;
+    *parity*)                            echo "跨语言一致性脚本 / 语料（本机工具）"; return 0 ;;
+    *baseline*.txt)                      echo "UI 基线快照（本机验收物）"; return 0 ;;
     *.pytest_cache/*|*/.pytest_cache)    echo "pytest 缓存"; return 0 ;;
     scripts/gen_parity.py)               echo "一致性语料生成器"; return 0 ;;
+    # ---- 图片：除了页面素材，任何图片都可能是带本机信息的截图 ----
+    *.png|*.jpg|*.jpeg|*.webp|*.gif)     echo "图片 / 截图（仅 web/qr.png 例外）"; return 0 ;;
     # ---- 临时数据 / 运行时数据 ----
     data/*|*/data/*|data-*/*|*/data-*/*) echo "运行时数据目录（含凭据哈希与运行历史）"; return 0 ;;
     *.jsonl|*.log|*.bak|*.tmp|*.swp|*.swo)

@@ -48,7 +48,7 @@
 - 必须存在的 id：`nav`、`main`、`btn-geo`、`geo-status`
 - `data-route="#/dashboard"`、`#/config`、`#/logs`、`#/runs` 各 **恰好 1** 处
 - `class="nav-btn"` 全文恰好 **4** 处，且 4 个都在 `<nav id="nav">` 与 `</nav>` 之间
-- **§附录里的 152 个 id 一个都不能少**（基线在 `docs/ui-baseline-ids.txt`）
+- **§附录里的 152 个 id 一个都不能少**（基线快照是本机验收物，不入库）
 
 ### 1.4 `style.css` 的字面要求
 
@@ -394,7 +394,7 @@ id 基线自查（html-owner）：
 
 ```powershell
 $now = ([regex]::Matches((Get-Content -Raw server\web\static\index.html), 'id="([^"]+)"') | ForEach-Object { $_.Groups[1].Value })
-$base = Get-Content docs\ui-baseline-ids.txt
+$base = Get-Content <本机>\ui-baseline-ids.txt   # 本机快照，不入库
 Compare-Object $base $now   # 必须无输出
 ```
 

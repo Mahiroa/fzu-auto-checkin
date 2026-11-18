@@ -1,7 +1,6 @@
 # 本地密钥扫描（Windows / PowerShell，betterleaks）
 #
-# 为什么需要：2026-11-16 那次是把真实 Access-Token 当成测试夹具提交了，
-# 而它是"无前缀的随机串"，肉眼和常规 review 都看不出来。CI 里已经有一份全历史扫描
+# 为什么需要：无前缀的随机串肉眼和常规 review 都看不出来，CI 里已经有一份全历史扫描
 # （.github/workflows/secret-scan.yml），这个脚本是同一套规则的手动入口。
 #
 # 用法：

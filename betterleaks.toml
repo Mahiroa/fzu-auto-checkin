@@ -1,8 +1,7 @@
-# betterleaks 配置：内置默认规则 + 本项目踩过的那两类坑
+# betterleaks 配置：内置默认规则 + 本项目补的两条
 #
-# 背景（2026-11-16）：真实的 oss.fzu.edu.cn Access-Token（22 字符、无前缀 base64url）
-# 曾被当成测试夹具写进三个 *_test.go。默认规则集只认 ghp_/AKIA/SCT 这类带前缀的值，
-# 抓不到纯随机串，所以下面补了"高熵 token 字面量"与"SESSION Cookie 值"两条。
+# 默认规则集只认 ghp_/AKIA/SCT 这类带前缀的值，抓不到无前缀的纯随机串，
+# 所以下面补了两条：高熵 token 字面量、SESSION Cookie 值。
 #
 # 这个文件同时服务三处：pre-commit 钩子（scripts/pre-commit-secret-scan.sh）、
 # 本地手动扫描（scripts/secret-scan.ps1）、CI 全历史扫描（.github/workflows/secret-scan.yml）。
@@ -23,7 +22,14 @@ title = "fzu-auto-checkin secret scan"
 
 # ---------------------------------------------------------------- 全局预过滤
 # 返回 true = 这个路径整个不扫。列出的都是"本来就不入库"或"已知是夹具"的地方：
-#   _test.go / testdata      —— 测试夹具与向量，历史里有一批（现在已被 .gitignore 挡住）
+#   _test.go / testdata      —— 测试夹具与向量（现在也已被 .gitignore 挡住）
+#                               ⚠️ 整文件跳过是已知盲区：测试文件里的值同样看不见。
+#                               之所以保留：树里已没有测试文件，新加的测试若含敏感值，
+#                               由 repo-guard 在提交前拦住。要专门复核这一类历史，用
+#                               不带本配置的扫描：
+#                                 git log -p | betterleaks stdin --git-diff --redact
+#                               （2026-11-19 实测：去掉这两条 prefilter 跑全历史会报 21 条，
+#                                全部是 whatever-1 / old-password 这类合成夹具，故保留）
 #   .recon/                  —— 本机抓包现场与工具目录，绝不入库
 #   docs/verify-shots/       —— 验收截图
 #   scripts/ui-verify.*      —— 本机浏览器验收编排（含本机测试密码），已从树里删除
@@ -82,7 +88,7 @@ id = "opaque-token-literal"
 description = "疑似真实 token 的字面量（无前缀、≥20 字符、高熵）"
 regex = '''(?i)(?:token|cookie|session|secret|passwd|password|api[_-]?key|access[_-]?key|send[_-]?key)\b[^\n]{0,16}?["']([A-Za-z0-9_\-+/=]{20,})["']'''
 valueGroup = 1
-# 阈值依据：真实值 aAvk… 的 Shannon 熵 = 4.005；英文短语型噪声
+# 阈值依据：高熵随机串的 Shannon 熵 ≈ 4.0；英文短语型噪声
 # （wrong-from-other-ip 3.34、definitely-not-the-password 3.86）都低于 3.9。
 filter = '''entropy(finding.secret) <= 3.9'''
 keywords = ["token", "cookie", "session", "secret", "password", "key"]

@@ -90,4 +90,8 @@ scripts/ui-verify.mjs
 .vs/
 node_modules/
 *.iml
-
+# ---- 校验脚本与验收快照：与 tests/ 同一条口径，只留本机 ----
+# 一致性用例表与 UI id 基线都是「跑验收才用得上」的东西，而运行器本身
+#（scripts/ui-verify.*）早已不入库；只清运行器、不清数据，就等于留了一条暗门。
+scripts/check-address-parity.mjs
+docs/ui-baseline-ids.txt

@@ -1,8 +1,8 @@
 #!/bin/sh
 # pre-commit 本地密钥扫描（betterleaks）
 #
-# 为什么有这一层：2026-11-16 把真实 Access-Token 当测试夹具提交过一次，
-# 它是无前缀随机串，肉眼 review 看不出来。CI 有全历史兜底，这里是提交前的闸门。
+# 为什么有这一层：无前缀的随机串肉眼 review 看不出来，CI 有全历史兜底，
+# 这里是提交前的闸门。
 #
 # betterleaks v2 不再有 `protect --staged`：暂存区扫描是把 git diff --cached
 # 喂给 `stdin --git-diff`（官方迁移文档给的就是这条命令）。

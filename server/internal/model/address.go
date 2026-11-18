@@ -8,7 +8,7 @@ import "strings"
 // 自己就是拿高德逆地理编码拼出来的。学校侧把这串原样存档、按人看，所以形态必须
 // 跟 H5 里长出来的一模一样，三段、不缺不重：
 //
-//	旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区至诚苑A区学生公寓
+//	旗山校区 福建省福州市闽侯县乌龙江北大道2号靠近福州大学旗山校区生活区X号楼
 //	└校区标记┘ └── 省/市/县 + 道路门牌 ──┘└── 靠近 + POI 全称 ──┘
 //
 // 也就是「校区 + 空格 + 详细地址 + 靠近 + 最近 POI」。示例形态（取自学校 H5 与
@@ -17,7 +17,7 @@ import "strings"
 //
 // 三类来源会写出"不规范"的形态，本函数逐一收口：
 //
-//  1. 地图选点：高德 regeo 的 formatted_address 已经写到楼栋时（"…至诚苑A区学生
+//  1. 地图选点：高德 regeo 的 formatted_address 已经写到楼栋时（"…生活区X号楼"
 //     公寓"），再拼一句"靠近"同一栋楼，就成了"…学生公寓靠近…学生公寓"——同一处
 //     说两遍，`靠近` 没有带来任何新信息，这时才合并。**注意这是例外，不是常态**：
 //     常规形态里 `靠近` 是有用的（门牌 → 楼栋），不能被一律删掉。
@@ -46,7 +46,7 @@ const (
 
 	// actualDupRunes 小于这个字数的相邻重复不折叠：两个字的重叠太容易误伤正常
 	// 连读（"上街镇" 后面接 "镇上"），三字起才基本只在真重复时出现
-	//（"闽侯县闽侯县"、"至诚苑A区学生公寓至诚苑A区学生公寓"）。
+	//（"闽侯县闽侯县"、"生活区X号楼生活区X号楼"）。
 	actualDupRunes = 3
 
 	// actualMergeRunes 两段首尾重叠短于这个字数就不当作同一段：1-3 字的重叠
@@ -68,7 +68,7 @@ func NormalizeActualLocation(raw string) string {
 		return ""
 	}
 	body, tagged := splitCampusTag(text)
-	// 标记已经占住第一段，正文开头再出现一次就是重复（"旗山校区 旗山校区至诚苑A区"）
+	// 标记已经占住第一段，正文开头再出现一次就是重复（"旗山校区 旗山校区生活区X号楼"）
 	body = strings.TrimSpace(strings.TrimPrefix(body, ActualLocationCampus))
 	body = mergeNearClauses(body)
 	body = collapseAdjacentRepeat(body)
@@ -140,7 +140,7 @@ func mergeHeadTail(head, tail string) string {
 		// 主地址里已经有这栋楼：整段「靠近X」是纯重复，丢掉
 		return head
 	case strings.Contains(tail, head):
-		// 反过来主地址被 POI 名包含（"福州大学旗山校区" + "福州大学旗山校区至诚苑A区"）：
+		// 反过来主地址被 POI 名包含（"福州大学旗山校区" + "福州大学旗山校区生活区X号楼"）：
 		// 信息全在那一段里，直接用它，不出现两个"福州大学旗山校区"
 		return tail
 	}

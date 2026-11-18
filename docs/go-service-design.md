@@ -714,7 +714,7 @@ POST /api/v1/login/sms/cancel  {challenge}       → {ok:true}
 工程约定：
 
 - challenge 是**进程内**句柄（10 分钟 TTL、最多 5 条、成功即删、错 5 次即删）。它握着一条活的 CAS 会话（cookie jar + flowkey），落盘或跨实例迁移都会让学校侧认不出这条会话。
-- 日志/响应/推送里只出现打码手机号（`152****1543`）、challenge 前 8 位与 `maskSecret(token)`；验证码与 flowkey 一律不进任何输出。
+- 日志/响应/推送里只出现打码手机号（`138****1234`）、challenge 前 8 位与 `maskSecret(token)`；验证码与 flowkey 一律不进任何输出。
 - **init 没过也照样落盘**（与本轮之前的 `/login/refresh` 不同）：这条 token 是用户等了一条短信换来的，上游一时 500 不代表 token 无效；面板显式回 `school_ok:false` 并附 init 原话。
 - 409 的文案同步改成「点面板上的发送验证码」——不能再让用户去开 DevTools。
 - 换票的收尾写了两种（会话已认证则直接 GET 发票；否则提交 smsLogin 表单，username 先手机号再学号），因为没拿到过真实验证码，无法把收尾收敛到一条。失败时错误里带每次尝试的 HTTP 码与"页面是否还是二次认证页"，便于下一轮定位。

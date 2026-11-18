@@ -90,7 +90,12 @@ import (
 // 1.6.5：文档与界面里的示例统一改成 `生活区X号楼` 占位（宿舍楼属于个人信息，只该待在
 // 本机 config.yaml 里）；密钥扫描补 prefilter（dist/、*.exe、.shots/）与两条同形表达式
 // 的 filter，并把树里的探针文件换成 scripts/secret-scan-selftest.ps1。
-const Version = "1.6.5"
+//
+// 1.6.6：隐私复核查出三处并清掉——真实苑区名 5 处（代码注释）、真机打码手机号 2 处
+// （文档）、已移除 token 的指纹（扫描配置里写了站点名与前缀）；发布件与线上二进制
+// 按修好的树重建（v1.6.5 的 release 与 tag 已撤下）。行为与 1.6.5 完全一致，只有
+// 文案与注释变化。
+const Version = "1.6.6"
 
 // dateLayout 是 state.json / DayPlan 里日期的唯一写法。
 const dateLayout = "2006-01-02"

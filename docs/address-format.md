@@ -2,7 +2,7 @@
 
 > 对应字段：`checkin.actual_location`（单点）/ `checkin.locations[].actual_location`（位置池）。
 > 实现：`server/internal/model/address.go`（Go）、`src/checkin.py`（Python）、`server/web/static/map-picker.js`（前端）。
-> 三方一致由 `scripts/check-address-parity.mjs` + 两侧单测钉住（见 §5）。
+> 三方一致由一张跨语言用例表钉住（脚本不入库，见 §5）。
 
 ## 1. 格式：校区 + 详细地址 + 靠近 POI
 
@@ -99,7 +99,7 @@ checkin:
 ```bash
 cd server && go test ./internal/model/ ./internal/fzu/ ./internal/config/
 python -m pytest tests -q
-node scripts/check-address-parity.mjs     # 同一张表跑 JS/Py/Go 的期望值
+node <本机>/check-address-parity.mjs        # 同一张表跑 JS/Py/Go 的期望值（脚本是本机工具，不入库）
 ```
 
 换校区（`泉港校区` 等）只需改常量 `ActualLocationCampus` / `CAMPUS_PREFIX` / `CAMPUS_TAG` 三处；换楼栋只改配置里 `靠近` 后面那段。
