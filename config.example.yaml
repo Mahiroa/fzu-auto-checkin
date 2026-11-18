@@ -10,26 +10,29 @@ user:
   # 注意：token 有有效期，失效后需重新获取（脚本会明确报错提示）
   token: ""
 
-  # 【推荐】浏览器 Cookie：登录学校统一身份认证后，把 sso.fzu.edu.cn 的 SESSION 粘过来。
-  # 好处是免密码、也不会有验证码问题（复用的是一个已经通过人机校验的浏览器会话）；
-  # 服务会用它在 token 过期时自动换新 token 并回写配置。
+  # 浏览器 Cookie（可选）：登录学校统一身份认证后，把 sso.fzu.edu.cn 的 SESSION 粘过来。
+  # 好处是免密码、也不会有验证码问题（复用的是一个已经通过人机校验的浏览器会话），
+  # Go 面板会在 token 过期时用它自动换新 token 并回写配置。
+  #
+  # ⚠️ 只有 Go 面板（server/）会读这一项；Python 版（main.py）只认 token 与学号密码，
+  #    在这里填 cookie 对 `python main.py` 没有任何作用。
   #
   # 怎么拿：
   #   1. 浏览器打开 https://sso.fzu.edu.cn/login 并完成登录
   #   2. F12 → 应用(Application) → 存储 → Cookie → https://sso.fzu.edu.cn
   #   3. 找到名为 SESSION 的那条，复制它的「值」，填成 cookie: "SESSION=粘贴的值"
-  #      （面板里的「浏览器 Cookie」框支持直接粘 cookies.json 全文，不用手拼）
   #
   # 三种凭据任选其一即可，优先级 token > cookie > 学号密码。
   cookie: ""
 
-  # 以下两项为可选：CAS 自动登录（已实现，token 与 cookie 都为空时用学号密码换新 token 并回写配置）
+  # 以下两项为可选：CAS 自动登录（token 与 cookie 都为空时用学号密码换新 token 并回写配置）
   # 填【当前能成功登录智汇福大 App 的账号密码】：
   #   username = 学号
   #   password = 你现在登录智汇福大 App 用的密码
   #             （如果你在 App 内自己改过密码，就填改过之后的那个，
   #              不保证与学校统一身份认证初始密码一致）
-  # 注意：学校侧可能对服务器 IP 弹验证码，那时账密登录会失败，改用上面的 cookie 即可。
+  # 注意：校外/机房 IP 上学校会强制短信二次验证，那时账密登录会停在验证码这一步；
+  #      Go 面板可以在面板内收码走完，Actions 这条路请改用 token（见 docs/get-token.md）。
   #
   # 这两个值在 config.yaml 里是**明文**：SSO 登录必须拿到原文，哈希在这里用不上。
   # src/config.py 每次加载会把文件权限收紧到 0600（收不紧会打印警告），
