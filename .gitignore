@@ -57,3 +57,37 @@ scripts/gen_parity.py
 scripts/smoke.ps1
 scripts/ui-verify.ps1
 scripts/ui-verify.mjs
+
+# ---- 兜底：临时数据 / 编辑器垃圾 / 其它二进制（2026-11-19 补） ----
+# 上面按目录分的规则是主力；这一组是"随手放进来也不会被提交"的兜底。
+# 同一条规矩在 scripts/repo-guard.sh 里有一份可执行的版本（pre-commit + CI 双跑），
+# 因为 .gitignore 挡不住 `git add -f`。
+*.tmp
+*.bak
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+*.db
+*.sqlite
+*.sqlite3
+*.prof
+*.pprof
+*.dmp
+*.trace
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
+.idea/
+.vs/
+node_modules/
+*.iml
+

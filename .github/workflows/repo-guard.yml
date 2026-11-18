@@ -1,0 +1,23 @@
+name: repo-guard
+
+# 产物 / 冒烟文件 / 测试 / 临时数据 一律不许入库（2026-11-19 立的规矩）。
+#
+# .gitignore 挡不住 `git add -f`，本地 pre-commit 挡不住 `--no-verify`，
+# 所以这里再拦一道：扫描**整棵已跟踪树**，命中就红。
+# 规则只有一份——scripts/repo-guard.sh，与本地钩子共用，避免"本地绿、CI 红"。
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  paths:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: 检查已跟踪文件
+        run: sh ./scripts/repo-guard.sh --tree
