@@ -33,7 +33,7 @@ import requests
 def _safe_stdout():
     """让 Windows 的 GBK 控制台不会因为 ✅ / ⚠ 之类的字符直接崩掉。
 
-    GitHub Actions 是 UTF-8，这里不起作用；但本地 `python main.py` 时 cp936 控制台遇到
+    Linux / 容器里是 UTF-8，这里不起作用；但 Windows 的 cp936 控制台遇到
     无法编码的字符会抛 UnicodeEncodeError，整次签到在打印日志这一步就结束了——
     比签到本身失败更难排查，所以只放宽编码错误的处理（replace），不改输出内容。
     """
@@ -64,9 +64,10 @@ def _save_token(cfg, token: str):
 # ============ 时间决策 ============
 
 def _force_enabled() -> bool:
-    """CHECKIN_FORCE=1 表示"手动补签"（workflow_dispatch 的 force 输入透传成该变量）。
+    """CHECKIN_FORCE=1 表示"手动补签"（Actions 版曾由 workflow_dispatch 的 force 透传，
+    该 workflow 已于 2026-11-19 下线；现在只在命令行手动设这个变量）。
 
-    只认严格的 "1"：CI 里表达式可能落成空串，其它值一律走正常调度分支，
+    只认严格的 "1"：环境变量可能被写成空串或 true，其它值一律走正常调度分支，
     免得一个手滑的 CHECKIN_FORCE=true 让定时任务整晚都跳过等待。
     """
     return (os.environ.get("CHECKIN_FORCE") or "").strip() == "1"
@@ -101,7 +102,7 @@ def decide(cfg: dict, now: datetime.datetime = None, *, sched: dict = None, rng=
            slots=None) -> Decision:
     """把"现在签 / 等一会儿 / 跳过"收敛成一个不联网、不 sleep 的纯决策。
 
-    为什么单独抽出来：这段判断一旦留在 main() 里，就只能靠真跑 GitHub Actions 来验证，
+    为什么单独抽出来：这段判断一旦留在 main() 里，就只能靠真跑一次线上定时来验证，
     而漏签恰恰是低频、难复现的故障。这里把配置、当前时间、随机源全部做成入参，
     任意时刻都能在本地断言分支走向（见自检脚本里的三个假 config）。
 

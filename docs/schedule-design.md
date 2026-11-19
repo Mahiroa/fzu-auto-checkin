@@ -167,14 +167,21 @@ decision = decide(cfg, now, sched=sched, slots=slots)
 
 保留：假期判定、token/SSO 登录、`query_today_task`、无计划/已签到/失败/成功四类推送分支。
 
-`CHECKIN_FORCE=1`（手动补签，`workflow_dispatch` 勾 `force`）的语义只有一条：**跳过等待、跳过窗口外拦截，但仍然打印窗口警告后继续尝试签到**。补签本来就是窗口外才用得上，"窗口外直接退出"会让这个开关失去意义；CI 层不再重复一套窗口判断，只透传布尔。
+`CHECKIN_FORCE=1`（手动补签，原先由 `workflow_dispatch` 的 `force` 透传，现在只在本地/命令行用）的语义只有一条：**跳过等待、跳过窗口外拦截，但仍然打印窗口警告后继续尝试签到**。补签本来就是窗口外才用得上，"窗口外直接退出"会让这个开关失去意义；调度层不再重复一套窗口判断，只认这一个环境变量。
 
-## 6. `.github/workflows/checkin.yml`
+## 6. GitHub Actions 签到（2026-11-19 已下线）
 
-- 保留现有十档 cron（对老配置兜底），**新增**窗口扫描 cron：北京时间 21:00–23:59（UTC 13:00–15:59）每 10 分钟一次 → `cron: "*/10 13-15 * * *"`。
-- `workflow_dispatch` 增加输入 `force`（boolean，默认 false），透传为环境变量 `CHECKIN_FORCE`。
-- job 增加 `timeout-minutes: 60`（等待流程最长约 12 分钟 + 依赖安装）。
-- 注释说明：cron 必须覆盖用户 `schedule.times` 所在的时段，否则该时刻不会被触发。
+> 这一节保留作历史记录：`.github/workflows/checkin.yml` 已从仓库删除，签到只走 Go 面板或本机自挂的 cron。
+>
+> 下线的直接原因：`Prepare config` 依赖「`CONFIG_YAML` secret 或仓库里的 `config.yaml`」，公开仓库两者都没有时必然退 1；而 cron 一晚叫醒二十多次，于是每个点一封「run failed」（实测 2026-11-18/19 共 22 次全红，9 秒死在同一个 step）。保留的动作只剩 `repo-guard.yml`（路径/隐私闸门）与 `secret-scan.yml`（密钥扫描）。
+
+原先的设计要点（供将来真要恢复时参考）：
+
+- 十档遗留 cron + 窗口扫描 cron（UTC 13:00–15:59 每 10 分钟）双轨，扫描档覆盖用户自定义时刻。
+- `workflow_dispatch` 的 `force`（boolean，默认 false）透传为环境变量 `CHECKIN_FORCE`。
+- `timeout-minutes: 60` 兜住排队与最长约 12 分钟的等待。
+- cron 必须覆盖 `schedule.times` 所在时段，否则该时刻不会被叫醒。
+- 恢复前必须先解决三件事：凭据不能进公开仓库、配置缺失不能以失败收场、单次失败不能变成一晚二十封邮件。
 
 ## 7. 测试
 
@@ -197,7 +204,7 @@ decision = decide(cfg, now, sched=sched, slots=slots)
   - 超大 `time_jitter_minutes` + 全越界 rng → `clamped_high`，且 `in_window(target)` 恒真。
 - `tests/test_main.py` / `tests/test_assets.py`（验证阶段补的集成/资产用例）
   - `main()` 窗口外零请求零推送；`decide()` 三分支；无硬编码 21:30/21:35（去注释后检查）。
-  - `config.example.yaml` 键位齐全；workflow cron / force / timeout 存在；README 无旧坏链。
+  - `config.example.yaml` 键位齐全；README 无旧坏链；`checkin.yml` 保持删除状态（`test_assets.py` 守住）。
 
 ## 8. 文件所有权（并行时不越界）
 
@@ -206,7 +213,7 @@ decision = decide(cfg, now, sched=sched, slots=slots)
 | agent-schedule | `src/schedule.py`（新建）、`tests/test_schedule.py` |
 | agent-location | `src/checkin.py`、`tests/test_location.py` |
 | agent-config | `src/config.py`、`config.example.yaml` |
-| agent-ci | `.github/workflows/checkin.yml` |
+| agent-ci | `.github/workflows/checkin.yml`（已下线，2026-11-19 删除） |
 | agent-main（第二阶段） | `main.py` |
 | agent-docs | `README.md`、`docs/schedule-design.md` 之外的新文档可加 |
 

@@ -90,7 +90,7 @@ token 由 App 登录后下发，获取方式按成本排序：
 2. **CAS 自动登录**（TODO，`src/login.py`）：
    走 `sso.fzu.edu.cn` 统一身份认证（即智汇福大 App 登录用的学号+密码），
    登录成功 → ticket → callback 换 token。
-   实现后无需手动获取 token，适合 GitHub Actions 云端长期运行。
+   实现后无需手动获取 token，适合在常驻服务或本机定时任务里长期运行。
    注意：sso.fzu.edu.cn 是新版前端（登录表单 JS 动态渲染 + clientredirect 多端适配），
    需继续分析其前端 JS 的密码加密与提交接口，工作量中等。
 

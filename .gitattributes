@@ -14,3 +14,8 @@
 # 钩子与扫描规则也要在 Linux/macOS 上直接跑：CRLF 会让 sh 报 $'\r': command not found。
 .githooks/* text eol=lf
 *.awk      text eol=lf
+
+# workflow 的 run: 段同样是 Linux 上执行的 shell 脚本，检出成 CRLF 会在 runner 上
+# 报 "syntax error near unexpected token"（CI 只在 Linux 跑，没有容错空间）。
+*.yml      text eol=lf
+*.yaml     text eol=lf

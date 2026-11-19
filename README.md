@@ -6,7 +6,7 @@
 
 **福州大学「智汇福大」晚点名 · 自动签到**
 
-一个二进制常驻面板，或一段 GitHub Actions 脚本：到点自动打卡，结果推到你微信。
+一个二进制常驻面板：到点自动打卡，结果推到你微信。
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f6fd0.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.22%2B-00add8.svg)](server/go.mod)
@@ -27,9 +27,9 @@
 
 ## 目录
 
-- [两条跑法：怎么选](#两条跑法怎么选)
+- [两种跑法：怎么选](#两种跑法怎么选)
 - [跑法 A：自建 Go 面板（推荐）](#跑法-a自建-go-面板推荐)
-- [跑法 B：GitHub Actions + Python](#跑法-bgithub-actions--python)
+- [跑法 B：Python CLI（本机跑，不挂 Actions）](#跑法-bpython-cli本机跑不挂-actions)
 - [功能一览](#功能一览)
 - [时间调度](#时间调度)
 - [位置与上报文案](#位置与上报文案)
@@ -45,21 +45,23 @@
 - [常见问题](#常见问题)
 - [贡献与反馈](#贡献与反馈)
 
-## 两条跑法：怎么选
+## 两种跑法：怎么选
 
-仓库里是同一套业务逻辑的两个实现：**Go 常驻服务**（`server/`，2026-11 起的主线，带 Web 面板）与**Python CLI**（`main.py` + `src/`，给 GitHub Actions 用的零服务器方案）。时间语义、位置解析、打卡链路、推送行为在两边是逐条对齐的（调度层有 323 例跨语言一致性语料）。
+仓库里是同一套业务逻辑的两个实现：**Go 常驻服务**（`server/`，2026-11 起的主线，带 Web 面板）与**Python CLI**（`main.py` + `src/`，无界面，定时自己挂）。时间语义、位置解析、打卡链路、推送行为在两边是逐条对齐的（调度层有 323 例跨语言一致性语料）。
 
-| | **Go 面板** | **GitHub Actions + Python** |
+> **仓库不再带 GitHub Actions 签到**（2026-11-19 起删除 `checkin.yml`）。理由很实在：Secret 里要放明文凭据、GitHub cron 常延迟 1–4 小时、配置一错就是每晚二十多封「run failed」邮件。要云端就用下面的面板，要命令行就自己在本机挂定时。
+
+| | **Go 面板** | **Python CLI** |
 |---|---|---|
-| 跑在哪 | 自己的电脑 / 小主机 / 服务器，常驻 | GitHub 托管的 runner，按 cron 唤起 |
+| 跑在哪 | 自己的电脑 / 小主机 / 服务器，常驻 | 本机或自有服务器，靠你自己的 cron 唤起 |
 | 有没有界面 | 浏览器面板：仪表盘 / 配置 / 日志 / 历史 | 没有界面，结论靠推送 |
-| 调度 | 服务内建调度器，窗口内每 30 秒复查，启动即补签 | GitHub cron（最小 10 分钟）+ 脚本内等待到点 |
-| 凭据存放 | `data/config.json` 里 AES-256-GCM 密文，密钥在同目录 `secret.key` | GitHub Secret 或仓库里的 `config.yaml`（**明文**，靠仓库私有与 Secret 兜底） |
+| 调度 | 服务内建调度器，窗口内每 30 秒复查，启动即补签 | 自己写 cron / 计划任务，档位落在窗口内 |
+| 凭据存放 | `data/config.json` 里 AES-256-GCM 密文，密钥在同目录 `secret.key` | 本机 `config.yaml`（**明文**，权限收到 `0600`） |
 | 依赖 | 一个二进制（Go 1.22 构建，**零第三方库**） | Python 3.11+ / requests / PyYAML / pycryptodome |
-| 额外能力 | 一键启停、定位预检、面板内收短信验证码、SSE 实时日志、运行历史、YAML 导入导出 | fork 即用，手机零安装 |
-| 代价 | 得有台常开的机器（或每天开机时段） | cron 不保证准点（实测延迟 1–4 小时），凭据在 Secret 里 |
+| 额外能力 | 一键启停、定位预检、面板内收短信验证码、SSE 实时日志、运行历史、YAML 导入导出 | 纯命令行，`CHECKIN_FORCE=1` 手动补签 |
+| 代价 | 得有台常开的机器（或每天开机时段） | 定时要自己写，cron 也不保证准点 |
 
-两条路可以同时开：面板负责日常，Actions 当兜底。任意一边签成功后，另一边读到学校的已签状态会直接静默退出；想彻底避免两边同时触发，把面板的「自动签到」开关暂停、只留 Actions 即可。
+两套同时开着没有意义：任意一边签成功后，另一边读到学校的已签状态会直接静默退出，但配置与日志要维护两份。
 
 ## 跑法 A：自建 Go 面板（推荐）
 
@@ -140,7 +142,7 @@ go build -trimpath -ldflags="-s -w" -o fzucheckin.exe ./cmd/fzucheckin
 
 `POST /api/v1/login/test`、`/login/refresh` 在需要二次验证时回 **409**、`reason=second_auth`，而不是含糊的"登录失败"。
 
-## 跑法 B：GitHub Actions + Python
+## 跑法 B：Python CLI（本机跑，不挂 Actions）
 
 ### 1. 拿到代码
 
@@ -193,19 +195,27 @@ CHECKIN_FORCE=1 python main.py          # bash / macOS / Linux
 $env:CHECKIN_FORCE = "1"; python main.py # Windows PowerShell
 ```
 
-### 4. 挂到云端
+### 4. 自己挂定时（可选）
 
-1. Fork 本仓库，或新建一个**私有仓库**把代码推上去；
-2. `Settings → Secrets and variables → Actions → New repository secret`，名称 `CONFIG_YAML`，值 = 本地 `config.yaml` 的**全文**；
-3. 完事。`.github/workflows/checkin.yml` 每 10 分钟扫一次北京时间 21:00–23:59，到点自动签。
+签到的前提是「有人按点把它叫醒」。仓库不再提供 cron，自己挂一个：**外部定时必须覆盖 `schedule.times` 所在的时段**，否则那个时刻根本不会被叫醒。
 
-> 也可以直接提交 `config.yaml`：workflow 的逻辑是「有 `CONFIG_YAML` secret 就用它，否则用仓库里的 `config.yaml`」。走这条路记得 `git add -f config.yaml`（`.gitignore` 默认忽略它），并且**必须是私有仓库**。
+Linux / macOS 的 crontab（北京 21:00–23:59 = UTC 13:00–15:59）：
 
-Actions 侧两个细节：`concurrency` 让整条 workflow 串行（已经开始的一次签到必须跑完，宁可排队也不打断半路请求），`timeout-minutes: 60` 兜住排队与早到等待。手动补签：`Actions → checkin → Run workflow → 勾 force`。
+```cron
+*/10 13-15 * * * cd ~/fzu-auto-checkin && /usr/bin/python3 main.py >> ~/fzu-checkin.log 2>&1
+```
+
+Windows 计划任务：触发器设成每天 21:30 / 21:50，操作填 `python main.py`，「起始于」填仓库目录。
+
+- 粒度 10 分钟足够：早到的时候脚本自己会等到目标时刻，秒级时刻不用你操心。
+- 迟到的运行走 `late_fallback` 补签，宁可迟到不缺席；拖到窗口外的静默退出，不会刷出误报。
+- 想补签一次：`CHECKIN_FORCE=1 python main.py`（Windows 见上一步的 PowerShell 写法）。
+
+> 这条路要自己保证机器开机、cron 生效、日志别把磁盘写满。嫌麻烦就用跑法 A 的面板：它把这些都做进服务里了。
 
 ## 功能一览
 
-| | 能力 | Go 面板 | Actions | 说明 |
+| | 能力 | Go 面板 | Python CLI | 说明 |
 |---|---|:--:|:--:|---|
 | ⏰ | 自定义签到时刻 | ✅ | ✅ | `schedule.times` 想写几档写几档，如 `["21:35","22:10"]`；被提前叫醒会自动等到最近一档 |
 | 🎲 | 时间抖动 | ✅ | ✅ | 每档 ±N 分钟随机偏移，越界先重抽、再贴边、执行前二次校验，**落不到窗口外** |
@@ -221,7 +231,7 @@ Actions 侧两个细节：`concurrency` 让整条 workflow 串行（已经开始
 | 🎯 | 定位预检 | ✅ | — | 只 `init` + `check`，不提交打卡、不推送、不标今日已签；白天也能放心点 |
 | 📲 | 结果推送 | ✅ | ✅ | Server酱 / PushPlus / Bark / 企业微信，也可完全静默 |
 | 🌴 | 假期跳过 | ✅ | ✅ | 按校历预填寒暑假，也能自己加任意免签区间 |
-| 🕘 | 手动补签 | ✅ | ✅ | 面板「立即签到」 / `mode=force`；Actions 勾 `force`；本地 `CHECKIN_FORCE=1` |
+| 🕘 | 手动补签 | ✅ | ✅ | 面板「立即签到」 / `mode=force`；命令行 `CHECKIN_FORCE=1` |
 | 🧪 | 离线可测 | ✅ | ✅ | 时间与随机源全部可注入，不联网、不读真实配置 |
 | 🤖 | 备选方案 | — | — | 附 v0.1 Auto.js 无障碍脚本（模拟点击，不碰接口），供参考 |
 
@@ -283,22 +293,14 @@ checkin:
 
 所以抖动写多大都不会在 21:00–23:59 之外打卡。
 
-### 与 cron 的关系（Actions 侧）
+### 与定时器的关系
 
-脚本只能「被叫醒之后决定做什么」，不能自己创造运行机会。**cron 必须覆盖 `times` 所在的时段**，否则那个时刻根本不会被叫醒。
+脚本只能「被叫醒之后决定做什么」，不能自己创造运行机会。**外部定时必须覆盖 `times` 所在的时段**，否则那个时刻根本不会被叫醒。
 
-仓库自带 workflow 有两组档：
-
-```yaml
-- cron: "*/10 13-15 * * *"   # 北京 21:00–23:59，每 10 分钟扫一次（主力）
-# 另有十档遗留 cron 兜底老配置：北京 20:05 / 20:35 / 21:05 / 21:35 / 21:50
-#                                 22:05 / 23:00 / 23:05 / 23:30 / 23:55
-```
-
-- **只改 `times`（仍在 21:00–23:59 内）**：不用动 cron，10 分钟粒度够用，秒级时刻由脚本自己等到点。
-- **把窗口挪出这段**（例如 `window_start: "20:00"` + `times: ["20:30"]`）：自己加 cron。北京时间 = UTC + 8，北京 20:00–23:59 = UTC 12:00–15:59 → `cron: "*/10 12-15 * * *"`；只加一个点也行，`cron: "30 12 * * *"` 就是北京 20:30。
-- GitHub 定时**实测常延迟 1–4 小时**（晚间高峰尤其明显），那十档遗留 cron 就是为了对冲：被拖进窗口的运行照常签，拖到窗口外的静默退出，不会刷出一堆误报。
-- Go 面板不依赖 cron：服务在窗口内每 30 秒复查一次，启动时还会补一次「今天在窗口内 + 未签到 + 已过最后一档」的 `late_fallback`。
+- **Go 面板**：不用管。服务在窗口内每 30 秒复查一次，启动时还会补一次「今天在窗口内 + 未签到 + 已过最后一档」的 `late_fallback`。
+- **Python CLI**：自己挂 cron / 计划任务。北京时间 = UTC + 8，北京 21:00–23:59 就是 `cron: "*/10 13-15 * * *"`。
+- **把窗口挪出这段**（例如 `window_start: "20:00"` + `times: ["20:30"]`）就把 cron 一起挪：北京 20:00–23:59 = UTC 12:00–15:59 → `cron: "*/10 12-15 * * *"`；只想打一个点也行，`cron: "30 12 * * *"` 就是北京 20:30。
+- 定时本身不保证准点（机器休眠、负载高都会迟到）：早到会被脚本等到点，迟到走 `late_fallback` 补签，两头都兜住；拖出窗口就静默退出，不会刷误报。
 
 ## 位置与上报文案
 
@@ -382,7 +384,7 @@ vacation:
       end: "2026-11-08"
 ```
 
-模板已按《福州大学 2026—2027 学年校历》（福大教〔2026〕10号）预填寒暑假。区间内**不签、不推、不留运行记录**（`notify: true` 才推一条提醒）；日期一过自动恢复。用 `CONFIG_YAML` secret 的话改 secret 内容即可，不用提交代码。
+模板已按《福州大学 2026—2027 学年校历》（福大教〔2026〕10号）预填寒暑假。区间内**不签、不推、不留运行记录**（`notify: true` 才推一条提醒）；日期一过自动恢复。面板改「假期」页，Python CLI 改 `config.yaml` 里的同名段，都不用动代码。
 
 ## 结果推送
 
@@ -453,7 +455,7 @@ curl -N -b jar http://127.0.0.1:14514/api/v1/logs/stream
 ## 一次签到做了什么
 
 ```
-调度触发（面板 tick / 启动补签 / Actions cron / 手动）
+调度触发（面板 tick / 启动补签 / 自己的 cron / 手动）
   └─ 读配置 → 解析 schedule（窗口、各档、抖动、等待、容忍）
        ├─ 不在窗口 / 等不起 / 已暂停 → 静默退出（不登录、不推送）
        └─ 到了目标时刻（早到就等到点）
@@ -519,10 +521,10 @@ location / {
 
 Linux 常驻用 systemd（`ExecStart=/usr/local/bin/fzucheckin -listen 127.0.0.1:8787 -data /var/lib/fzucheckin`，`Restart=on-failure`、`NoNewPrivileges=yes`、`ProtectSystem=strict`、`ReadWritePaths=/var/lib/fzucheckin`）；Windows 用计划任务开机启动。
 
-### Actions / Python 侧
+### Python 侧
 
-- `config.yaml` 是明文，权限靠 `0600` 与「私有仓库 + Secret」；**不要**把它放进公开仓库或共享目录。
-- `CONFIG_YAML` secret 的内容每次运行临时落盘，回写的 token 不会持久化——每次运行都会重新登录一次，这是预期行为。
+- `config.yaml` 是明文，权限靠 `0600` 收紧；**不要**把它放进仓库、共享目录或聊天记录。
+- 本机跑不会把凭据发到别处，但 token 也是写回这个文件——换机器记得重新登一次。
 - SSO 自动登录遇到验证码会明确失败，此时改用 token（[docs/get-token.md](docs/get-token.md)）。
 
 ## 项目结构
@@ -562,7 +564,7 @@ fzu-auto-checkin/
 │   ├── ui-redesign.md          # 界面改版记录与令牌
 │   └── assets/                 # logo.png / promo.png（品牌图，唯一允许入库的图片）
 ├── scripts/                    # repo-guard.sh、privacy-guard、密钥扫描、Auto.js 脚本
-├── .github/workflows/          # checkin.yml（签到）、repo-guard.yml、secret-scan.yml
+├── .github/workflows/          # repo-guard.yml（路径 + 隐私闸门）、secret-scan.yml（密钥扫描）
 ├── .githooks/                  # pre-commit（路径/隐私/密钥）+ commit-msg（提交信息）
 ├── config.example.yaml         # 配置模板（每项都有注释）
 ├── start.ps1 / start.cmd       # Windows 一键启动（按需构建 → 前台运行 → 打开浏览器）
@@ -631,7 +633,7 @@ sh ./scripts/repo-guard.sh --tree      # 手动全树体检
 ## 已知限制
 
 - **窗口不支持跨日**（如 23:00–01:00），写了会回退默认窗口并提示。
-- Actions 侧：自定义 `times` 必须落在 cron 扫描的时段里，否则不会被叫醒；GitHub 定时本身**不保证准点**，延迟 1–4 小时是常态，靠「窗口扫描 cron + 十档遗留档 + 多档时刻 + 迟到补签」把漏签概率压到最低，但无法承诺 100% 准点。
+- **仓库不自带定时器**：Go 面板跑自己的调度循环；Python CLI 准不准时取决于你的 cron / 计划任务（机器休眠、负载高都会迟到），脚本只能在被叫醒之后干活。
 - 签到完全依赖学校 H5 的接口与字段。若前端改版（路径、字段名、加密密钥变化），需要重新逆向；报错会明确推送，不会静默失败。
 - 校外 / 机房 IP 上统一身份认证会强制短信二次验证；服务端只能替你提交验证码，替不了收短信（面板内可完成，Python 侧需手填 token）。
 - 面板是**单用户、单实例**：一个进程一个写者，不做多用户与多副本；同一份 `data/` 不要给两个进程同时用。
@@ -643,7 +645,7 @@ sh ./scripts/repo-guard.sh --tree      # 手动全树体检
 <details>
 <summary><b>token 是什么？会过期吗？</b></summary>
 
-登录态凭证。**推荐填学号密码**：服务会用 SSO 自动换 token 并回写配置，全程无感。有效期官方没公开，失效就重新登录一次（配上账密或 Cookie 就自动做了）。在 GitHub Actions 里 `config.yaml` 每次从 Secret 临时生成，回写的 token 不会持久化——每次运行都会重新登录一次，这是预期行为。
+登录态凭证。**推荐填学号密码**：服务会用 SSO 自动换 token 并回写配置，全程无感。有效期官方没公开，失效就重新登录一次（配上账密或 Cookie 就自动做了）。面板把 token 存成 `data/config.json` 里的密文；Python CLI 就写在 `config.yaml` 里，每次登录覆盖成最新的。
 </details>
 
 <details>
@@ -681,7 +683,7 @@ sh ./scripts/repo-guard.sh --tree      # 手动全树体检
 <details>
 <summary><b>一晚会不会重复打卡？</b></summary>
 
-不会。任意一档签成功后，后续每次运行都会被 `FState` 判成「已签到」直接静默退出；面板还有单飞开关（同一时刻最多一次运行）与 `last_slot_key` 幂等闸；Actions 侧有 `concurrency` 串行化。
+不会。任意一档签成功后，后续每次运行都会被 `FState` 判成「已签到」直接静默退出；面板还有单飞开关（同一时刻最多一次运行）与 `last_slot_key` 幂等闸。
 </details>
 
 <details>
@@ -697,9 +699,17 @@ sh ./scripts/repo-guard.sh --tree      # 手动全树体检
 </details>
 
 <details>
-<summary><b>大概要花多少 Actions 额度？</b></summary>
+<summary><b>要花什么成本？</b></summary>
 
-窗口内每 10 分钟扫一次、单次约几十秒，一晚上约 20 次运行；真正干活的只有到目标时刻那一次，其余在 `init` 之后立刻退出。公开库免费，私有库也在免费额度内（每月 2000 分钟）。
+零。不用 Actions、不用任何付费服务：一台常开的机器（旧笔记本、小主机、家里 NAS 都行）跑那个二进制就够，推送渠道本身也有免费额度。真正干活的只有到目标时刻那一次，其余复查在一次 `init` 之后立刻退出。
+</details>
+
+<details>
+<summary><b>为什么仓库里没有 GitHub Actions 的签到 workflow 了？</b></summary>
+
+2026-11-19 删掉了 `checkin.yml`。它跑起来的代价是：凭据得以明文塞进 `CONFIG_YAML` secret；GitHub cron 在晚高峰实测延迟 1–4 小时；一旦配置缺失或写错，一晚上二十多个 cron 点就是二十多封「run failed」邮件——而签到一次都没真正执行（2026-11-18/19 实测 22 次全红，全部死在 `Prepare config` 的第 9 秒）。
+
+现在只剩两条体检类 CI：[`repo-guard.yml`](.github/workflows/repo-guard.yml)（路径 + 隐私闸门）与 [`secret-scan.yml`](.github/workflows/secret-scan.yml)（密钥扫描）。要签到请走跑法 A 的面板，或按跑法 B 在本机挂定时；`Actions` 页里剩下的历史运行记录不会再增加。
 </details>
 
 ## 贡献与反馈

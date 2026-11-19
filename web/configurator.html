@@ -284,12 +284,12 @@
   <div class="card decision">
     <div class="card-head">
       <h2 class="card-title">先选一条路</h2>
-      <span class="card-note">签到跑在 GitHub 服务器上，所以得有个账号</span>
+      <span class="card-note">签到不用 GitHub 账号；账号只用于「把配置备份进你自己的私有仓库」</span>
     </div>
-    <p class="hint">没有账号走第 4 步，有账号走第 5 步。两条路配出来的东西一样。</p>
+    <p class="hint">没有账号走第 4 步（直接生成配置）；有账号、想把代码和配置备份进私有仓库走第 5 步。</p>
     <div class="opts">
-      <a class="btn ghost opt" id="btnNoAcc" href="#step4card"><b>没有 GitHub 账号</b><small>走第 4 步：先注册，再照 1~4 条手动粘配置</small></a>
-      <a class="btn ghost opt" id="btnHasAcc" href="#step5card"><b>已有 GitHub 账号</b><small>走第 5 步：贴一个 token，页面替你建私有仓库、写配置</small></a>
+      <a class="btn ghost opt" id="btnNoAcc" href="#step4card"><b>没有 GitHub 账号</b><small>走第 4 步：直接生成配置，交给面板或本机跑</small></a>
+      <a class="btn ghost opt" id="btnHasAcc" href="#step5card"><b>已有 GitHub 账号</b><small>走第 5 步：贴一个 token，页面把代码与配置备份进你的私有仓库</small></a>
     </div>
   </div>
 
@@ -300,24 +300,22 @@
       <span class="card-note">没有 GitHub 账号</span>
     </div>
     <p class="hint">生成配置后，下面有一步一步的引导，照着做。</p>
-    <p class="hint">GitHub 国内直连时好时坏，只有注册和配置那几分钟可能打不开：换个时间、用校园网或手机热点，有梯子就开着。配好之后就不用了，签到跑在 GitHub 服务器上，日常零操作。</p>
+    <p class="hint">GitHub 国内直连时好时坏，只有第 5 步（备份到私有仓库）那几分钟可能打不开：换个时间、用校园网或手机热点，有梯子就开着。不备份也能用，签到跑在你自己的机器上。</p>
     <button class="btn ghost" id="ghCheck" type="button">测一下现在能不能打开 GitHub</button>
     <p class="hint" id="ghCheckResult" style="display:none"></p>
     <label class="chk"><input type="checkbox" id="agree"><span>我确认：只在<b>本人确实在校</b>时使用，不用于隐瞒在校或离校状态，也不代挂。</span></label>
     <button class="btn" id="gen" disabled type="button">生成配置</button>
     <div id="out" class="hide">
-      <label for="outSecret">方式 A：云端自动签到</label>
-      <p class="hint">这段贴进你自己的私有仓库就行。</p>
+      <label for="outSecret">方式 A：导入面板（推荐）</label>
+      <p class="hint">复制这段 → 面板「配置」页 → 「导入 YAML」→ 粘贴 → 应用。面板会跑同一套规范化与校验。</p>
       <textarea id="outSecret" readonly></textarea>
       <button class="btn ghost" data-copy="outSecret" type="button">复制这段配置</button>
       <ol class="guide">
-        <li>没有账号先注册：<a href="https://github.com/signup" target="_blank" rel="noopener">点这里免费注册</a>，一分钟，要邮箱。</li>
-        <li><a href="https://github.com/new/import" target="_blank" rel="noopener">把项目导入你自己的私有仓库</a>：clone URL 填 <code>https://github.com/Mahiroa/fzu-auto-checkin</code>，仓库名随意，可见性选 <b>Private</b>，点 Begin import。</li>
-        <li>导入完进仓库的 Settings → Secrets and variables → Actions → New repository secret，Name 填 <code>CONFIG_YAML</code>，Secret 粘上面复制的那段，点 Add secret。</li>
-        <li>到此为止。之后每晚 <b>21:35 和 21:50</b> 自动签到，记录在仓库的 Actions 页。想收微信通知回第 3 步开推送。</li>
+        <li>先按仓库 README「跑法 A」把面板跑起来：一个二进制，Windows 双击 <code>start.ps1</code> 即可。</li>
+        <li><b>Actions 自动签到已于 2026-11-19 下线</b>，仓库里不再有定时 workflow：配置交给面板、或本机 <code>python main.py</code>，别再往仓库 Secret 里贴。</li>
       </ol>
-      <label for="outYaml">方式 B：本地运行</label>
-      <p class="hint">存成仓库根目录的 config.yaml，需要一台常开的电脑。</p>
+      <label for="outYaml">方式 B：自己跑 Python CLI</label>
+      <p class="hint">存成仓库根目录的 <code>config.yaml</code>，自己挂 cron / 计划任务，需要一台常开的机器。</p>
       <textarea id="outYaml" readonly></textarea>
       <button class="btn ghost" data-copy="outYaml" type="button">复制 config.yaml</button>
       <p class="hint">细节见仓库 README。</p>
@@ -327,18 +325,18 @@
   <!-- 第 5 步 一键部署（有账号） -->
   <div class="card folded" id="step5card">
     <div class="card-head">
-      <h2 class="card-title"><span class="step">5</span>一键部署</h2>
+      <h2 class="card-title"><span class="step">5</span>备份到私有仓库</h2>
       <span class="card-note">已有 GitHub 账号</span>
     </div>
     <p class="hint">没有账号回上面走第 4 步。</p>
-    <p class="hint">贴一个 token：页面替你建私有仓库、写入全部代码和你的配置，之后每晚 21:35 和 21:50 自动签到。凭据只存在你自己的私有仓库里。</p>
+    <p class="hint">贴一个 token：页面把代码和你填的配置写进你自己的私有仓库，仅作备份 / 换机器用。<b>签到不会再在 GitHub 上跑</b>——把这份 <code>config.yaml</code> 导入面板，或本机 <code>python main.py</code>。凭据只存在你自己的私有仓库里。</p>
     <label for="ghPat">GitHub Token</label>
     <input type="text" id="ghPat" autocomplete="off" spellcheck="false" placeholder="粘贴 ghp_ 开头的 token">
-    <p class="hint">没有？<a href="https://github.com/settings/tokens/new?scopes=repo,workflow&amp;description=fzu-checkin" target="_blank" rel="noopener">点这里创建</a>，直达创建表单，repo 和 workflow 两项已经勾好。三件事：Expiration 选 <b>No expiration</b>，默认 30 天到期后写入会静默失败；拉到页面底部点 Generate token；复制出现的 <code>ghp_</code> 那串，只显示这一次。部署完建议把 token 删掉。</p>
+    <p class="hint">没有？<a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=fzu-checkin" target="_blank" rel="noopener">点这里创建</a>，直达创建表单，<code>repo</code> 权限已经勾好（只有这条路才需要 token）。三件事：Expiration 选 <b>No expiration</b>，默认 30 天到期后写入会静默失败；拉到页面底部点 Generate token；复制出现的 <code>ghp_</code> 那串，只显示这一次。备份完建议把 token 删掉。</p>
     <label for="repoName">私有仓库名</label>
     <input type="text" id="repoName" value="fzu-auto-checkin">
     <label class="chk"><input type="checkbox" id="agree2"><span>我确认：只在<b>本人确实在校</b>时使用，不用于隐瞒在校或离校状态，也不代挂。</span></label>
-    <button class="btn" id="deploy" disabled type="button">部署，今晚开始自动签到</button>
+    <button class="btn" id="deploy" disabled type="button">备份到我的私有仓库</button>
     <pre id="log" class="hide"></pre>
   </div>
 
@@ -791,17 +789,9 @@ document.getElementById('deploy').addEventListener('click', async () => {
     });
     dlog('代码和配置都写好了');
 
-    dlog('第 4 步：手动触发一次签到验证…');
-    try {
-      await gh(`/repos/${me.login}/${repo}/actions/workflows/checkin.yml/dispatches`, {
-        method: 'POST', body: JSON.stringify({ ref: repoInfo.default_branch })
-      });
-      dlog('已触发，1 分钟后到仓库 Actions 页看结果');
-    } catch (e) {
-      dlog('自动触发没成功，不影响定时签到。到 Actions 页手动 Run workflow 验证一下。');
-    }
-
-    dlog('部署完成。今晚 21:35 和 21:50 自动开始。Token 现在可以去 GitHub 删掉：Settings → Developer settings → Tokens。');
+    dlog('第 4 步：完成（不再触发 Actions —— 签到流程已于 2026-11-19 下线）');
+    dlog('仓库里现在是代码 + 你的 config.yaml，只作备份。签到怎么跑：把它导入面板「配置 → 导入 YAML」，或本机 python main.py 自己挂定时。');
+    dlog('Token 现在可以去 GitHub 删掉：Settings → Developer settings → Tokens。');
 
     // 补假期复用同一个 Token：只存在本次打开的内存里，不落盘、不上传
     const vp = document.getElementById('vacPat');
@@ -811,9 +801,6 @@ document.getElementById('deploy').addEventListener('click', async () => {
   } catch (e) {
     dlog('失败：' + e.message);
     dlog('常见原因：Token 粘错，或者网络超时，GitHub 国内时好时坏。已传好的文件不会丢，等一会儿点上面的「重试 / 继续部署」会从断点接着传。');
-    if (/404/.test(e.message) && /workflows/.test(e.message)) {
-      dlog('这个 404 基本能确定：Token 缺 workflow 权限，旧链接只勾了 repo，写不了签到工作流。用上面「点这里创建」重新生成一个，repo 和 workflow 都勾好的，粘回来点「重试 / 继续部署」，已传好的文件会自动跳过。');
-    }
   } finally {
     btn.disabled = false;
     btn.textContent = '重试 / 继续部署';
