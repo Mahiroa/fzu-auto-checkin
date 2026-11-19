@@ -43,13 +43,29 @@ if (-not (Test-Path $config)) { throw "缺少规则文件：$config" }
 Push-Location $root
 try {
     if ($Staged) {
-        # v2 没有 protect --staged：暂存区扫描 = git diff --cached 喂给 stdin --git-diff。
-        # 走 cmd 的字节管道，避免 PowerShell 对象管道破坏补丁文本（中文路径尤其容易出事）。
-        $tail = '--git-diff --config "{0}" --redact' -f $config
-        if ($ReportPath) { $tail += ' --output "{0}"' -f (Join-Path $root $ReportPath) }
-        $line = 'git diff --cached --no-ext-diff --no-textconv --no-color --src-prefix=a/ --dst-prefix=b/ | "{0}" stdin {1}' -f $bl, $tail
-        cmd /c $line
-        $code = $LASTEXITCODE
+        # 暂存区入口在两个大版本之间换过一次：
+        #   v1.x：betterleaks git --staged
+        #   v2.x：git diff --cached | betterleaks stdin --git-diff（v2 删掉了 --staged）
+        # 先问二进制自己支持哪个，别再假设 PATH 里那份和 .recon/tools 里那份同版本。
+        $stdinHelp = (& $bl stdin --help 2>&1 | Out-String)
+        if ($stdinHelp -match '--git-diff') {
+            # 走 cmd 的字节管道，避免 PowerShell 对象管道破坏补丁文本（中文路径尤其容易出事）。
+            $tail = '--git-diff --config "{0}" --redact' -f $config
+            if ($ReportPath) { $tail += ' --output "{0}"' -f (Join-Path $root $ReportPath) }
+            $line = 'git diff --cached --no-ext-diff --no-textconv --no-color --src-prefix=a/ --dst-prefix=b/ | "{0}" stdin {1}' -f $bl, $tail
+            cmd /c $line
+            $code = $LASTEXITCODE
+        }
+        elseif ((& $bl git --help 2>&1 | Out-String) -match '--staged') {
+            $argv = @('git', '--staged', '--config', $config, '--redact')
+            if ($ReportPath) { $argv += @('--output', (Join-Path $root $ReportPath)) }
+            & $bl @argv
+            $code = $LASTEXITCODE
+        }
+        else {
+            Write-Warning "这个 betterleaks 既不支持 stdin --git-diff 也不支持 git --staged，跳过本地暂存区扫描（CI 仍会全历史扫）。"
+            $code = 0
+        }
     }
     else {
         # betterleaks 的 findings 退出码默认是 1，与 gitleaks 的 --exit-code 1 等价

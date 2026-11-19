@@ -18,6 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # 全历史体检要拿到所有提交，浅克隆会在 `git log --all` 上少算。
       - uses: actions/checkout@v4
-      - name: 检查已跟踪文件
+        with:
+          fetch-depth: 0
+
+      - name: 检查已跟踪文件的路径
         run: sh ./scripts/repo-guard.sh --tree
+
+      # 隐私闸门：路径闸门只管"文件该不该在"，内容里的学号/手机号/邮箱/
+      # 本机路径/楼栋/Cookie 导出由这一条管。历史已在 2026-11-19 清洗过，
+      # 所以全历史也能当硬门禁用——提交信息与作者邮箱同样在扫描范围内。
+      - name: 检查已跟踪文件里的个人信息
+        run: sh ./scripts/privacy-guard.sh --tree
+
+      - name: 检查全历史里的个人信息
+        run: sh ./scripts/privacy-guard.sh --history

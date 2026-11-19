@@ -28,11 +28,24 @@ if [ -z "$bl" ] || [ ! -x "$bl" ]; then
   exit 0
 fi
 
-git diff --cached --no-ext-diff --no-textconv --no-color \
-  --src-prefix=a/ --dst-prefix=b/ \
-  | "$bl" stdin --git-diff --config "$root/betterleaks.toml" --redact
-
-code=$?
+# 暂存区入口在两个大版本之间换过一次：
+#   v1.x：betterleaks git --staged
+#   v2.x：git diff --cached | betterleaks stdin --git-diff（v2 删掉了 --staged）
+# 所以先问二进制自己支持哪个，别再假设 PATH 里那份和 .recon/tools 里那份同版本——
+# 之前正是这个假设让"换台机器/清掉 .recon"之后的钩子直接报 unknown flag。
+if "$bl" stdin --help 2>&1 | grep -q -- '--git-diff'; then
+  git diff --cached --no-ext-diff --no-textconv --no-color \
+    --src-prefix=a/ --dst-prefix=b/ \
+    | "$bl" stdin --git-diff --config "$root/betterleaks.toml" --redact
+  code=$?
+elif "$bl" git --help 2>&1 | grep -q -- '--staged'; then
+  "$bl" git --staged --config "$root/betterleaks.toml" --redact
+  code=$?
+else
+  echo "[secret-scan] $bl 既不支持 stdin --git-diff 也不支持 git --staged，跳过本地扫描"
+  echo "              （CI 的 secret-scan.yml 仍会全历史扫）"
+  exit 0
+fi
 if [ $code -ne 0 ]; then
   echo ""
   echo "[secret-scan] 暂存区里有疑似密钥（已 REDACT）。确认是合成夹具后，"

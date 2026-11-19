@@ -561,9 +561,9 @@ fzu-auto-checkin/
 │   ├── capture.md              # 自己抓包验证报文的方法
 │   ├── ui-redesign.md          # 界面改版记录与令牌
 │   └── assets/                 # logo.png / promo.png（品牌图，唯一允许入库的图片）
-├── scripts/                    # repo-guard.sh、密钥扫描、Auto.js 脚本
+├── scripts/                    # repo-guard.sh、privacy-guard、密钥扫描、Auto.js 脚本
 ├── .github/workflows/          # checkin.yml（签到）、repo-guard.yml、secret-scan.yml
-├── .githooks/pre-commit        # 路径闸门 + 密钥扫描
+├── .githooks/                  # pre-commit（路径/隐私/密钥）+ commit-msg（提交信息）
 ├── config.example.yaml         # 配置模板（每项都有注释）
 ├── start.ps1 / start.cmd       # Windows 一键启动（按需构建 → 前台运行 → 打开浏览器）
 └── betterleaks.toml            # 密钥扫描规则
@@ -592,22 +592,41 @@ python scripts/gen_parity.py
 
 ## 仓库里不放什么
 
-**构建产物、冒烟脚本与冒烟产物、测试与测试数据、截图、运行时数据、真实配置**一律不入库。规则只有一份（[`scripts/repo-guard.sh`](scripts/repo-guard.sh)），三道闸门把着：
+**构建产物、冒烟脚本与冒烟产物、测试与测试数据、截图、运行时数据、真实配置**一律不入库。规则只有一份，四道闸门把着：
 
 - `.gitignore`：挡还没被跟踪的文件；
-- 仓库内 pre-commit（`.githooks/pre-commit`）：路径闸门 + 密钥扫描，任一不过就取消提交；
-- CI（`.github/workflows/repo-guard.yml` + `secret-scan.yml`）：扫整棵已跟踪树与**全历史**，`git add -f` 或 `--no-verify` 绕过的提交照样红。
+- 仓库内 pre-commit（[`.githooks/pre-commit`](.githooks/pre-commit)）：**路径闸门 + 隐私闸门 + 密钥扫描**，任一不过就取消提交；
+- 仓库内 commit-msg（[`.githooks/commit-msg`](.githooks/commit-msg)）：扫**提交信息本身**，`git commit -m "学号 xxx"` 这种内容干净、消息带隐私的提交由它拦；
+- CI（[`repo-guard.yml`](.github/workflows/repo-guard.yml) + [`secret-scan.yml`](.github/workflows/secret-scan.yml)）：扫整棵已跟踪树、全历史与提交信息，`git add -f` 或 `--no-verify` 绕过的提交照样红。
+
+三道闸门分工不同，谁都替不了谁：
+
+| 闸门 | 抓什么 | 规则 |
+| --- | --- | --- |
+| [`scripts/repo-guard.sh`](scripts/repo-guard.sh) | 路径形状：产物、测试、截图、运行数据、真实配置 | 路径正则 |
+| [`scripts/privacy-guard.sh`](scripts/privacy-guard.sh) | 内容形状：学号、手机号、个人邮箱、本机绝对路径、楼栋号、Cookie 导出；外加作者身份与提交信息 | [`privacy-guard.awk`](scripts/privacy-guard.awk) |
+| [`scripts/pre-commit-secret-scan.sh`](scripts/pre-commit-secret-scan.sh) | 高熵密钥：token / AK / 私钥 / 会话 Cookie 值 | 根目录 [`betterleaks.toml`](betterleaks.toml) |
+
+隐私闸门是最后补的一道：betterleaks 只认高熵串，**学号这种人眼一看就懂、熵却很低的字符串它一条都抓不到**。手工体检三条命令：
+
+```bash
+sh ./scripts/repo-guard.sh --tree       # 已跟踪树的路径体检（CI 跑的就是这条）
+sh ./scripts/privacy-guard.sh --tree    # 已跟踪树的内容体检
+sh ./scripts/privacy-guard.sh --history # 全历史：新增行 + 作者/提交者邮箱 + 提交信息
+```
+
+历史里的旧痕迹（早期 README 的反馈邮箱、测试语料里的具体楼栋、以及 2026-09 那几个用学校邮箱提交的 commit）已在 2026-11-19 用 `git filter-repo --mailmap` + `--replace-text` 重写并强推清理，所以 `--history` 现在是硬门禁（本地手动跑，CI 每次 push 也跑）。`git rm` 对历史无效——下次再混进去，同样只能重写历史。
 
 图片只允许两类：页面素材 `web/qr.png` 与品牌图 `docs/assets/{logo,promo}.png`（生成图，不含任何本机信息）；其余 `*.png/jpg/webp/gif` 一律视为可能带本机路径、坐标或账号的截图。
 
-新克隆先启用钩子（`core.hooksPath` 可能被全局配置指着别处，仓库内钩子默认不生效）：
+新克隆第一件事是启用钩子（`core.hooksPath` 不进版本控制，且可能被全局配置指着别处）：
 
 ```bash
-git config core.hooksPath .githooks
-sh ./scripts/repo-guard.sh --tree     # 手动全树体检，CI 跑的就是这条
+sh ./scripts/install-hooks.sh          # core.hooksPath=.githooks + 补执行位（幂等）
+sh ./scripts/repo-guard.sh --tree      # 手动全树体检
 ```
 
-密钥扫描用 [betterleaks](https://github.com/betterleaks/betterleaks)（gitleaks 原作者的新项目），规则与豁免在根目录 `betterleaks.toml`，与本地钩子共用同一份配置。
+密钥扫描用 [betterleaks](https://github.com/betterleaks/betterleaks)（gitleaks 原作者的新项目），规则与豁免在根目录 `betterleaks.toml`，与本地钩子共用同一份配置。本地二进制优先用 `.recon/tools/betterleaks.exe`（v2），缺失时回退 PATH；钩子会自己探测版本（v1 用 `git --staged`、v2 用 `stdin --git-diff`），不再假设两份二进制同版本。
 
 ## 已知限制
 

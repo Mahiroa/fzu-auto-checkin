@@ -1,0 +1,25 @@
+#!/bin/sh
+# 仓库内 commit-msg 钩子：提交信息闸门。
+#
+# 为什么单独一个钩子：pre-commit 只看暂存区内容，作者身份检查只看 GIT_AUTHOR/COMMITTER，
+# 两者都看不见「提交信息」——`git commit -m "学号 1024xxxx 签好了"` 这种提交会一路绿灯，
+# 而提交信息同样进历史、同样公开。commit-msg 拿到的就是最终消息文件的路径，直接扫它。
+#
+# 装法同 pre-commit：core.hooksPath 指向 .githooks（scripts/install-hooks.sh 一键完成）。
+
+set -u
+root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+guard="$root/scripts/privacy-guard.sh"
+[ -f "$guard" ] || exit 0
+
+msg="${1:-}"
+[ -n "$msg" ] || exit 0
+[ -f "$msg" ] || exit 0
+
+if ! sh "$guard" --message "$msg"; then
+  echo ""
+  echo "[commit-msg] 提交信息里有不该公开的内容，提交已取消（改完消息再提交）。"
+  exit 1
+fi
+
+exit 0

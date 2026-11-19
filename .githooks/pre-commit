@@ -1,38 +1,35 @@
 #!/bin/sh
-# 仓库内 pre-commit 钩子：两道闸门，任一不过就拒绝提交。
+# 仓库内 pre-commit 钩子：三道闸门，任一不过就拒绝提交。
 #
-#   1) scripts/repo-guard.sh            —— 产物 / 冒烟 / 测试 / 临时数据 一律不许入库
-#   2) scripts/pre-commit-secret-scan.sh —— 暂存区的密钥扫描（betterleaks，同一份规则）
+#   1) scripts/repo-guard.sh             —— 产物 / 冒烟 / 测试 / 临时数据 一律不许入库
+#   2) scripts/privacy-guard.sh          —— 学号 / 手机号 / 个人邮箱 / 本机路径 / 楼栋 / Cookie 导出
+#   3) scripts/pre-commit-secret-scan.sh —— 暂存区的密钥扫描（betterleaks，同一份规则）
 #
-# 装法（本机 core.hooksPath 指向全局目录时，仓库内钩子默认不生效，需要为这个仓库覆盖回来）：
+# 装法（本机 core.hooksPath 可能指着全局目录，仓库内钩子默认不生效，需要为这个仓库覆盖回来）：
 #   git config core.hooksPath .githooks
 # 检查是否生效：
 #   git config --get core.hooksPath        # 期望输出 .githooks
 #
 # 注意：本地钩子只是"早一点拦住"，绕过它（--no-verify）的提交仍会被 CI 的
-# repo-guard（--tree）和 secret-scan（全历史）拦下——两道在，别只盯着本地。
+# repo-guard（--tree）、privacy-guard（--tree）和 secret-scan（全历史）拦下——三道在，别只盯着本地。
 
 set -u
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 
-guard="$root/scripts/repo-guard.sh"
-if [ -f "$guard" ]; then
-  # 闸门本身出问题（脚本坏了/解释器缺失）时按 fail-closed 处理：宁可提交失败，
-  # 也不要在没检查的情况下把产物或临时数据放进仓库。
-  if ! sh "$guard"; then
+# 闸门本身出问题（脚本坏了/解释器缺失）时按 fail-closed 处理：宁可提交失败，
+# 也不要在没检查的情况下把产物、隐私或凭据放进仓库。
+gate() {
+  # $1 = 脚本路径；$2 = 人话名字
+  [ -f "$1" ] || return 0
+  if ! sh "$1"; then
     echo ""
-    echo "[pre-commit] 路径闸门未通过，提交已取消。"
+    echo "[pre-commit] $2 未通过，提交已取消。"
     exit 1
   fi
-fi
+}
 
-scan="$root/scripts/pre-commit-secret-scan.sh"
-if [ -f "$scan" ]; then
-  if ! sh "$scan"; then
-    echo ""
-    echo "[pre-commit] 密钥扫描未通过，提交已取消。"
-    exit 1
-  fi
-fi
+gate "$root/scripts/repo-guard.sh" "路径闸门"
+gate "$root/scripts/privacy-guard.sh" "隐私闸门"
+gate "$root/scripts/pre-commit-secret-scan.sh" "密钥扫描"
 
 exit 0

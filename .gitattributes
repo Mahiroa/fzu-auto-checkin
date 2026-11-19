@@ -10,3 +10,7 @@
 *.css     text eol=lf
 *.html    text eol=lf
 *.md      text eol=lf
+
+# 钩子与扫描规则也要在 Linux/macOS 上直接跑：CRLF 会让 sh 报 $'\r': command not found。
+.githooks/* text eol=lf
+*.awk      text eol=lf
