@@ -31,6 +31,12 @@ dist/
 # 目录要真离开仓库，还得配一次 git rm -r --cached deploy（历史则要 filter-repo）。
 deploy/
 
+# ---- 含个人信息的原始材料：只留本机，不入库 ----
+# docs/ 里的文档是随仓库分发的（协议笔记、设计契约、脱敏后的审查报告），写进去的内容
+# 会先过隐私闸门。原始底稿——带真名、学号、真实截图、当事人原话的版本——放 docs/local/，
+# 这个目录与 deploy/ 同一条口径：只在你这台机器上，配 git rm -r --cached 才会真离开索引。
+docs/local/
+
 # ---- 浏览器导出的 Cookie / 抓包现场：含真实会话凭据，绝不入库 ----
 docs/**/cookies*.json
 docs/**/cookie*.txt

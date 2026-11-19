@@ -69,6 +69,7 @@ check() {
     .recon/*|*/.recon/*)                 echo "本机抓包现场与工具目录"; return 0 ;;
     .shots/*|*/.shots/*)                 echo "本机截图 / 探针暂存"; return 0 ;;
     deploy/*|*/deploy/*)                 echo "本机部署记录（真实路径、域名、备份名）"; return 0 ;;
+    docs/local/*|*/docs/local/*)         echo "含个人信息的原始报告（脱敏版放 docs/ 其它位置）"; return 0 ;;
     docs/verify-shots/*)                 echo "验收截图"; return 0 ;;
     config.yaml|config.yml|*/config.yaml|*/config.yml)
                                          echo "真实配置（含凭据与坐标）"; return 0 ;;

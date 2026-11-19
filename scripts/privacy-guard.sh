@@ -5,7 +5,7 @@
 # 楼栋号这些**形状固定但熵很低**的值它一条都抓不到，而它们恰恰是这个仓库历史上
 # 真正泄露过的东西（见 README「隐私」一节）。两道闸门分工：
 #   repo-guard.sh  —— 路径形状（产物/测试/截图/配置）
-#   privacy-guard  —— 内容形状（学号/手机/邮箱/本机路径/楼栋/Cookie 导出）
+#   privacy-guard  —— 内容形状（学号/手机/邮箱/本机路径/楼栋/身份证号/Cookie 导出）
 #   secret-scan    —— 高熵密钥（token/AK/私钥）
 #
 # 用法：
@@ -139,7 +139,7 @@ EOF
 fi
 
 case "$mode" in
-  staged)  echo "[privacy-guard] 暂存区干净：没有学号/手机号/个人邮箱/本机路径/楼栋/Cookie 导出，提交者身份也干净" ;;
+  staged)  echo "[privacy-guard] 暂存区干净：没有学号/手机号/个人邮箱/本机路径/楼栋/身份证号/Cookie 导出，提交者身份也干净" ;;
   tree)    echo "[privacy-guard] 已跟踪文件干净（--tree）" ;;
   recent)  echo "[privacy-guard] 最近 $recent_n 个提交干净（--recent）" ;;
   message) echo "[privacy-guard] 提交信息干净（--message）" ;;

@@ -111,6 +111,14 @@ function check_line(line, where,   rest, e, v) {
         line !~ /SYNTHETIC/) {
         report("COOKIE", where, "cookie-export", "Cookie 导出内容")
     }
+
+    # 7) 身份证号：18 位（末位可能是 X），按出生日期段做形状识别，避免误伤长数字流水号。
+    #    审查报告里引用当事人信息时最容易带出来的就是这一串；示例号多为连串 0，按合成值放行。
+    if (match(line, /(^|[^0-9])[1-9][0-9]{5}(19|20)[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[0-9]{3}[0-9Xx]([^0-9]|$)/)) {
+        v = substr(line, RSTART, RLENGTH)
+        gsub(/[^0-9Xx]/, "", v)
+        if (v !~ /0{4}/) report("IDCARD", where, v, "身份证号")
+    }
 }
 
 mode == "diff" {
