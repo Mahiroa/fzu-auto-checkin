@@ -95,7 +95,14 @@ import (
 // （文档）、已移除 token 的指纹（扫描配置里写了站点名与前缀）；发布件与线上二进制
 // 按修好的树重建（v1.6.5 的 release 与 tag 已撤下）。行为与 1.6.5 完全一致，只有
 // 文案与注释变化。
-const Version = "1.6.6"
+//
+// 1.6.7：下线 GitHub Actions 签到。`.github/workflows/checkin.yml` 删除，仓库只留
+// repo-guard / secret-scan 两条体检 CI；定时口径改成「面板内建调度，或自己的 cron」。
+// 起因：checkin 的 22 次运行全部死在 Prepare config（公开仓库没有 config.yaml、
+// CONFIG_YAML secret 也没配），而窗口扫描 cron 一晚叫醒二十多次，等于一晚二十多封
+// run failed。签到链路、协议与界面行为与 1.6.6 完全一致，改的只有 CI、文档与
+// 配置生成器的引导文案（第 5 步不再 dispatch checkin.yml）。
+const Version = "1.6.7"
 
 // dateLayout 是 state.json / DayPlan 里日期的唯一写法。
 const dateLayout = "2006-01-02"

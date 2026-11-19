@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-2f6fd0.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.22%2B-00add8.svg)](server/go.mod)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776ab.svg)](requirements.txt)
-[![Version](https://img.shields.io/badge/version-1.6.6-1f7a4d.svg)](server/internal/server/server.go)
+[![Version](https://img.shields.io/badge/version-1.6.7-1f7a4d.svg)](server/internal/server/server.go)
 
 </div>
 
